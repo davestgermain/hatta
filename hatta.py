@@ -50,13 +50,13 @@ class WikiStorage(object):
         mime, encoding = mimetypes.guess_type(file_path, strict=False)
         if encoding:
             mime = 'archive/%s' % encoding
-        if mime is None:
+        if mime is None and title in self:
             sample = self.open_page(title).read(8)
             image = imghdr.what(file_path, sample)
             if image is not None:
                 mime = 'image/%s' % image
         if mime is None:
-            mime = 'text/x-hatta'
+            mime = 'text/x-wiki'
         return mime
 
 class WikiParser(object):
@@ -454,6 +454,7 @@ border: solid 1px #babdb6; }
         rss = request.adapter.build(self.rss)
         icon = request.adapter.build(self.favicon)
         edit = request.adapter.build(self.edit, {'title': title})
+        download = request.adapter.build(self.download, {'title': title})
         yield (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
                '"http://www.w3.org/TR/html4/strict.dtd">')
         yield u'<html><head><title>%s</title>' % werkzeug.escape(title)
@@ -470,7 +471,8 @@ border: solid 1px #babdb6; }
         for part in content:
             yield part
         yield u'<div class="footer">'
-        yield u'<a href="%s" class="edit">Edit</a>' % edit
+        yield u'<a href="%s" class="edit">Edit</a> ' % edit
+        yield u'<a href="%s" class="download">Download</a>' % download
         yield u'</div></body></html>'
 
     def view(self, request, title):
@@ -478,7 +480,7 @@ border: solid 1px #babdb6; }
             url = request.adapter.build(self.edit, {'title':title})
             raise WikiRedirect(url)
         mime = self.storage.page_mime(title)
-        if mime == 'text/x-hatta':
+        if mime == 'text/x-wiki':
             f = self.storage.open_page(title)
             content = self.parser.parse(f, request.wiki_link, request.wiki_image)
         elif mime.startswith('image/'):
@@ -486,29 +488,7 @@ border: solid 1px #babdb6; }
                        % (request.get_download_url(title),
                           werkzeug.escape(title))]
         else:
-            content = ['<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>'
-                       % (request.get_download_url(title),
-                          werkzeug.escape(title),
-                          mime)]
-            try:
-                import pygments
-                import pygments.util
-                import pygments.lexers
-                import pygments.formatters
-                formatter = pygments.formatters.HtmlFormatter()
-                try:
-                    lexer = pygments.lexers.get_lexer_for_mimetype(mime)
-                    f = self.storage.open_page(title)
-                    css = formatter.get_style_defs('.highlight')
-                    html = pygments.highlight(f.read(), lexer, formatter)
-                    content = itertools.chain(
-                        [u'<style type="text/css"><!--\n%s\n--></style>' % css],
-                        [html])
-                    f.close()
-                except pygments.util.ClassNotFound:
-                    pass
-            except ImportError:
-                pass
+            content = self.highlight(title, mime)
         html = self.html_page(request, title, content)
         return werkzeug.Response(html, mimetype="text/html")
 
@@ -522,17 +502,49 @@ border: solid 1px #babdb6; }
             elif request.form.get('save'):
                 self.save(request, title)
         else:
-            status = None
             if title not in self.storage:
-                form = self.editor_form
                 status = '404 Not found'
-            elif self.storage.page_mime(title).startswith('text/'):
+            else:
+                status = None
+            if self.storage.page_mime(title).startswith('text/'):
                 form = self.editor_form
             else:
                 form = self.upload_form
             html = self.html_page(request, title, form(request, title))
             return werkzeug.Response(html, mimetype="text/html", status=status)
         raise werkzeug.exceptions.Forbidden()
+
+    def highlight(self, title, mime):
+        try:
+            import pygments
+            import pygments.util
+            import pygments.lexers
+            import pygments.formatters
+            formatter = pygments.formatters.HtmlFormatter()
+            try:
+                lexer = pygments.lexers.get_lexer_for_mimetype(mime)
+                css = formatter.get_style_defs('.highlight')
+                f = self.storage.open_page(title)
+                html = pygments.highlight(f.read(), lexer, formatter)
+                f.close()
+                yield u'<style type="text/css"><!--\n%s\n--></style>' % css
+                yield html
+                return
+            except pygments.util.ClassNotFound:
+                pass
+        except ImportError:
+            pass
+        if mime.startswith('text/'):
+            yield u'<pre>'
+            f = self.storage.open_page(title)
+            for part in f:
+                yield f
+            f.close()
+            yield '</pre>'
+        else:
+            yield ('<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>'
+                   % (request.get_download_url(title), werkzeug.escape(title),
+                      mime))
 
     def editor_form(self, request, title):
         yield u'<form action="" method="POST" class="editor"><div>'

@@ -517,7 +517,7 @@ border: solid 1px #babdb6; }
         yield (u'<link rel="alternate" type="application/rss+xml" '
                u'title="Recent Changes" href="%s">' % rss)
         if self.style_page in self.storage:
-            css = request.get_download_link(self.style_page)
+            css = request.get_download_url(self.style_page)
             yield u'<link rel="stylesheet" type="text/css" href="%s">' % css
         else:
             yield u'<style type="text/css">%s</style>' % self.default_style
@@ -553,13 +553,17 @@ border: solid 1px #babdb6; }
 
     def edit(self, request, title):
         if request.method == 'POST':
+            url = request.get_page_url(title)
             if request.form.get('cancel'):
-                if title in self.storage:
-                    raise WikiRedirect(request.get_page_url(title))
-                else:
-                    raise WikiRedirect(request.get_page_url(self.front_page))
+                if title not in self.storage:
+                    url = request.get_page_url(self.front_page)
             elif request.form.get('save'):
                 self.save(request, title)
+            response = werkzeug.routing.redirect(url, code=303)
+            response.set_cookie('author',
+                                werkzeug.url_quote(request.get_author()),
+                                max_age=604800)
+            return response
         else:
             if title not in self.storage:
                 status = '404 Not found'
@@ -656,7 +660,6 @@ value="%(comment)s"><input name="author" value="%(author)s"><div class="buttons"
         text = request.form.get("text")
         if text is not None:
             self.storage.save_text(title, text.encode('utf8'), author, comment)
-            raise WikiRedirect(request.get_page_url(title))
         else:
             f = request.files['data'].stream
             if f is not None:
@@ -664,8 +667,6 @@ value="%(comment)s"><input name="author" value="%(author)s"><div class="buttons"
                     self.storage.save_file(title, f.tmpname, author, comment)
                 except AttributeError:
                     self.storage.save_text(title, f.read(), author, comment)
-                raise WikiRedirect(request.get_page_url(title))
-        raise werkzeug.Forbidden()
 
     def favicon(self, request):
         return werkzeug.Response(self.favicon, mimetype='image/x-icon')

@@ -4,9 +4,15 @@
 import os
 import re
 import tempfile
+import mimetypes
 import itertools
+import imghdr
 
 import werkzeug
+import pygments
+import pygments.util
+import pygments.lexers
+import pygments.formatters
 
 class WikiStorage(object):
     def __init__(self, path):
@@ -37,7 +43,24 @@ class WikiStorage(object):
                 pass
 
     def open_page(self, title):
-        return open(self._file_path(title), "rb")
+        try:
+            return open(self._file_path(title), "rb")
+        except IOError:
+            raise werkzeug.exceptions.NotFound()
+
+    def page_mime(self, title):
+        file_path = self._file_path(title)
+        mime, encoding = mimetypes.guess_type(file_path, strict=False)
+        if encoding:
+            mime = 'archive/%s' % encoding
+        if mime is None:
+            sample = self.open_page(title).read(8)
+            image = imghdr.what(file_path, sample)
+            if image is not None:
+                mime = 'image/%s' % image
+        if mime is None:
+            mime = 'text/x-hatta'
+        return mime
 
 class WikiParser(object):
     bullets_pat = ur"^\s*[*]+\s+"
@@ -103,17 +126,6 @@ class WikiParser(object):
     markup_re = re.compile(ur"|".join("(?P<%s>%s)" % kv
                            for kv in sorted(markup.iteritems())))
 
-    def __init__(self, wiki_link=None, wiki_image=None):
-        """ Create a new parser for parsing the lines of text, using
-            wiki_link to generate links and wiki_image to insert images.
-        """
-        self.wiki_link = wiki_link
-        self.wiki_image = wiki_image
-        self.stack = []
-
-    def __iter__(self):
-        return self.parse()
-
     def pop_to(self, stop):
         """
             Pop from the stack until the specified tag is encoutered.
@@ -135,7 +147,7 @@ class WikiParser(object):
     def line_smiley(self, groups):
         smiley = groups["smiley_face"]
         return self.wiki_image(self.smilies[smiley], alt=smiley,
-                               class_="smiley", action="download")
+                               class_="smiley")
 
     def line_bold(self, groups):
         if 'b' in self.stack:
@@ -183,7 +195,7 @@ class WikiParser(object):
 
     def line_image(self, groups):
         target = groups['image_target']
-        alt = groups.get('image_text')
+        alt = groups.get('image_text') or target
         return self.wiki_image(target, alt)
 
     def line_macro(self, groups):
@@ -272,7 +284,7 @@ class WikiParser(object):
             func = getattr(self, "line_%s" % m.lastgroup)
             yield func(m.groupdict())
 
-    def parse(self, lines):
+    def parse(self, lines, wiki_link=None, wiki_image=None):
         def key(line):
             match = self.block_re.match(line)
             if match:
@@ -280,6 +292,8 @@ class WikiParser(object):
             return "paragraph"
         self.lines = (unicode(line, "utf-8", "replace") for line in lines)
         self.stack = []
+        self.wiki_link = wiki_link
+        self.wiki_image = wiki_image
         for kind, block in itertools.groupby(self.lines, key):
             func = getattr(self, "block_%s" % kind)
             for part in func(block):
@@ -302,6 +316,30 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
     def get_download_url(self, title):
         return self.adapter.build(self.wiki.download, {'title': title},
                                   method='GET')
+
+    def wiki_link(self, addr, label, class_='wiki'):
+        if (addr.startswith('http://') or addr.startswith('https://')
+            or addr.startswith('ftp://')):
+            return u'<a href="%s" class="external">%s</a>' % (
+                werkzeug.url_fix(addr), werkzeug.escape(label))
+        elif addr in self.wiki.storage:
+            return u'<a href="%s" class="%s">%s</a>' % (
+                self.get_page_url(addr), class_, werkzeug.escape(label))
+        else:
+            return u'<a href="%s" class="nonexistent">%s</a>' % (
+                self.get_page_url(addr), werkzeug.escape(label))
+
+    def wiki_image(self, addr, alt, class_='wiki'):
+        if (addr.startswith('http://') or addr.startswith('https://')
+            or addr.startswith('ftp://')):
+            return u'<img src="%s" class="external" alt="%s">' % (
+                werkzeug.url_fix(addr), werkzeug.escape(alt))
+        elif addr in self.wiki.storage:
+            return u'<img src="%s" class="%s" alt="%s">' % (
+                self.get_download_url(addr), class_, werkzeug.escape(alt))
+        else:
+            return u'<a href="%s" class="nonexistent">%s</a>' % (
+                self.get_page_url(addr), werkzeug.escape(alt))
 
     def get_author(self):
         author = (self.form.get("author")
@@ -357,59 +395,93 @@ class Wiki(object):
         self.path = os.path.abspath(path)
         self.storage = WikiStorage(self.path)
         self.parser = WikiParser()
+        self.formatter = pygments.formatters.HtmlFormatter()
         self.url_map = werkzeug.routing.Map([
             werkzeug.routing.Rule('/', defaults={'title': 'Home'},
-                                  endpoint=self.view, methods=['GET']),
+                                  endpoint=self.view,
+                                  methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/edit/<title:title>', endpoint=self.edit,
-                                  methods=['GET']),
-            werkzeug.routing.Rule('/edit/<title:title>', endpoint=self.save,
-                                  methods=['POST']),
+                                  methods=['GET', 'POST']),
             werkzeug.routing.Rule('/download/<title:title>',
-                                  endpoint=self.download, methods=['GET']),
+                                  endpoint=self.download,
+                                  methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/<title:title>', endpoint=self.view,
+                                  methods=['GET', 'HEAD']),
+            werkzeug.routing.Rule('/rss', endpoint=self.rss,
+                                  methods=['GET', 'HEAD']),
+            werkzeug.routing.Rule('/favicon.ico', endpoint=self.favicon,
+                                  methods=['GET', 'HEAD']),
+            werkzeug.routing.Rule('/download/style.css', endpoint=self.style,
+                                  methods=['GET', 'HEAD']),
+            werkzeug.routing.Rule('/robots.txt', endpoint=self.robots,
                                   methods=['GET']),
-            werkzeug.routing.Rule('/rss', endpoint=self.rss, methods=['GET']),
         ], converters={'title':WikiTitle})
 
     def html_page(self, request, title, content):
-        style = request.get_download_url(u'style.css')
+        style = request.adapter.build(self.style)
         rss = request.adapter.build(self.rss)
-        yield u"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" 
-"http://www.w3.org/TR/html4/strict.dtd">
-<html><head><title>%(title)s</title>
-<link rel="stylesheet" type="text/css" charset="utf-8" href="%(style)s">
-<link rel="alternate" type="application/rss+xml" title="Recent Changes"
-href="%(rss)s">
-</head><body><h1>%(title)s</h1>""" % {
-    'title': werkzeug.escape(title),
-    'style': style,
-    'rss': rss,
-}
+        icon = request.adapter.build(self.favicon)
+        edit = request.adapter.build(self.edit, {'title': title})
+        yield (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
+               '"http://www.w3.org/TR/html4/strict.dtd">')
+        yield u'<html><head><title>%s</title>' % werkzeug.escape(title)
+        yield u'<link rel="stylesheet" type="text/css" href="%s">' % style
+        yield u'<link rel="shortcut icon" type="image/x-icon" href="%s">' % icon
+        yield u'<link rel="alternate" type="application/wiki" href="%s">' % edit
+        yield (u'<link rel="alternate" type="application/rss+xml" '
+               u'title="Recent Changes" href="%s">' % rss)
+        yield u'</head><body><h1>%s</h1>' % werkzeug.escape(title)
         for part in content:
             yield part
-        yield u"""</body></html>"""
+        yield u'<div class="footer">'
+        yield u'<a href="%s">Edit</a>' % edit
+        yield u'</div></body></html>'
 
     def view(self, request, title):
         if title not in self.storage:
             url = request.adapter.build(self.edit, {'title':title})
             raise WikiRedirect(url)
-        f = self.storage.open_page(title)
-        content = self.parser.parse(f)
+        mime = self.storage.page_mime(title)
+        if mime == 'text/x-hatta':
+            f = self.storage.open_page(title)
+            content = self.parser.parse(f, request.wiki_link, request.wiki_image)
+        elif mime.startswith('image/'):
+            content = ['<img src="%s" alt="%s">'
+                       % (request.get_download_url(title),
+                          werkzeug.escape(title))]
+        else:
+            try:
+                lexer = pygments.lexers.get_lexer_for_mimetype(mime)
+                f = self.storage.open_page(title)
+                content = pygments.highlight(f.read(), lexer, self.formatter)
+                f.close()
+            except pygments.util.ClassNotFound:
+                content = ['<a href="%s">Download</a>'
+                           % request.get_download_url(title)]
         html = self.html_page(request, title, content)
         return werkzeug.Response(html, mimetype="text/html")
 
     def edit(self, request, title):
-        page_title = u"""Editing "%s"...""" % title
-        html = self.html_page(request, page_title,
-                              self.editor_form(request, title))
-        return werkzeug.Response(html, mimetype="text/html")
+        if request.method == 'POST':
+            self.save(request, title)
+        else:
+            status = None
+            if title not in self.storage:
+                form = self.editor_form
+                status = '404 Not found'
+            elif self.storage.page_mime(title).startswith('text/'):
+                form = self.editor_form
+            else:
+                form = self.upload_form
+            html = self.html_page(request, title, form(request, title))
+            return werkzeug.Response(html, mimetype="text/html", status=status)
 
     def editor_form(self, request, title):
         yield u"""<form action="" method="POST"><div><textarea
-name="text" cols="80" rows="25">"""
+name="text" cols="80" rows="22">"""
         try:
             f = self.storage.open_page(title)
-        except IOError:
+        except werkzeug.exceptions.NotFound:
             f = []
         for part in f:
             yield werkzeug.escape(part)
@@ -420,20 +492,90 @@ value="%(comment)s"><input name="author" value="%(author)s"><div class="buttons"
     'author': werkzeug.escape(request.get_author()),
 }
 
+    def upload_form(self, request, title):
+        yield u"""<form action="" method="POST" enctype="multipart/form-data">
+<div><input type="file" name="data"><input name="comment"
+value="%(comment)s"><input name="author" value="%(author)s"><div class="buttons"
+><input type="submit" name="save" value="Save"></div></div></form>""" % {
+    'comment': werkzeug.escape(u'comment'),
+    'author': werkzeug.escape(request.get_author()),
+}
+
     def rss(self, request):
         return werkzeug.Response('edit', mimetype="text/plain")
 
     def download(self, request, title):
-        return werkzeug.Response('download', mimetype="text/plain")
+        headers = {
+            'Cache-Control': 'max-age=60, public',
+            'Vary': 'Transfer-Encoding',
+            'Allow': 'GET, HEAD',
+        }
+        mime = self.storage.page_mime(title)
+        f = self.storage.open_page(title)
+        response = werkzeug.Response(f, mimetype=mime, headers=headers)
+        response.add_etag(u'download/%s' % title)
+        response.make_conditional(request)
+        return response
 
     def save(self, request, title):
         comment = request.form.get("comment", "")
         author = request.get_author()
         text = request.form.get("text")
         if text is not None:
-            self.storage.save_text(title, text, author, comment)
+            self.storage.save_text(title, text.encode('utf8'), author, comment)
             raise WikiRedirect(request.get_page_url(title))
+        else:
+            f = request.files['data'].stream
+            if f is not None:
+                try:
+                    self.storage.save_file(title, f.tmpname, author, comment)
+                except AttributeError:
+                    self.storage.save_text(title, f.read(), author, comment)
+                raise WikiRedirect(request.get_page_url(title))
         raise werkzeug.Forbidden()
+
+    def favicon(self, request):
+        icon = ('\x00\x00\x01\x00\x01\x00\x10\x10\x10\x00\x01\x00\x04\x00(\x01'
+'\x00\x00\x16\x00\x00\x00(\x00\x00\x00\x10\x00\x00\x00 \x00\x00\x00\x01\x00\x04'
+'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+'\x00\x00\x00\x00\x00\x00=$;\x00_0T\x00oDl\x00\x80Vx\x00Nf\xa4\x00\x95m\x9a\x00'
+'\xa7\x80\xa8\x00?\x83\xc5\x00\x1a\x86\xe1\x00\x98\x97\xa3\x00|\x97\xc4\x00u'
+'\xb3\xd7\x00\xb4\xb7\xb5\x00R\xd2\xf5\x00\xd8\xd4\xd6\x00\x00\x00\x00\x00\xff'
+'\xff!\x00\x00\x01\xff\xff\xff#fUUU\x10\xff\xf0feUS33\x0f\xf2UY\xbd\xdds3\x1f'
+'\xf23m\xdd\xd8\x883\x1f\xf23\xad\xa5>\xb8A\x1f\xff\x13\xa5U>\xcc@\xff\xff\x125'
+'e<\xecP\xff\xff\x116f^\xcc\x90\xff\xff\x12fU^\xee\xe0\xff\xff%UV3l\xe1\xff\xff'
+'&5333!\xff\xff%32231\xff\xff"3""3!\xff\xff\xf2#331\x1f\xff\xff\xff\xf2!\x11'
+'\x1f\xff\xff\xf0\x0f\x00\x00\xc0\x03\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00'
+'\x80\x01\x00\x00\x80\x01\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00'
+'\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03'
+'\x00\x00\xe0\x07\x00\x00\xf8\x1f\x00\x00')
+        return werkzeug.Response(icon, mimetype='image/x-icon')
+
+    def style(self, request):
+        style = u"""html { background: #fff; color: #2e3436; 
+font-family: sans-serif; font-size: 96% }
+body { margin: 1em auto; line-height: 1.3; width: 40em }
+textarea { width: 100%; display: block; font-size: 100% }
+a { color: #3465a4; text-decoration: none }
+a:hover { text-decoration: underline }
+a.wiki:visited { color: #204a87 }
+a.nonexistent { color: #a40000; }
+a.external { color: #3465a4; text-decoration: underline }
+a.external:visited { color: #75507b }
+a img { border: none }
+img.smiley { vertical-align: middle }
+div.footer { border-top: solid 1px #babdb6; text-align: right }
+div.buttons { text-align: center }
+h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}"""
+        style += self.formatter.get_style_defs('.highlight')
+        return werkzeug.Response(style, mimetype='text/css')
+
+    def robots(self, request):
+        robots = ('User-agent: *\r\n'
+                  'Disallow: /edit/\r\n'
+                  'Disallow: /rss\r\n'
+                 )
+        return werkzeug.Response(robots, mimetype='text/plain')
 
     @werkzeug.responder
     def application(self, environ, start):

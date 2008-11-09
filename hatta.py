@@ -7,24 +7,74 @@ import tempfile
 import mimetypes
 import itertools
 import imghdr
+import weakref
+import datetime
 
 import werkzeug
 
-
 class WikiStorage(object):
     def __init__(self, path):
+        os.environ['HGENCODING'] = 'utf-8'
+        os.environ["HGMERGE"] = "internal:fail"
+        import mercurial.hg
+        import mercurial.ui
+
         self.path = path
+        self._lockref = None
         if not os.path.exists(self.path):
             os.makedirs(self.path)
+        self.repo_path = self._find_repo_path(self.path)
+        self.ui = mercurial.ui.ui(report_untrusted=False, interactive=False,
+                                  quiet=True)
+        if self.repo_path is None:
+            self.repo_path = self.path
+            self.repo = mercurial.hg.repository(self.ui, self.repo_path,
+                                                create=True)
+        else:
+            self.repo = mercurial.hg.repository(self.ui, self.repo_path)
+        self.repo_prefix = self.path[len(self.repo_path):].strip('/')
+
+    def _lock(self):
+        if self._lockref and self._lockref():
+            return self._lockref()
+        lock = self.repo._lock(os.path.join(self.path, "wikilock"),
+                               True, None, None, "Main wiki lock")
+        self._lockref = weakref.ref(lock)
+        return lock
+
+    def _find_repo_path(self, path):
+        while not os.path.isdir(os.path.join(path, ".hg")):
+            old_path, path = path, os.path.dirname(path)
+            if path == old_path:
+                return None
+        return path
 
     def _file_path(self, title):
         return os.path.join(self.path, werkzeug.url_quote(title, safe=''))
+
+    def _title_to_file(self, title):
+        return os.path.join(self.repo_prefix, werkzeug.url_quote(title, safe=''))
+    def _file_to_title(self, filename):
+        name = filename[len(self.repo_prefix):].strip('/')
+        return werkzeug.url_unquote(name)
 
     def __contains__(self, title):
         return os.path.exists(self._file_path(title))
 
     def save_file(self, title, file_name, author=u'', comment=u''):
-        os.rename(file_name, self._file_path(title))
+        user = author.encode('utf-8') or 'anon'
+        text = comment.encode('utf-8') or 'comment'
+        repo_file = self._title_to_file(title)
+        file_path = self._file_path(title)
+        lock = self._lock()
+        try:
+            os.rename(file_name, file_path)
+            #if repo_file not in self.repo.changectx():
+            self.repo.add([repo_file])
+            self.repo.commit(files=[repo_file], text=text, user=user,
+                             force=True, empty_ok=True)
+        finally:
+            del lock
 
     def save_text(self, title, text, author=u'', comment=u''):
         try:
@@ -44,6 +94,10 @@ class WikiStorage(object):
             return open(self._file_path(title), "rb")
         except IOError:
             raise werkzeug.exceptions.NotFound()
+
+    def page_date(self, title):
+        stamp = os.path.getmtime(self._file_path(title))
+        return datetime.datetime.fromtimestamp(stamp)
 
     def page_mime(self, title):
         file_path = self._file_path(title)
@@ -490,7 +544,12 @@ border: solid 1px #babdb6; }
         else:
             content = self.highlight(title, mime)
         html = self.html_page(request, title, content)
-        return werkzeug.Response(html, mimetype="text/html")
+        response = werkzeug.Response(html, mimetype="text/html")
+        date = self.storage.page_date(title)
+        response.last_modified = date
+        response.add_etag(u'%s/%s' % (title, date))
+        response.make_conditional(request)
+        return response
 
     def edit(self, request, title):
         if request.method == 'POST':
@@ -585,7 +644,9 @@ value="%(comment)s"><input name="author" value="%(author)s"><div class="buttons"
         mime = self.storage.page_mime(title)
         f = self.storage.open_page(title)
         response = werkzeug.Response(f, mimetype=mime, headers=headers)
-        response.add_etag(u'download/%s' % title)
+        date = self.storage.page_date(title)
+        response.add_etag(u'download/%s/%s' % (title, date))
+        response.last_modified = date
         response.make_conditional(request)
         return response
 

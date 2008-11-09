@@ -9,10 +9,43 @@ import itertools
 import imghdr
 
 import werkzeug
-import pygments
-import pygments.util
-import pygments.lexers
-import pygments.formatters
+
+style = u"""html { background: #fff; color: #2e3436; 
+font-family: sans-serif; font-size: 96% }
+body { margin: 1em auto; line-height: 1.3; width: 40em }
+a { color: #3465a4; text-decoration: none }
+a:hover { text-decoration: underline }
+a.wiki:visited { color: #204a87 }
+a.nonexistent { color: #a40000; }
+a.external { color: #3465a4; text-decoration: underline }
+a.external:visited { color: #75507b }
+a img { border: none }
+img.smiley { vertical-align: middle }
+div.footer { border-top: solid 1px #babdb6; text-align: right }
+h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
+div.buttons { text-align: center }
+div.buttons input { font-weight: bold; font-size: 100%; background: #eee;
+border: solid 1px #babdb6; margin: 0.25em}
+.editor textarea { width: 100%; display: block; font-size: 100%; 
+border: solid 1px #babdb6; }
+.editor label { display:block; text-align: right }
+.editor label input { font-size: 100%; border: solid 1px #babdb6; margin: 0.125em 0 }
+.editor label.comment input  { width: 32em }"""
+
+favicon = ('\x00\x00\x01\x00\x01\x00\x10\x10\x10\x00\x01\x00\x04\x00(\x01'
+'\x00\x00\x16\x00\x00\x00(\x00\x00\x00\x10\x00\x00\x00 \x00\x00\x00\x01\x00\x04'
+'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+'\x00\x00\x00\x00\x00\x00=$;\x00_0T\x00oDl\x00\x80Vx\x00Nf\xa4\x00\x95m\x9a\x00'
+'\xa7\x80\xa8\x00?\x83\xc5\x00\x1a\x86\xe1\x00\x98\x97\xa3\x00|\x97\xc4\x00u'
+'\xb3\xd7\x00\xb4\xb7\xb5\x00R\xd2\xf5\x00\xd8\xd4\xd6\x00\x00\x00\x00\x00\xff'
+'\xff!\x00\x00\x01\xff\xff\xff#fUUU\x10\xff\xf0feUS33\x0f\xf2UY\xbd\xdds3\x1f'
+'\xf23m\xdd\xd8\x883\x1f\xf23\xad\xa5>\xb8A\x1f\xff\x13\xa5U>\xcc@\xff\xff\x125'
+'e<\xecP\xff\xff\x116f^\xcc\x90\xff\xff\x12fU^\xee\xe0\xff\xff%UV3l\xe1\xff\xff'
+'&5333!\xff\xff%32231\xff\xff"3""3!\xff\xff\xf2#331\x1f\xff\xff\xff\xf2!\x11'
+'\x1f\xff\xff\xf0\x0f\x00\x00\xc0\x03\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00'
+'\x80\x01\x00\x00\x80\x01\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00'
+'\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03'
+'\x00\x00\xe0\x07\x00\x00\xf8\x1f\x00\x00')
 
 class WikiStorage(object):
     def __init__(self, path):
@@ -395,7 +428,6 @@ class Wiki(object):
         self.path = os.path.abspath(path)
         self.storage = WikiStorage(self.path)
         self.parser = WikiParser()
-        self.formatter = pygments.formatters.HtmlFormatter()
         self.url_map = werkzeug.routing.Map([
             werkzeug.routing.Rule('/', defaults={'title': 'Home'},
                                   endpoint=self.view,
@@ -411,30 +443,31 @@ class Wiki(object):
                                   methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/favicon.ico', endpoint=self.favicon,
                                   methods=['GET', 'HEAD']),
-            werkzeug.routing.Rule('/download/style.css', endpoint=self.style,
-                                  methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/robots.txt', endpoint=self.robots,
                                   methods=['GET']),
         ], converters={'title':WikiTitle})
 
     def html_page(self, request, title, content):
-        style = request.adapter.build(self.style)
         rss = request.adapter.build(self.rss)
         icon = request.adapter.build(self.favicon)
         edit = request.adapter.build(self.edit, {'title': title})
         yield (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
                '"http://www.w3.org/TR/html4/strict.dtd">')
         yield u'<html><head><title>%s</title>' % werkzeug.escape(title)
-        yield u'<link rel="stylesheet" type="text/css" href="%s">' % style
         yield u'<link rel="shortcut icon" type="image/x-icon" href="%s">' % icon
         yield u'<link rel="alternate" type="application/wiki" href="%s">' % edit
         yield (u'<link rel="alternate" type="application/rss+xml" '
                u'title="Recent Changes" href="%s">' % rss)
+        if 'style.css' in self.storage:
+            css = request.get_download_link('style.css')
+            yield u'<link rel="stylesheet" type="text/css" href="%s">' % css
+        else:
+            yield u'<style type="text/css">%s</style>' % style
         yield u'</head><body><h1>%s</h1>' % werkzeug.escape(title)
         for part in content:
             yield part
         yield u'<div class="footer">'
-        yield u'<a href="%s">Edit</a>' % edit
+        yield u'<a href="%s" class="edit">Edit</a>' % edit
         yield u'</div></body></html>'
 
     def view(self, request, title):
@@ -451,11 +484,18 @@ class Wiki(object):
                           werkzeug.escape(title))]
         else:
             try:
+                import pygments
+                import pygments.util
+                import pygments.lexers
+                import pygments.formatters
+                formatter = pygments.formatters.HtmlFormatter()
                 lexer = pygments.lexers.get_lexer_for_mimetype(mime)
                 f = self.storage.open_page(title)
-                content = pygments.highlight(f.read(), lexer, self.formatter)
+                css = formatter.get_style_defs('.highlight')
+                html = pygments.highlight(f.read(), lexer, formatter)
+                content = u'<style type="text/css"><!--\n%s\n--></style>%s' % (css, html)
                 f.close()
-            except pygments.util.ClassNotFound:
+            except (ImportError, pygments.util.ClassNotFound):
                 content = ['<a href="%s">Download</a>'
                            % request.get_download_url(title)]
         html = self.html_page(request, title, content)
@@ -477,7 +517,7 @@ class Wiki(object):
             return werkzeug.Response(html, mimetype="text/html", status=status)
 
     def editor_form(self, request, title):
-        yield u"""<form action="" method="POST"><div><textarea
+        yield u"""<form action="" method="POST" class="editor"><div><textarea
 name="text" cols="80" rows="22">"""
         try:
             f = self.storage.open_page(title)
@@ -485,12 +525,10 @@ name="text" cols="80" rows="22">"""
             f = []
         for part in f:
             yield werkzeug.escape(part)
-        yield u"""</textarea><input name="comment"
-value="%(comment)s"><input name="author" value="%(author)s"><div class="buttons"
-><input type="submit" name="save" value="Save"></div></div></form>""" % {
-    'comment': werkzeug.escape(u'comment'),
-    'author': werkzeug.escape(request.get_author()),
-}
+        yield u"""</textarea>"""
+        yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape('comment')
+        yield u'<label>Author <input name="author" value="%s"></label>' % werkzeug.escape(request.get_author())
+        yield u'<div class="buttons"><input type="submit" name="save" value="Save"></div></div></form>'
 
     def upload_form(self, request, title):
         yield u"""<form action="" method="POST" enctype="multipart/form-data">
@@ -535,40 +573,8 @@ value="%(comment)s"><input name="author" value="%(author)s"><div class="buttons"
         raise werkzeug.Forbidden()
 
     def favicon(self, request):
-        icon = ('\x00\x00\x01\x00\x01\x00\x10\x10\x10\x00\x01\x00\x04\x00(\x01'
-'\x00\x00\x16\x00\x00\x00(\x00\x00\x00\x10\x00\x00\x00 \x00\x00\x00\x01\x00\x04'
-'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-'\x00\x00\x00\x00\x00\x00=$;\x00_0T\x00oDl\x00\x80Vx\x00Nf\xa4\x00\x95m\x9a\x00'
-'\xa7\x80\xa8\x00?\x83\xc5\x00\x1a\x86\xe1\x00\x98\x97\xa3\x00|\x97\xc4\x00u'
-'\xb3\xd7\x00\xb4\xb7\xb5\x00R\xd2\xf5\x00\xd8\xd4\xd6\x00\x00\x00\x00\x00\xff'
-'\xff!\x00\x00\x01\xff\xff\xff#fUUU\x10\xff\xf0feUS33\x0f\xf2UY\xbd\xdds3\x1f'
-'\xf23m\xdd\xd8\x883\x1f\xf23\xad\xa5>\xb8A\x1f\xff\x13\xa5U>\xcc@\xff\xff\x125'
-'e<\xecP\xff\xff\x116f^\xcc\x90\xff\xff\x12fU^\xee\xe0\xff\xff%UV3l\xe1\xff\xff'
-'&5333!\xff\xff%32231\xff\xff"3""3!\xff\xff\xf2#331\x1f\xff\xff\xff\xf2!\x11'
-'\x1f\xff\xff\xf0\x0f\x00\x00\xc0\x03\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00'
-'\x80\x01\x00\x00\x80\x01\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00'
-'\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03'
-'\x00\x00\xe0\x07\x00\x00\xf8\x1f\x00\x00')
-        return werkzeug.Response(icon, mimetype='image/x-icon')
+        return werkzeug.Response(favicon, mimetype='image/x-icon')
 
-    def style(self, request):
-        style = u"""html { background: #fff; color: #2e3436; 
-font-family: sans-serif; font-size: 96% }
-body { margin: 1em auto; line-height: 1.3; width: 40em }
-textarea { width: 100%; display: block; font-size: 100% }
-a { color: #3465a4; text-decoration: none }
-a:hover { text-decoration: underline }
-a.wiki:visited { color: #204a87 }
-a.nonexistent { color: #a40000; }
-a.external { color: #3465a4; text-decoration: underline }
-a.external:visited { color: #75507b }
-a img { border: none }
-img.smiley { vertical-align: middle }
-div.footer { border-top: solid 1px #babdb6; text-align: right }
-div.buttons { text-align: center }
-h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}"""
-        style += self.formatter.get_style_defs('.highlight')
-        return werkzeug.Response(style, mimetype='text/css')
 
     def robots(self, request):
         robots = ('User-agent: *\r\n'

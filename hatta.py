@@ -1,14 +1,14 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import datetime
+import itertools
+import imghdr
+import mimetypes
 import os
 import re
 import tempfile
-import mimetypes
-import itertools
-import imghdr
 import weakref
-import datetime
 
 import werkzeug
 
@@ -69,10 +69,10 @@ class WikiStorage(object):
         lock = self._lock()
         try:
             os.rename(file_name, file_path)
-            #if repo_file not in self.repo.changectx():
-            self.repo.add([repo_file])
+            if repo_file not in self.repo.changectx():
+                self.repo.add([repo_file])
             self.repo.commit(files=[repo_file], text=text, user=user,
-                             force=True, empty_ok=True)
+                             force=True)
         finally:
             del lock
 
@@ -81,7 +81,7 @@ class WikiStorage(object):
             tmpfd, file_name = tempfile.mkstemp(dir=self.path)
             f = os.fdopen(tmpfd, "w+b")
             f.write(text)
-            f.close
+            f.close()
             self.save_file(title, file_name, author, comment)
         finally:
             try:

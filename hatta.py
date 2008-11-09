@@ -10,42 +10,6 @@ import imghdr
 
 import werkzeug
 
-style = u"""html { background: #fff; color: #2e3436; 
-font-family: sans-serif; font-size: 96% }
-body { margin: 1em auto; line-height: 1.3; width: 40em }
-a { color: #3465a4; text-decoration: none }
-a:hover { text-decoration: underline }
-a.wiki:visited { color: #204a87 }
-a.nonexistent { color: #a40000; }
-a.external { color: #3465a4; text-decoration: underline }
-a.external:visited { color: #75507b }
-a img { border: none }
-img.smiley { vertical-align: middle }
-div.footer { border-top: solid 1px #babdb6; text-align: right }
-h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
-div.buttons { text-align: center }
-div.buttons input { font-weight: bold; font-size: 100%; background: #eee;
-border: solid 1px #babdb6; margin: 0.25em}
-.editor textarea { width: 100%; display: block; font-size: 100%; 
-border: solid 1px #babdb6; }
-.editor label { display:block; text-align: right }
-.editor label input { font-size: 100%; border: solid 1px #babdb6; margin: 0.125em 0 }
-.editor label.comment input  { width: 32em }"""
-
-favicon = ('\x00\x00\x01\x00\x01\x00\x10\x10\x10\x00\x01\x00\x04\x00(\x01'
-'\x00\x00\x16\x00\x00\x00(\x00\x00\x00\x10\x00\x00\x00 \x00\x00\x00\x01\x00\x04'
-'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-'\x00\x00\x00\x00\x00\x00=$;\x00_0T\x00oDl\x00\x80Vx\x00Nf\xa4\x00\x95m\x9a\x00'
-'\xa7\x80\xa8\x00?\x83\xc5\x00\x1a\x86\xe1\x00\x98\x97\xa3\x00|\x97\xc4\x00u'
-'\xb3\xd7\x00\xb4\xb7\xb5\x00R\xd2\xf5\x00\xd8\xd4\xd6\x00\x00\x00\x00\x00\xff'
-'\xff!\x00\x00\x01\xff\xff\xff#fUUU\x10\xff\xf0feUS33\x0f\xf2UY\xbd\xdds3\x1f'
-'\xf23m\xdd\xd8\x883\x1f\xf23\xad\xa5>\xb8A\x1f\xff\x13\xa5U>\xcc@\xff\xff\x125'
-'e<\xecP\xff\xff\x116f^\xcc\x90\xff\xff\x12fU^\xee\xe0\xff\xff%UV3l\xe1\xff\xff'
-'&5333!\xff\xff%32231\xff\xff"3""3!\xff\xff\xf2#331\x1f\xff\xff\xff\xf2!\x11'
-'\x1f\xff\xff\xf0\x0f\x00\x00\xc0\x03\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00'
-'\x80\x01\x00\x00\x80\x01\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00'
-'\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03'
-'\x00\x00\xe0\x07\x00\x00\xf8\x1f\x00\x00')
 
 class WikiStorage(object):
     def __init__(self, path):
@@ -424,12 +388,51 @@ class WikiRedirect(werkzeug.routing.RequestRedirect):
         return werkzeug.redirect(self.new_url, 303)
 
 class Wiki(object):
+    front_page = 'Home'
+    style_page = 'style.css'
+    default_style = u"""html { background: #fff; color: #2e3436; 
+font-family: sans-serif; font-size: 96% }
+body { margin: 1em auto; line-height: 1.3; width: 40em }
+a { color: #3465a4; text-decoration: none }
+a:hover { text-decoration: underline }
+a.wiki:visited { color: #204a87 }
+a.nonexistent { color: #a40000; }
+a.external { color: #3465a4; text-decoration: underline }
+a.external:visited { color: #75507b }
+a img { border: none }
+img.smiley { vertical-align: middle }
+div.footer { border-top: solid 1px #babdb6; text-align: right }
+h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
+div.buttons { text-align: center }
+div.buttons input { font-weight: bold; font-size: 100%; background: #eee;
+border: solid 1px #babdb6; margin: 0.25em}
+.editor textarea { width: 100%; display: block; font-size: 100%; 
+border: solid 1px #babdb6; }
+.editor label { display:block; text-align: right }
+.editor label input { font-size: 100%; border: solid 1px #babdb6; margin: 0.125em 0 }
+.editor label.comment input  { width: 32em }"""
+
+    favicon = ('\x00\x00\x01\x00\x01\x00\x10\x10\x10\x00\x01\x00\x04\x00(\x01'
+'\x00\x00\x16\x00\x00\x00(\x00\x00\x00\x10\x00\x00\x00 \x00\x00\x00\x01\x00\x04'
+'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+'\x00\x00\x00\x00\x00\x00=$;\x00_0T\x00oDl\x00\x80Vx\x00Nf\xa4\x00\x95m\x9a\x00'
+'\xa7\x80\xa8\x00?\x83\xc5\x00\x1a\x86\xe1\x00\x98\x97\xa3\x00|\x97\xc4\x00u'
+'\xb3\xd7\x00\xb4\xb7\xb5\x00R\xd2\xf5\x00\xd8\xd4\xd6\x00\x00\x00\x00\x00\xff'
+'\xff!\x00\x00\x01\xff\xff\xff#fUUU\x10\xff\xf0feUS33\x0f\xf2UY\xbd\xdds3\x1f'
+'\xf23m\xdd\xd8\x883\x1f\xf23\xad\xa5>\xb8A\x1f\xff\x13\xa5U>\xcc@\xff\xff\x125'
+'e<\xecP\xff\xff\x116f^\xcc\x90\xff\xff\x12fU^\xee\xe0\xff\xff%UV3l\xe1\xff\xff'
+'&5333!\xff\xff%32231\xff\xff"3""3!\xff\xff\xf2#331\x1f\xff\xff\xff\xf2!\x11'
+'\x1f\xff\xff\xf0\x0f\x00\x00\xc0\x03\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00'
+'\x80\x01\x00\x00\x80\x01\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00'
+'\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03'
+'\x00\x00\xe0\x07\x00\x00\xf8\x1f\x00\x00')
+
     def __init__(self, path):
         self.path = os.path.abspath(path)
         self.storage = WikiStorage(self.path)
         self.parser = WikiParser()
         self.url_map = werkzeug.routing.Map([
-            werkzeug.routing.Rule('/', defaults={'title': 'Home'},
+            werkzeug.routing.Rule('/', defaults={'title': self.front_page},
                                   endpoint=self.view,
                                   methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/edit/<title:title>', endpoint=self.edit,
@@ -458,11 +461,11 @@ class Wiki(object):
         yield u'<link rel="alternate" type="application/wiki" href="%s">' % edit
         yield (u'<link rel="alternate" type="application/rss+xml" '
                u'title="Recent Changes" href="%s">' % rss)
-        if 'style.css' in self.storage:
-            css = request.get_download_link('style.css')
+        if self.style_page in self.storage:
+            css = request.get_download_link(self.style_page)
             yield u'<link rel="stylesheet" type="text/css" href="%s">' % css
         else:
-            yield u'<style type="text/css">%s</style>' % style
+            yield u'<style type="text/css">%s</style>' % self.default_style
         yield u'</head><body><h1>%s</h1>' % werkzeug.escape(title)
         for part in content:
             yield part
@@ -483,27 +486,41 @@ class Wiki(object):
                        % (request.get_download_url(title),
                           werkzeug.escape(title))]
         else:
+            content = ['<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>'
+                       % (request.get_download_url(title),
+                          werkzeug.escape(title),
+                          mime)]
             try:
                 import pygments
                 import pygments.util
                 import pygments.lexers
                 import pygments.formatters
                 formatter = pygments.formatters.HtmlFormatter()
-                lexer = pygments.lexers.get_lexer_for_mimetype(mime)
-                f = self.storage.open_page(title)
-                css = formatter.get_style_defs('.highlight')
-                html = pygments.highlight(f.read(), lexer, formatter)
-                content = u'<style type="text/css"><!--\n%s\n--></style>%s' % (css, html)
-                f.close()
-            except (ImportError, pygments.util.ClassNotFound):
-                content = ['<a href="%s">Download</a>'
-                           % request.get_download_url(title)]
+                try:
+                    lexer = pygments.lexers.get_lexer_for_mimetype(mime)
+                    f = self.storage.open_page(title)
+                    css = formatter.get_style_defs('.highlight')
+                    html = pygments.highlight(f.read(), lexer, formatter)
+                    content = itertools.chain(
+                        [u'<style type="text/css"><!--\n%s\n--></style>' % css],
+                        [html])
+                    f.close()
+                except pygments.util.ClassNotFound:
+                    pass
+            except ImportError:
+                pass
         html = self.html_page(request, title, content)
         return werkzeug.Response(html, mimetype="text/html")
 
     def edit(self, request, title):
         if request.method == 'POST':
-            self.save(request, title)
+            if request.form.get('cancel'):
+                if title in self.storage:
+                    raise WikiRedirect(request.get_page_url(title))
+                else:
+                    raise WikiRedirect(request.get_page_url(self.front_page))
+            elif request.form.get('save'):
+                self.save(request, title)
         else:
             status = None
             if title not in self.storage:
@@ -515,10 +532,11 @@ class Wiki(object):
                 form = self.upload_form
             html = self.html_page(request, title, form(request, title))
             return werkzeug.Response(html, mimetype="text/html", status=status)
+        raise werkzeug.exceptions.Forbidden()
 
     def editor_form(self, request, title):
-        yield u"""<form action="" method="POST" class="editor"><div><textarea
-name="text" cols="80" rows="22">"""
+        yield u'<form action="" method="POST" class="editor"><div>'
+        yield u'<textarea name="text" cols="80" rows="22">'
         try:
             f = self.storage.open_page(title)
         except werkzeug.exceptions.NotFound:
@@ -528,7 +546,11 @@ name="text" cols="80" rows="22">"""
         yield u"""</textarea>"""
         yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape('comment')
         yield u'<label>Author <input name="author" value="%s"></label>' % werkzeug.escape(request.get_author())
-        yield u'<div class="buttons"><input type="submit" name="save" value="Save"></div></div></form>'
+        yield u'<div class="buttons">'
+        yield u'<input type="submit" name="save" value="Save">'
+        yield u'<input type="submit" name="cancel" value="Cancel">'
+        yield u'</div>'
+        yield u'</div></form>'
 
     def upload_form(self, request, title):
         yield u"""<form action="" method="POST" enctype="multipart/form-data">
@@ -573,7 +595,7 @@ value="%(comment)s"><input name="author" value="%(author)s"><div class="buttons"
         raise werkzeug.Forbidden()
 
     def favicon(self, request):
-        return werkzeug.Response(favicon, mimetype='image/x-icon')
+        return werkzeug.Response(self.favicon, mimetype='image/x-icon')
 
 
     def robots(self, request):

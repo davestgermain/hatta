@@ -1,6 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+"""
+Hatta Wiki is a wiki engine designed to be used with Mercurial repositories.
+It requires Mercurial and Werkzeug python modules.
+
+"""
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -1323,8 +1329,10 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         return response
 
 if __name__ == "__main__":
+    # You can change some internal config here.
     interface = ''
     port = 8080
-    application = Wiki().application
-    werkzeug.run_simple(interface, port, application, use_reloader=True,
-                        extra_files=[])
+    pages_path = 'docs'
+    cache_path = 'cache'
+    application = Wiki(pages_path, cache_path).application
+    werkzeug.run_simple(interface, port, application, use_reloader=True)

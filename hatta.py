@@ -1058,16 +1058,17 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         yield u'<textarea name="text" cols="80" rows="20">'
         try:
             f = self.storage.open_page(title)
+            comment = 'modified'
+            rev, old_date, old_author, old_comment = self.storage.page_meta(title)
+            if old_author == author:
+                comment = old_comment
         except werkzeug.exceptions.NotFound:
             f = []
+            comment = 'created'
         for part in f:
             yield werkzeug.escape(part)
         yield u"""</textarea>"""
         author = request.get_author()
-        comment = 'modified'
-        rev, old_date, old_author, old_comment = self.storage.page_meta(title)
-        if old_author == author:
-            comment = old_comment
         yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape(comment)
         yield u'<label>Author <input name="author" value="%s"></label>' % werkzeug.escape(request.get_author())
         yield u'<div class="buttons">'

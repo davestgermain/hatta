@@ -126,6 +126,15 @@ class WikiStorage(object):
         stamp = os.path.getmtime(self._file_path(title))
         return datetime.datetime.fromtimestamp(stamp)
 
+    def page_meta(self, title):
+        filectx = self._find_filectx(title)
+        rev = filectx.filerev()
+        date = datetime.datetime.fromtimestamp(filectx.date()[0])
+        author = unicode(filectx.user(), "utf-8",
+                         'replace').split('<')[0].strip()
+        comment = unicode(filectx.description(), "utf-8", 'replace')
+        return rev, date, author, comment
+
     def page_mime(self, title):
         file_path = self._file_path(title)
         mime, encoding = mimetypes.guess_type(file_path, strict=False)
@@ -934,7 +943,8 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
                       mime)]
         html = self.html_page(request, title, content)
         response = werkzeug.Response(html, mimetype="text/html")
-        date = self.storage.page_date(title)
+#        date = self.storage.page_date(title)
+        rev, date, author, comment = self.storage.page_meta(title)
         response.last_modified = date
         response.add_etag(u'%s/%s' % (title, date))
         response.make_conditional(request)
@@ -1044,7 +1054,12 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         for part in f:
             yield werkzeug.escape(part)
         yield u"""</textarea>"""
-        yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape('comment')
+        author = request.get_author()
+        comment = 'modified'
+        rev, old_date, old_author, old_comment = self.storage.page_meta(title)
+        if old_author == author:
+            comment = old_comment
+        yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape(comment)
         yield u'<label>Author <input name="author" value="%s"></label>' % werkzeug.escape(request.get_author())
         yield u'<div class="buttons">'
         yield u'<input type="submit" name="save" value="Save">'

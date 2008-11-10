@@ -783,11 +783,11 @@ div.snippet { font-size: 80%; color: #888a85 }
         for part in content:
             yield part
         if not page_title:
-            download = request.adapter.build(self.download, {'title': title})
+#            download = request.adapter.build(self.download, {'title': title})
             history = request.adapter.build(self.history, {'title': title})
             yield u'<div class="footer">'
             yield u'<a href="%s" class="edit">Edit</a> ' % edit
-            yield u'<a href="%s" class="download">Download</a> ' % download
+#            yield u'<a href="%s" class="download">Download</a> ' % download
             yield u'<a href="%s" class="history">History</a> ' % history
             yield u'</div>'
         yield u'</div></body></html>'

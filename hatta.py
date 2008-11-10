@@ -673,6 +673,9 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
             if score > 0:
                 yield score, self.titles[ident]
 
+class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin):
+    pass
+
 class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
     def __init__(self, wiki, adapter, environ, populate_request=True,
                  shallow=False):
@@ -942,11 +945,11 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
                    % (request.get_download_url(title), werkzeug.escape(title),
                       mime)]
         html = self.html_page(request, title, content)
-        response = werkzeug.Response(html, mimetype="text/html")
+        response = WikiResponse(html, mimetype="text/html")
 #        date = self.storage.page_date(title)
         rev, date, author, comment = self.storage.page_meta(title)
-        response.last_modified = date
-        response.add_etag(u'%s/%s' % (title, date))
+#        response.last_modified = date
+        response.add_etag(u'%s/%s' % (title, rev))
         response.make_conditional(request)
         return response
 
@@ -1090,9 +1093,10 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         if mime == 'text/x-wiki':
             mime = 'text/plain'
         f = self.storage.open_page(title)
-        response = werkzeug.Response(f, mimetype=mime, headers=headers)
-        date = self.storage.page_date(title)
-        response.add_etag(u'download/%s/%s' % (title, date))
+        response = WikiResponse(f, mimetype=mime, headers=headers)
+#        date = self.storage.page_date(title)
+        rev, date, author, comment = self.storage.page_meta(title)
+        response.add_etag(u'download/%s/%s' % (title, rev))
         response.last_modified = date
         response.make_conditional(request)
         return response

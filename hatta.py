@@ -1295,7 +1295,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
 
 
     def favicon(self, request):
-        return werkzeug.Response(self.favicon, mimetype='image/x-icon')
+        return werkzeug.Response(self.icon, mimetype='image/x-icon')
 
     def robots(self, request):
         robots = ('User-agent: *\r\n'

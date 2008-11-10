@@ -1056,6 +1056,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
     def editor_form(self, request, title):
         yield u'<form action="" method="POST" class="editor"><div>'
         yield u'<textarea name="text" cols="80" rows="20">'
+        author = request.get_author()
         try:
             f = self.storage.open_page(title)
             comment = 'modified'
@@ -1068,7 +1069,6 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         for part in f:
             yield werkzeug.escape(part)
         yield u"""</textarea>"""
-        author = request.get_author()
         yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape(comment)
         yield u'<label>Author <input name="author" value="%s"></label>' % werkzeug.escape(request.get_author())
         yield u'<div class="buttons">'

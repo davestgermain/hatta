@@ -18,6 +18,11 @@ import difflib
 
 import werkzeug
 
+def external_link(addr):
+    return (addr.startswith('http://')
+            or addr.startswith('https://')
+            or addr.startswith('ftp://'))
+
 class WikiStorage(object):
     def __init__(self, path):
         os.environ['HGENCODING'] = 'utf-8'
@@ -302,7 +307,11 @@ class WikiParser(object):
 
     def line_link(self, groups):
         target = groups['link_target']
-        text = groups.get('link_text') or target
+        text = groups.get('link_text')
+        if not text:
+            text = target
+            if '#' in text:
+                text, chunk = text.split('#', 1)
         match = self.image_re.match(text)
         if match:
             inside = self.line_image(match.groupdict())
@@ -459,7 +468,6 @@ un under ve until up upon us very via was wasn we well were what whatever when
 whence whenever where whereafter whereas whereby wherein whereupon wherever
 whether which while whither who whoever whole whom whose why will with within
 without would yet you your yours yourself yourselves""".split())
-
     stop_words_pl = frozenset(u"""a aby acz aczkolwiek albo ale ależ aż
 bardziej bardzo bez bo bowiem by byli bym być był była było były będzie będą
 cali cała cały co cokolwiek coś czasami czasem czemu czwarte czy czyli dla
@@ -486,14 +494,17 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
     def __init__(self, filename):
         self.filename = filename
         self.index_file = "%s.words" % self.filename
+        self.links_file = "%s.links" % self.filename
         self.title_file = "%s.titles" % self.filename
         self.index = shelve.open(self.index_file, protocol=2)
+        self.links = shelve.open(self.links_file, protocol=2)
         try:
             f = open(self.title_file, "rb")
             self.titles = pickle.load(f)
             f.close()
         except (IOError, EOFError):
             self.titles = []
+
 
     def split_text(self, text):
         for match in self.word_pattern.finditer(text):
@@ -522,7 +533,7 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
             count[word] = count.get(word, 0) + 1
         return count
 
-    def add(self, title, text):
+    def get_title_id(self, title):
         try:
             ident = self.titles.index(title)
         except ValueError:
@@ -537,6 +548,10 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
             f = open(self.title_file, "w+b")
             pickle.dump(self.titles, f, 2)
             f.close()
+        return ident
+
+    def add_words(self, title, text):
+        ident = self.get_title_id(title)
         words = self.count_words(self.filter_words(self.split_text(text)))
         for word, count in words.iteritems():
             encoded = word.encode("utf-8")
@@ -587,23 +602,31 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
                                   method='GET')
 
     def wiki_link(self, addr, label, class_='wiki'):
-        if (addr.startswith('http://') or addr.startswith('https://')
-            or addr.startswith('ftp://')):
+        if (external_link(addr)):
             return u'<a href="%s" class="external">%s</a>' % (
                 werkzeug.url_fix(addr), werkzeug.escape(label))
-        elif addr in self.wiki.storage:
-            return u'<a href="%s" class="%s">%s</a>' % (
-                self.get_page_url(addr), class_, werkzeug.escape(label))
+        if '#' in addr:
+            addr, chunk = addr.split('#', 1)
+            chunk = '#%s' % chunk
         else:
-            return u'<a href="%s" class="nonexistent">%s</a>' % (
-                self.get_page_url(addr), werkzeug.escape(label))
+            chunk = ''
+        if addr == u'':
+            return u'<a href="%s" class="%s">%s</a>' % (
+                chunk, class_, werkzeug.escape(label))
+        elif addr in self.wiki.storage:
+            return u'<a href="%s%s" class="%s">%s</a>' % (
+                self.get_page_url(addr), chunk, class_, werkzeug.escape(label))
+        else:
+            return u'<a href="%s%s" class="nonexistent">%s</a>' % (
+                self.get_page_url(addr), chunk, werkzeug.escape(label))
 
     def wiki_image(self, addr, alt, class_='wiki'):
-        if (addr.startswith('http://') or addr.startswith('https://')
-            or addr.startswith('ftp://')):
+        if (external_link(addr)):
             return u'<img src="%s" class="external" alt="%s">' % (
                 werkzeug.url_fix(addr), werkzeug.escape(alt))
-        elif addr in self.wiki.storage:
+        if '#' in addr:
+            addr, chunk = addr.split('#', 1)
+        if addr in self.wiki.storage:
             return u'<img src="%s" class="%s" alt="%s">' % (
                 self.get_download_url(addr), class_, werkzeug.escape(alt))
         else:
@@ -792,6 +815,36 @@ div.snippet { font-size: 80%; color: #888a85 }
             yield u'</div>'
         yield u'</div></body></html>'
 
+    def extract_links(self, title, text, parser):
+        class LinkExtractor(object):
+            def __init__(self):
+                self.links = []
+                self.images = []
+
+            def wiki_link(self, address, label=None, class_=None):
+                if external_link(address):
+                    return u''
+                if '#' in address:
+                    address, chunk = address.split('#', 1)
+                if address == u'':
+                    address = title
+                self.links.append(address)
+                return u''
+
+            def wiki_image(self, address, alt=None, class_=None):
+                if external_link(address):
+                    return u''
+                if '#' in address:
+                    address, chunk = address.split('#', 1)
+                self.images.append(address)
+                return u''
+
+            def empty(*args, **kw):
+                return u''
+
+        helper = LinkExtractor()
+        parser.parse(f, helper.wiki_link, helper.wiki_image, helper.empty)
+
     def view(self, request, title):
         if title not in self.storage:
             url = request.adapter.build(self.edit, {'title':title})
@@ -848,7 +901,7 @@ div.snippet { font-size: 80%; color: #888a85 }
                 if text is not None:
                     self.storage.save_text(title, text.encode('utf8'), author,
                                            comment)
-                    self.index.add(title, text)
+                    self.index.add_words(title, text)
                 else:
                     f = request.files['data'].stream
                     if f is not None:

@@ -1,12 +1,17 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import datetime
 import itertools
 import imghdr
 import mimetypes
 import os
 import re
+import shelve
 import tempfile
 import weakref
 import difflib
@@ -166,6 +171,12 @@ class WikiStorage(object):
                                      'replace').split('<')[0].strip()
                     comment = unicode(filectx.description(), "utf-8", 'replace')
                     yield title, rev, date, author, comment
+
+    def all_pages(self):
+        for filename in os.listdir(self.path):
+            if (os.path.isfile(os.path.join(self.path, filename))
+                and not filename.startswith('.')):
+                yield werkzeug.url_unquote(filename)
 
 class WikiParser(object):
     bullets_pat = ur"^\s*[*]+\s+"
@@ -405,6 +416,143 @@ class WikiParser(object):
                 yield part
 
 
+class WikiSearch(object):
+    stop_words_en = frozenset(u""" am ii iii per po re a about above across 
+after afterwards again against all almost alone along already also although
+always am among ain amongst amoungst amount an and another any aren anyhow
+anyone anything anyway anywhere are around as at back be became because become
+becomes becoming been before beforehand behind being below beside besides
+between beyond bill both bottom but by can cannot cant con could couldnt
+describe detail do done down due during each eg eight either eleven else etc
+elsewhere empty enough even ever every everyone everything everywhere except
+few fifteen fifty fill find fire first five for former formerly forty found
+four from front full further get give go had has hasnt have he hence her here
+hereafter hereby herein hereupon hers herself him himself his how however
+hundred i ie if in inc indeed interest into is it its itself keep last latter
+latterly least isn less made many may me meanwhile might mill mine more
+moreover most mostly move much must my myself name namely neither never
+nevertheless next nine no nobody none noone nor not nothing now nowhere of off
+often on once one only onto or other others otherwise our ours ourselves out
+over own per perhaps please pre put rather re same see seem seemed seeming
+seems serious several she should show side since sincere six sixty so some
+somehow someone something sometime sometimes somewhere still such take ten than
+that the their theirs them themselves then thence there thereafter thereby
+therefore therein thereupon these they thick thin third this those though three
+through throughout thru thus to together too toward towards twelve twenty two
+un under ve until up upon us very via was wasn we well were what whatever when
+whence whenever where whereafter whereas whereby wherein whereupon wherever
+whether which while whither who whoever whole whom whose why will with within
+without would yet you your yours yourself yourselves""".split())
+
+    stop_words_pl = frozenset(u"""a aby acz aczkolwiek albo ale ależ aż
+bardziej bardzo bez bo bowiem by byli bym być był była było były będzie będą
+cali cała cały co cokolwiek coś czasami czasem czemu czwarte czy czyli dla
+dlaczego dlatego do drugie drugiej dwa gdy gdyż gdzie gdziekolwiek gdzieś go i
+ich ile im inna inny innych itd itp iż ja jak jakaś jakichś jakiś jakiż jako
+jakoś jednak jednakże jego jej jemu jest jeszcze jeśli jeżeli już ją kiedy
+kilka kimś kto ktokolwiek ktoś która które którego której który których którym
+którzy lat lecz lub ma mi mimo między mnie mogą moim może możliwe można mu na
+nad nam nas naszego naszych nawet nic nich nie niech nigdy nim niż no o obok od
+około on ona ono oprócz oraz pan pana pani pierwsze piąte po pod podczas pomimo
+ponad ponieważ powinien powinna powinni powinno poza prawie przecież przed
+przede przez przy raz roku również się sobie sobą sposób swoje są ta tak taka
+taki takie także tam te tego tej ten teraz też to tobie toteż trzeba trzecie
+trzy tu twoim twoja twoje twym twój ty tych tylko tym u w we według wiele wielu
+więc wszyscy wszystkich wszystkie wszystkim wszystko właśnie z za zapewne
+zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
+    digits_pattern = re.compile(ur"""^[=+~-]?[\d,.:-]+\w?\w?%?$""", re.UNICODE)
+    split_pattern = re.compile(ur"""
+[A-ZĄÂÃĀÄÅÁÀĂĘÉÊĚËĒÈŚĆÇČŁÓÒÖŌÕÔŃŻŹŽÑÍÏĐÞÐÆŸ]
+[a-ząâãāäåáàăęéêěëēèśćçčłóòöōõôńżźžñíïđþðæÿ]+
+|\w+""", re.X|re.UNICODE)
+    word_pattern = re.compile(ur"""[-\w.@~+:$&%#]{2,}""", re.UNICODE)
+
+    def __init__(self, filename):
+        self.filename = filename
+        self.index_file = "%s.words" % self.filename
+        self.title_file = "%s.titles" % self.filename
+        self.index = shelve.open(self.index_file, protocol=2)
+        try:
+            f = open(self.title_file, "rb")
+            self.titles = pickle.load(f)
+            f.close()
+        except (IOError, EOFError):
+            self.titles = []
+
+    def split_text(self, text):
+        for match in self.word_pattern.finditer(text):
+            word = match.group(0).strip(u"-.@~+:$&")
+            yield word.lower()
+            parts = self.split_pattern.findall(word)
+            if len(parts) > 1:
+                for part in parts:
+                    yield part.lower()
+
+    def filter_words(self, words):
+        for word in words:
+            if not 1 < len(word) < 25:
+                continue
+            if word in self.stop_words_en:
+                continue
+            if word in self.stop_words_pl:
+                continue
+            if self.digits_pattern.match(word):
+                continue
+            yield word
+
+    def count_words(self, words):
+        count = {}
+        for word in words:
+            count[word] = count.get(word, 0) + 1
+        return count
+
+    def add(self, title, text):
+        try:
+            ident = self.titles.index(title)
+        except ValueError:
+            ident = None
+        if ident is not None:
+            for word, counts in self.index.iteritems():
+                if ident in counts:
+                    del counts[ident]
+        else:
+            ident = len(self.titles)
+            self.titles.append(title)
+            f = open(self.title_file, "w+b")
+            pickle.dump(self.titles, f, 2)
+            f.close()
+        words = self.count_words(self.filter_words(self.split_text(text)))
+        for word, count in words.iteritems():
+            encoded = word.encode("utf-8")
+            if encoded not in self.index:
+                stored = {}
+            else:
+                stored = self.index[encoded]
+            stored[ident] = count
+            self.index[encoded] = stored
+        self.index.sync()
+
+    def find(self, words):
+        first = words[0]
+        rest = words[1:]
+        try:
+            first_counts = self.index[first.encode("utf-8")]
+        except KeyError:
+            return
+        for ident, count in first_counts.iteritems():
+            score = count
+            for word in rest:
+                try:
+                    counts = self.index[word.encode("utf-8")]
+                except KeyError:
+                    return
+                if ident in counts:
+                    score += counts[ident]
+                else:
+                    score = 0
+            if score > 0:
+                yield score, self.titles[ident]
+
 class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
     def __init__(self, wiki, adapter, environ, populate_request=True,
                  shallow=False):
@@ -514,22 +662,27 @@ pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word;
 white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap;
 line-height: 1.2; color: #555753 }
 pre.diff div.orig { font-size: 75%; color: #babdb6 }
-pre.diff ins { font-weight: bold; background: #fcaf3e; color: #ce5c00; 
+b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e; color: #ce5c00; 
 text-decoration: none }
 pre.diff del { background: #eeeeec; color: #888a85; text-decoration: none }
 pre.diff div.change { border-left: 2px solid #fcaf3e }
 div.footer { border-top: solid 1px #babdb6; text-align: right }
 h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
 div.buttons { text-align: center }
-div.buttons input { font-weight: bold; font-size: 100%; background: #eee;
-border: solid 1px #babdb6; margin: 0.25em}
+input.button, div.buttons input { font-weight: bold; font-size: 100%;
+background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
 .editor textarea { width: 100%; display: block; font-size: 100%; 
 border: solid 1px #babdb6; }
 .editor label { display:block; text-align: right }
-.editor label input { font-size: 100%; border: solid 1px #babdb6; margin: 0.125em 0 }
+form.search input.search, .editor label input { font-size: 100%; 
+border: solid 1px #babdb6; margin: 0.125em 0 }
 .editor label.comment input  { width: 32em }
-a.logo { float: left }
-div.content { clear: left }"""
+a.logo { float: left; display: block; margin: 0.25em }
+div.header h1 { margin: 0; }
+div.content { clear: left }
+form.search { margin:0; text-align: right; font-size: 80% }
+div.snippet { font-size: 80%; color: #888a85 }
+"""
 
     favicon = ('\x00\x00\x01\x00\x01\x00\x10\x10\x10\x00\x01\x00\x04\x00(\x01'
 '\x00\x00\x16\x00\x00\x00(\x00\x00\x00\x10\x00\x00\x00 \x00\x00\x00\x01\x00\x04'
@@ -546,10 +699,12 @@ div.content { clear: left }"""
 '\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03'
 '\x00\x00\xe0\x07\x00\x00\xf8\x1f\x00\x00')
 
-    def __init__(self, path):
+    def __init__(self, path='docs/', cache='/tmp/'):
         self.path = os.path.abspath(path)
+        self.cache = os.path.abspath(cache)
         self.storage = WikiStorage(self.path)
         self.parser = WikiParser()
+        self.index = WikiSearch(os.path.join(self.cache, 'words'))
         self.url_map = werkzeug.routing.Map([
             werkzeug.routing.Rule('/', defaults={'title': self.front_page},
                                   endpoint=self.view,
@@ -575,6 +730,8 @@ div.content { clear: left }"""
                                   methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/robots.txt', endpoint=self.robots,
                                   methods=['GET']),
+            werkzeug.routing.Rule('/search', endpoint=self.search,
+                                  methods=['GET', 'POST']),
         ], converters={'title':WikiTitle})
 
     def html_page(self, request, title, content, page_title=u''):
@@ -600,6 +757,11 @@ div.content { clear: left }"""
             logo = request.get_download_url(self.logo_page)
             yield u'<a href="%s" class="logo"><img src="%s" alt="[%s]"></a>' % (
                 home, logo, werkzeug.escape(self.front_page))
+        search = request.adapter.build(self.search)
+        yield u'<form class="search" action="%s" method="GET"><div>' % search
+        yield u'<input name="q" class="search">'
+        yield u'<input class="button" type="submit" value="Search">'
+        yield u'</div></form>'
         yield u'<h1>%s</h1>' % werkzeug.escape(page_title or title)
         yield u'</div><div class="content">'
         for part in content:
@@ -662,6 +824,7 @@ div.content { clear: left }"""
                 if text is not None:
                     self.storage.save_text(title, text.encode('utf8'), author,
                                            comment)
+                    self.index.add(title, text)
                 else:
                     f = request.files['data'].stream
                     if f is not None:
@@ -724,7 +887,7 @@ div.content { clear: left }"""
 
     def editor_form(self, request, title):
         yield u'<form action="" method="POST" class="editor"><div>'
-        yield u'<textarea name="text" cols="80" rows="22">'
+        yield u'<textarea name="text" cols="80" rows="20">'
         try:
             f = self.storage.open_page(title)
         except werkzeug.exceptions.NotFound:
@@ -823,7 +986,7 @@ div.content { clear: left }"""
         from_page = self.storage.page_revision(title, from_rev)
         to_page = self.storage.page_revision(title, to_rev)
         content = self.html_page(request, title, itertools.chain(
-            [u'<p>Differences between revisions %d and %d of page %s.</p>' 
+            [u'<p>Differences between revisions %d and %d of page %s.</p>'
              % (from_rev, to_rev, request.wiki_link(title, title))],
             self.diff_content(from_page, to_page)),
             page_title=u'Diff for "%s"' % title)
@@ -879,9 +1042,53 @@ div.content { clear: left }"""
                        % werkzeug.escape(unicode(old_text, 'utf-8', 'replace')))
         yield u'</pre>'
 
+    def search(self, request):
+        query = request.values.get('q', u'')
+        words = tuple(self.index.filter_words(self.index.split_text(query)))
+        if not words:
+            content = self.page_index(request)
+            title = 'Page index'
+        else:
+            title = 'Searching for "%s"' % u" ".join(words)
+            content = self.page_search(request, words)
+        html = self.html_page(request, u'', content, page_title=title)
+        return werkzeug.Response(html, mimetype='text/html')
+
+    def page_index(self, request):
+        yield u'<p>Index of all pages.</p>'
+        yield u'<ul>'
+        for title in sorted(self.storage.all_pages()):
+            yield u'<li>%s</li>' % request.wiki_link(title, title)
+        yield u'</ul>'
+
+    def page_search(self, request, words):
+        result = sorted(self.index.find(words), key=lambda x:-x[0])
+        yield u'<p>%d page(s) containing all words:</p>' % len(result)
+        yield u'<ul>'
+        for score, title in result:
+            yield '<li><b>%s</b> (%d)<div class="snippet">%s</div></li>' % (
+                request.wiki_link(title, title),
+                score,
+                self.search_snippet(title, words))
+        yield u'</ul>'
+
+    def search_snippet(self, title, words):
+        text = unicode(self.storage.open_page(title).read(), "utf-8", "replace")
+        regexp = re.compile(u"|".join(re.escape(w) for w in words), re.U|re.I)
+        match = regexp.search(text)
+        if match is None:
+            return u""
+        position = match.start()
+        min_pos = max(position - 60, 0)
+        max_pos = min(position + 60, len(text))
+        snippet = werkzeug.escape(text[min_pos:max_pos])
+        html = regexp.sub(lambda m:u'<b class="highlight">%s</b>'
+                          % werkzeug.escape(m.group(0)), snippet)
+        return html
+
+
     def favicon(self, request):
         return werkzeug.Response(self.favicon, mimetype='image/x-icon')
-
 
     def robots(self, request):
         robots = ('User-agent: *\r\n'
@@ -906,6 +1113,6 @@ div.content { clear: left }"""
 if __name__ == "__main__":
     interface = ''
     port = 8080
-    application = Wiki("docs").application
+    application = Wiki().application
     werkzeug.run_simple(interface, port, application, use_reloader=True,
                         extra_files=[])

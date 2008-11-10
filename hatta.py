@@ -19,8 +19,7 @@ import difflib
 import werkzeug
 
 def external_link(addr):
-    return (addr.startswith('http://')
-            or addr.startswith('https://')
+    return (addr.startswith('http://') or addr.startswith('https://')
             or addr.startswith('ftp://'))
 
 class WikiStorage(object):
@@ -495,16 +494,17 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
         self.filename = filename
         self.index_file = "%s.words" % self.filename
         self.links_file = "%s.links" % self.filename
+        self.backlinks_file = "%s.back" % self.filename
         self.title_file = "%s.titles" % self.filename
         self.index = shelve.open(self.index_file, protocol=2)
         self.links = shelve.open(self.links_file, protocol=2)
+        self.backlinks = shelve.open(self.backlinks_file, protocol=2)
         try:
             f = open(self.title_file, "rb")
             self.titles = pickle.load(f)
             f.close()
         except (IOError, EOFError):
             self.titles = []
-
 
     def split_text(self, text):
         for match in self.word_pattern.finditer(text):
@@ -563,6 +563,63 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
             self.index[encoded] = stored
         self.index.sync()
 
+    def _extract_links(self, text, parser):
+        class LinkExtractor(object):
+            def __init__(self):
+                self.links = []
+                self.images = []
+
+            def wiki_link(self, addr, label=None, class_=None):
+                if external_link(addr):
+                    return u''
+                if '#' in addr:
+                    addr, chunk = addr.split('#', 1)
+                if addr == u'':
+                    return u''
+                self.links.append(addr)
+                return u''
+
+            def wiki_image(self, addr, alt=None, class_=None):
+                if external_link(addr):
+                    return u''
+                if '#' in addr:
+                    addr, chunk = addr.split('#', 1)
+                if addr == u'':
+                    return u''
+                self.images.append(addr)
+                return u''
+
+            def empty(*args, **kw):
+                return u''
+
+        helper = LinkExtractor()
+        lines = text.split('\n')
+        for part in parser.parse(lines, helper.wiki_link,
+                                 helper.wiki_image, helper.empty):
+            pass
+        return helper.links+helper.images
+
+    def add_links(self, title, text, parser):
+        links = self._extract_links(text, parser)
+        self.links[title.encode('utf-8', 'escape')] = links
+        self.links.sync()
+
+    def regenerate_backlinks(self):
+        for key in self.backlinks:
+            del self.backlinks[key]
+        for title, links in self.links.iteritems():
+            ident = self.get_title_id(title)
+            for link in links:
+                encoded = link.encode('utf-8', 'escape')
+                backlinks = self.backlinks.get(encoded, [])
+                backlinks.append(ident)
+                self.backlinks[encoded] = backlinks
+        self.backlinks.sync()
+
+    def page_backlinks(self, title):
+        for ident in self.backlinks[title.encode('utf-8', 'escape')]:
+            yield self.titles[ident]
+
     def find(self, words):
         first = words[0]
         rest = words[1:]
@@ -602,7 +659,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
                                   method='GET')
 
     def wiki_link(self, addr, label, class_='wiki'):
-        if (external_link(addr)):
+        if external_link(addr):
             return u'<a href="%s" class="external">%s</a>' % (
                 werkzeug.url_fix(addr), werkzeug.escape(label))
         if '#' in addr:
@@ -621,7 +678,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
                 self.get_page_url(addr), chunk, werkzeug.escape(label))
 
     def wiki_image(self, addr, alt, class_='wiki'):
-        if (external_link(addr)):
+        if external_link(addr):
             return u'<img src="%s" class="external" alt="%s">' % (
                 werkzeug.url_fix(addr), werkzeug.escape(alt))
         if '#' in addr:
@@ -771,6 +828,8 @@ div.snippet { font-size: 80%; color: #888a85 }
                                   methods=['GET']),
             werkzeug.routing.Rule('/search', endpoint=self.search,
                                   methods=['GET', 'POST']),
+            werkzeug.routing.Rule('/search/<title:title>', endpoint=self.backlinks,
+                                  methods=['GET', 'POST']),
         ], converters={'title':WikiTitle})
 
     def html_page(self, request, title, content, page_title=u''):
@@ -808,42 +867,15 @@ div.snippet { font-size: 80%; color: #888a85 }
         if not page_title:
 #            download = request.adapter.build(self.download, {'title': title})
             history = request.adapter.build(self.history, {'title': title})
+            backlinks = request.adapter.build(self.backlinks, {'title': title})
             yield u'<div class="footer">'
             yield u'<a href="%s" class="edit">Edit</a> ' % edit
 #            yield u'<a href="%s" class="download">Download</a> ' % download
             yield u'<a href="%s" class="history">History</a> ' % history
+            yield u'<a href="%s" class="history">Backlinks</a> ' % backlinks
             yield u'</div>'
         yield u'</div></body></html>'
 
-    def extract_links(self, title, text, parser):
-        class LinkExtractor(object):
-            def __init__(self):
-                self.links = []
-                self.images = []
-
-            def wiki_link(self, address, label=None, class_=None):
-                if external_link(address):
-                    return u''
-                if '#' in address:
-                    address, chunk = address.split('#', 1)
-                if address == u'':
-                    address = title
-                self.links.append(address)
-                return u''
-
-            def wiki_image(self, address, alt=None, class_=None):
-                if external_link(address):
-                    return u''
-                if '#' in address:
-                    address, chunk = address.split('#', 1)
-                self.images.append(address)
-                return u''
-
-            def empty(*args, **kw):
-                return u''
-
-        helper = LinkExtractor()
-        parser.parse(f, helper.wiki_link, helper.wiki_image, helper.empty)
 
     def view(self, request, title):
         if title not in self.storage:
@@ -899,9 +931,11 @@ div.snippet { font-size: 80%; color: #888a85 }
                 author = request.get_author()
                 text = request.form.get("text")
                 if text is not None:
-                    self.storage.save_text(title, text.encode('utf8'), author,
-                                           comment)
+                    data = text.encode('utf-8')
+                    self.storage.save_text(title, data, author, comment)
                     self.index.add_words(title, text)
+                    self.index.add_links(title, data, self.parser)
+                    self.index.regenerate_backlinks()
                 else:
                     f = request.files['data'].stream
                     if f is not None:
@@ -1155,6 +1189,20 @@ div.snippet { font-size: 80%; color: #888a85 }
         html = regexp.sub(lambda m:u'<b class="highlight">%s</b>'
                           % werkzeug.escape(m.group(0)), snippet)
         return html
+
+    def backlinks(self, request, title):
+        content = self.page_backlinks(request, title)
+        html = self.html_page(request, u'', content,
+                              page_title=u'Links to "%s"' % title)
+        return werkzeug.Response(html, mimetype='text/html')
+
+    def page_backlinks(self, request, title):
+        yield u'<p>Pages that contain a link to %s.</p>' % request.wiki_link(title, title)
+        yield u'<ul>'
+        for link in self.index.page_backlinks(title):
+            yield '<li>%s</li>' % request.wiki_link(link, link)
+        yield u'</ul>'
+
 
 
     def favicon(self, request):

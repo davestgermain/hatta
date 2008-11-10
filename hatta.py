@@ -498,6 +498,7 @@ class WikiRedirect(werkzeug.routing.RequestRedirect):
 class Wiki(object):
     front_page = 'Home'
     style_page = 'style.css'
+    logo_page = 'logo.png'
     default_style = u"""html { background: #fff; color: #2e3436; 
 font-family: sans-serif; font-size: 96% }
 body { margin: 1em auto; line-height: 1.3; width: 40em }
@@ -526,7 +527,9 @@ border: solid 1px #babdb6; margin: 0.25em}
 border: solid 1px #babdb6; }
 .editor label { display:block; text-align: right }
 .editor label input { font-size: 100%; border: solid 1px #babdb6; margin: 0.125em 0 }
-.editor label.comment input  { width: 32em }"""
+.editor label.comment input  { width: 32em }
+a.logo { float: left }
+div.content { clear: left }"""
 
     favicon = ('\x00\x00\x01\x00\x01\x00\x10\x10\x10\x00\x01\x00\x04\x00(\x01'
 '\x00\x00\x16\x00\x00\x00(\x00\x00\x00\x10\x00\x00\x00 \x00\x00\x00\x01\x00\x04'
@@ -574,17 +577,16 @@ border: solid 1px #babdb6; }
                                   methods=['GET']),
         ], converters={'title':WikiTitle})
 
-    def html_page(self, request, title, content):
+    def html_page(self, request, title, content, page_title=u''):
         rss = request.adapter.build(self.rss)
         icon = request.adapter.build(self.favicon)
-        edit = request.adapter.build(self.edit, {'title': title})
-        download = request.adapter.build(self.download, {'title': title})
-        history = request.adapter.build(self.history, {'title': title})
         yield (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
                '"http://www.w3.org/TR/html4/strict.dtd">')
-        yield u'<html><head><title>%s</title>' % werkzeug.escape(title)
+        yield u'<html><head><title>%s</title>' % werkzeug.escape(page_title or title)
         yield u'<link rel="shortcut icon" type="image/x-icon" href="%s">' % icon
-        yield u'<link rel="alternate" type="application/wiki" href="%s">' % edit
+        if not page_title:
+            edit = request.adapter.build(self.edit, {'title': title})
+            yield u'<link rel="alternate" type="application/wiki" href="%s">' % edit
         yield (u'<link rel="alternate" type="application/rss+xml" '
                u'title="Recent Changes" href="%s">' % rss)
         if self.style_page in self.storage:
@@ -592,13 +594,24 @@ border: solid 1px #babdb6; }
             yield u'<link rel="stylesheet" type="text/css" href="%s">' % css
         else:
             yield u'<style type="text/css">%s</style>' % self.default_style
-        yield u'</head><body><h1>%s</h1>' % werkzeug.escape(title)
+        yield u'</head><body><div class="header">'
+        if self.logo_page in self.storage:
+            home = request.get_page_url(self.front_page)
+            logo = request.get_download_url(self.logo_page)
+            yield u'<a href="%s" class="logo"><img src="%s" alt="[%s]"></a>' % (
+                home, logo, werkzeug.escape(self.front_page))
+        yield u'<h1>%s</h1>' % werkzeug.escape(page_title or title)
+        yield u'</div><div class="content">'
         for part in content:
             yield part
-        yield u'<div class="footer">'
-        yield u'<a href="%s" class="edit">Edit</a> ' % edit
-        yield u'<a href="%s" class="download">Download</a> ' % download
-        yield u'<a href="%s" class="history">History</a> ' % history
+        if not page_title:
+            download = request.adapter.build(self.download, {'title': title})
+            history = request.adapter.build(self.history, {'title': title})
+            yield u'<div class="footer">'
+            yield u'<a href="%s" class="edit">Edit</a> ' % edit
+            yield u'<a href="%s" class="download">Download</a> ' % download
+            yield u'<a href="%s" class="history">History</a> ' % history
+            yield u'</div>'
         yield u'</div></body></html>'
 
     def view(self, request, title):
@@ -631,7 +644,8 @@ border: solid 1px #babdb6; }
             u'<pre>%s</pre>'
                 % werkzeug.escape(unicode(data, 'utf-8', 'replace')),
         ]
-        html = self.html_page(request, title, content)
+        html = self.html_page(request, title, content,
+                              page_title=u'Revision of "%s"' % title)
         response = werkzeug.Response(html, mimetype="text/html")
         return response
 
@@ -671,7 +685,8 @@ border: solid 1px #babdb6; }
                 form = self.editor_form
             else:
                 form = self.upload_form
-            html = self.html_page(request, title, form(request, title))
+            html = self.html_page(request, title, form(request, title),
+                                  page_title=u'Editing "%s"' % title)
             return werkzeug.Response(html, mimetype="text/html", status=status)
         raise werkzeug.exceptions.Forbidden()
 
@@ -757,7 +772,8 @@ border: solid 1px #babdb6; }
 
     def history(self, request, title):
         content = self.html_page(request, title,
-                                 self.history_list(request, title))
+                                 self.history_list(request, title),
+                                 page_title=u'History of "%s"' % title)
         response = werkzeug.Response(content, mimetype='text/html')
         return response
 
@@ -780,7 +796,8 @@ border: solid 1px #babdb6; }
         yield u'</ul>'
 
     def recent_changes(self, request):
-        content = self.html_page(request, '', self.changes_list(request))
+        content = self.html_page(request, '', self.changes_list(request),
+                                 page_title=u'Recent changes')
         response = werkzeug.Response(content, mimetype='text/html')
         return response
 
@@ -808,7 +825,8 @@ border: solid 1px #babdb6; }
         content = self.html_page(request, title, itertools.chain(
             [u'<p>Differences between revisions %d and %d of page %s.</p>' 
              % (from_rev, to_rev, request.wiki_link(title, title))],
-            self.diff_content(from_page, to_page)))
+            self.diff_content(from_page, to_page)),
+            page_title=u'Diff for "%s"' % title)
         response = werkzeug.Response(content, mimetype='text/html')
         return response
 

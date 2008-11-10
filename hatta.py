@@ -824,12 +824,14 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
 '\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03'
 '\x00\x00\xe0\x07\x00\x00\xf8\x1f\x00\x00')
 
-    def __init__(self, path='docs/', cache='/tmp/'):
+    def __init__(self, path='docs/', cache='cache/'):
         self.path = os.path.abspath(path)
         self.cache = os.path.abspath(cache)
+        if not os.path.isdir(self.cache):
+            os.makedirs(self.cache)
         self.storage = WikiStorage(self.path)
         self.parser = WikiParser()
-        self.index = WikiSearch(os.path.join(self.cache, 'words'))
+        self.index = WikiSearch(os.path.join(self.cache, 'index'))
         self.url_map = werkzeug.routing.Map([
             werkzeug.routing.Rule('/', defaults={'title': self.front_page},
                                   endpoint=self.view,

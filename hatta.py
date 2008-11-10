@@ -9,6 +9,7 @@ import os
 import re
 import tempfile
 import weakref
+import difflib
 
 import werkzeug
 
@@ -112,6 +113,59 @@ class WikiStorage(object):
         if mime is None:
             mime = 'text/x-wiki'
         return mime
+
+    def _find_filectx(self, title):
+        repo_file = self._title_to_file(title)
+        changectx = self.repo.changectx()
+        stack = [changectx]
+        while repo_file not in changectx:
+            if not stack:
+                return None
+            changectx = stack.pop()
+            for parent in changectx.parents():
+                if parent != changectx:
+                    stack.append(parent)
+        return changectx[repo_file]
+
+    def page_history(self, title):
+        filectx_tip = self._find_filectx(title)
+        if filectx_tip is None:
+            return
+        maxrev = filectx_tip.filerev()
+        minrev = 0
+        for rev in range(maxrev, minrev-1, -1):
+            filectx = filectx_tip.filectx(rev)
+            date = datetime.datetime.fromtimestamp(filectx.date()[0])
+            author = unicode(filectx.user(), "utf-8",
+                             'replace').split('<')[0].strip()
+            comment = unicode(filectx.description(), "utf-8", 'replace')
+            yield rev, date, author, comment
+
+    def page_revision(self, title, rev):
+        filectx_tip = self._find_filectx(title)
+        if filectx_tip is None:
+            raise werkzeug.exceptions.NotFound()
+        try:
+            return filectx_tip.filectx(rev).data()
+        except IndexError:
+            raise werkzeug.exceptions.NotFound()
+
+    def history(self):
+        changectx = self.repo.changectx()
+        maxrev = changectx.rev()
+        minrev = 0
+        for wiki_rev in range(maxrev, minrev-1, -1):
+            change = self.repo.changectx(wiki_rev)
+            for repo_file in change.files():
+                if repo_file.startswith(self.repo_prefix):
+                    filectx = change[repo_file]
+                    title = self._file_to_title(repo_file)
+                    rev = filectx.filerev()
+                    date = datetime.datetime.fromtimestamp(filectx.date()[0])
+                    author = unicode(filectx.user(), "utf-8",
+                                     'replace').split('<')[0].strip()
+                    comment = unicode(filectx.description(), "utf-8", 'replace')
+                    yield title, rev, date, author, comment
 
 class WikiParser(object):
     bullets_pat = ur"^\s*[*]+\s+"
@@ -455,6 +509,14 @@ a.external { color: #3465a4; text-decoration: underline }
 a.external:visited { color: #75507b }
 a img { border: none }
 img.smiley { vertical-align: middle }
+pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word; 
+white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap;
+line-height: 1.2; color: #555753 }
+pre.diff div.orig { font-size: 75%; color: #babdb6 }
+pre.diff ins { font-weight: bold; background: #fcaf3e; color: #ce5c00; 
+text-decoration: none }
+pre.diff del { background: #eeeeec; color: #888a85; text-decoration: none }
+pre.diff div.change { border-left: 2px solid #fcaf3e }
 div.footer { border-top: solid 1px #babdb6; text-align: right }
 h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
 div.buttons { text-align: center }
@@ -491,6 +553,14 @@ border: solid 1px #babdb6; }
                                   methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/edit/<title:title>', endpoint=self.edit,
                                   methods=['GET', 'POST']),
+            werkzeug.routing.Rule('/history/<title:title>', endpoint=self.history,
+                                  methods=['GET', 'HEAD', 'POST']),
+            werkzeug.routing.Rule('/history/', endpoint=self.recent_changes,
+                                  methods=['GET', 'HEAD', 'POST']),
+            werkzeug.routing.Rule('/history/<title:title>/<int:rev>',
+                                  endpoint=self.revision, methods=['GET']),
+            werkzeug.routing.Rule('/history/<title:title>/<int:from_rev>:<int:to_rev>',
+                                  endpoint=self.diff, methods=['GET']),
             werkzeug.routing.Rule('/download/<title:title>',
                                   endpoint=self.download,
                                   methods=['GET', 'HEAD']),
@@ -509,6 +579,7 @@ border: solid 1px #babdb6; }
         icon = request.adapter.build(self.favicon)
         edit = request.adapter.build(self.edit, {'title': title})
         download = request.adapter.build(self.download, {'title': title})
+        history = request.adapter.build(self.history, {'title': title})
         yield (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
                '"http://www.w3.org/TR/html4/strict.dtd">')
         yield u'<html><head><title>%s</title>' % werkzeug.escape(title)
@@ -526,7 +597,8 @@ border: solid 1px #babdb6; }
             yield part
         yield u'<div class="footer">'
         yield u'<a href="%s" class="edit">Edit</a> ' % edit
-        yield u'<a href="%s" class="download">Download</a>' % download
+        yield u'<a href="%s" class="download">Download</a> ' % download
+        yield u'<a href="%s" class="history">History</a> ' % history
         yield u'</div></body></html>'
 
     def view(self, request, title):
@@ -551,6 +623,18 @@ border: solid 1px #babdb6; }
         response.make_conditional(request)
         return response
 
+    def revision(self, request, title, rev):
+        data = self.storage.page_revision(title, rev)
+        content = [
+            u'<p>Content of revision %d of page %s:</p>'
+                % (rev, request.wiki_link(title, title)),
+            u'<pre>%s</pre>'
+                % werkzeug.escape(unicode(data, 'utf-8', 'replace')),
+        ]
+        html = self.html_page(request, title, content)
+        response = werkzeug.Response(html, mimetype="text/html")
+        return response
+
     def edit(self, request, title):
         if request.method == 'POST':
             url = request.get_page_url(title)
@@ -558,7 +642,21 @@ border: solid 1px #babdb6; }
                 if title not in self.storage:
                     url = request.get_page_url(self.front_page)
             elif request.form.get('save'):
-                self.save(request, title)
+                comment = request.form.get("comment", "")
+                author = request.get_author()
+                text = request.form.get("text")
+                if text is not None:
+                    self.storage.save_text(title, text.encode('utf8'), author,
+                                           comment)
+                else:
+                    f = request.files['data'].stream
+                    if f is not None:
+                        try:
+                            self.storage.save_file(title, f.tmpname, author,
+                                                   comment)
+                        except AttributeError:
+                            self.storage.save_text(title, f.read(), author,
+                                                   comment)
             response = werkzeug.routing.redirect(url, code=303)
             response.set_cookie('author',
                                 werkzeug.url_quote(request.get_author()),
@@ -628,13 +726,14 @@ border: solid 1px #babdb6; }
         yield u'</div></form>'
 
     def upload_form(self, request, title):
-        yield u"""<form action="" method="POST" enctype="multipart/form-data">
-<div><input type="file" name="data"><input name="comment"
-value="%(comment)s"><input name="author" value="%(author)s"><div class="buttons"
-><input type="submit" name="save" value="Save"></div></div></form>""" % {
-    'comment': werkzeug.escape(u'comment'),
-    'author': werkzeug.escape(request.get_author()),
-}
+        yield u'<form action="" method="POST" enctype="multipart/form-data">'
+        yield u'<div><input type="file" name="data">'
+        yield u'<input name="comment" value="%s">' % werkzeug.escape(u'comment')
+        yield u'<input name="author" value="%s">' % werkzeug.escape(request.get_author())
+        yield u'<div class="buttons">'
+        yield u'<input type="submit" name="save" value="Save">'
+        yield u'<input type="submit" name="cancel" value="Cancel">'
+        yield u'</div></div></form>'
 
     def rss(self, request):
         return werkzeug.Response('edit', mimetype="text/plain")
@@ -646,6 +745,8 @@ value="%(comment)s"><input name="author" value="%(author)s"><div class="buttons"
             'Allow': 'GET, HEAD',
         }
         mime = self.storage.page_mime(title)
+        if mime == 'text/x-wiki':
+            mime = 'text/plain'
         f = self.storage.open_page(title)
         response = werkzeug.Response(f, mimetype=mime, headers=headers)
         date = self.storage.page_date(title)
@@ -654,19 +755,111 @@ value="%(comment)s"><input name="author" value="%(author)s"><div class="buttons"
         response.make_conditional(request)
         return response
 
-    def save(self, request, title):
-        comment = request.form.get("comment", "")
-        author = request.get_author()
-        text = request.form.get("text")
-        if text is not None:
-            self.storage.save_text(title, text.encode('utf8'), author, comment)
-        else:
-            f = request.files['data'].stream
-            if f is not None:
-                try:
-                    self.storage.save_file(title, f.tmpname, author, comment)
-                except AttributeError:
-                    self.storage.save_text(title, f.read(), author, comment)
+    def history(self, request, title):
+        content = self.html_page(request, title,
+                                 self.history_list(request, title))
+        response = werkzeug.Response(content, mimetype='text/html')
+        return response
+
+    def history_list(self, request, title):
+        yield '<p>History of changes for %s.</p>' % request.wiki_link(title, title)
+        yield u'<ul>'
+        for rev, date, author, comment in self.storage.page_history(title):
+            if rev > 0:
+                url = request.adapter.build(self.diff, {
+                    'title': title, 'from_rev': rev-1, 'to_rev': rev})
+            else:
+                url = request.adapter.build(self.revision, {
+                    'title': title, 'rev': rev})
+            yield u'<li>'
+            yield u'<a href="%s">%s</a> . . . . ' % (url,
+                                                     date.strftime('%F %H:%M'))
+            yield request.wiki_link(author, author)
+            yield u'<div class="comment">%s</div>' % werkzeug.escape(comment)
+            yield u'</li>'
+        yield u'</ul>'
+
+    def recent_changes(self, request):
+        content = self.html_page(request, '', self.changes_list(request))
+        response = werkzeug.Response(content, mimetype='text/html')
+        return response
+
+    def changes_list(self, request):
+        yield u'<ul>'
+        for title, rev, date, author, comment in self.storage.history():
+            if rev > 0:
+                url = request.adapter.build(self.diff, {
+                    'title': title, 'from_rev': rev-1, 'to_rev': rev})
+            else:
+                url = request.adapter.build(self.revision, {
+                    'title': title, 'rev': rev})
+            yield u'<li>'
+            yield u'<a href="%s">%s</a> ' % (url, date.strftime('%F %H:%M'))
+            yield request.wiki_link(title, title)
+            yield u' . . . . '
+            yield request.wiki_link(author, author)
+            yield u'<div class="comment">%s</div>' % werkzeug.escape(comment)
+            yield u'</li>'
+        yield u'</ul>'
+
+    def diff(self, request, title, from_rev, to_rev):
+        from_page = self.storage.page_revision(title, from_rev)
+        to_page = self.storage.page_revision(title, to_rev)
+        content = self.html_page(request, title, itertools.chain(
+            [u'<p>Differences between revisions %d and %d of page %s.</p>' 
+             % (from_rev, to_rev, request.wiki_link(title, title))],
+            self.diff_content(from_page, to_page)))
+        response = werkzeug.Response(content, mimetype='text/html')
+        return response
+
+    def diff_content(self, data, other_data):
+        diff = difflib._mdiff(data.split('\n'), other_data.split('\n'))
+        stack = []
+        def infiniter(iterator):
+            for i in iterator:
+                yield i
+            while True:
+                yield None
+        mark_re = re.compile('\0[-+^]([^\1\0]*)\1|([^\0\1])')
+        yield u'<pre class="diff">'
+        for old_line, new_line, changed in diff:
+            old_no, old_text = old_line
+            new_no, new_text = new_line
+            if changed:
+                yield u'<div class="change">'
+                old_iter = infiniter(mark_re.finditer(old_text))
+                new_iter = infiniter(mark_re.finditer(new_text))
+                old = old_iter.next()
+                new = new_iter.next()
+                buff = u''
+                while old or new:
+                    while old and old.group(1):
+                        if buff:
+                            yield werkzeug.escape(buff)
+                            buff = u''
+                        yield (u'<del>%s</del>'
+                               % werkzeug.escape(unicode(old.group(1),
+                                                         'utf-8', 'replace')))
+                        old = old_iter.next()
+                    while new and new.group(1):
+                        if buff:
+                            yield werkzeug.escape(buff)
+                            buff = u''
+                        yield (u'<ins>%s</ins>'
+                               % werkzeug.escape(unicode(new.group(1),
+                                                         'utf-8', 'replace')))
+                        new = new_iter.next()
+                    if new:
+                        buff += unicode(new.group(2), 'utf-8', 'replace')
+                    old = old_iter.next()
+                    new = new_iter.next()
+                if buff:
+                    yield werkzeug.escape(buff)
+                yield u'</div>'
+            else:
+                yield (u'<div class="orig">%s</div>'
+                       % werkzeug.escape(unicode(old_text, 'utf-8', 'replace')))
+        yield u'</pre>'
 
     def favicon(self, request):
         return werkzeug.Response(self.favicon, mimetype='image/x-icon')
@@ -692,9 +885,9 @@ value="%(comment)s"><input name="author" value="%(author)s"><div class="buttons"
             request.cleanup()
         return response
 
-application = Wiki("docs").application
 if __name__ == "__main__":
     interface = ''
     port = 8080
+    application = Wiki("docs").application
     werkzeug.run_simple(interface, port, application, use_reloader=True,
                         extra_files=[])

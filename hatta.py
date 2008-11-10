@@ -17,6 +17,11 @@ import weakref
 import difflib
 
 import werkzeug
+os.environ['HGENCODING'] = 'utf-8'
+os.environ["HGMERGE"] = "internal:fail"
+import mercurial.hg
+import mercurial.ui
+import mercurial.revlog
 
 def external_link(addr):
     return (addr.startswith('http://') or addr.startswith('https://')
@@ -24,11 +29,6 @@ def external_link(addr):
 
 class WikiStorage(object):
     def __init__(self, path):
-        os.environ['HGENCODING'] = 'utf-8'
-        os.environ["HGMERGE"] = "internal:fail"
-        import mercurial.hg
-        import mercurial.ui
-
         self.path = path
         self._lockref = None
         if not os.path.exists(self.path):
@@ -82,7 +82,7 @@ class WikiStorage(object):
             if repo_file not in self.repo.changectx():
                 self.repo.add([repo_file])
             self.repo.commit(files=[repo_file], text=text, user=user,
-                             force=True)
+                             force=True, empty_ok=True)
         finally:
             del lock
 
@@ -98,6 +98,23 @@ class WikiStorage(object):
                 os.unlink(file_name)
             except OSError:
                 pass
+
+    def delete_page(self, title, author=u'', comment=u''):
+        user = author.encode('utf-8') or 'anon'
+        text = comment.encode('utf-8') or 'deleted'
+        repo_file = self._title_to_file(title)
+        file_path = self._file_path(title)
+        lock = self._lock()
+        try:
+            try:
+                os.unlink(file_path)
+            except OSError:
+                pass
+            self.repo.remove([repo_file])
+            self.repo.commit(files=[repo_file], text=text, user=user,
+                             force=True, empty_ok=True)
+        finally:
+            del lock
 
     def open_page(self, title):
         try:
@@ -165,16 +182,19 @@ class WikiStorage(object):
         minrev = 0
         for wiki_rev in range(maxrev, minrev-1, -1):
             change = self.repo.changectx(wiki_rev)
+            date = datetime.datetime.fromtimestamp(change.date()[0])
+            author = unicode(change.user(), "utf-8",
+                             'replace').split('<')[0].strip()
+            comment = unicode(change.description(), "utf-8", 'replace')
             for repo_file in change.files():
                 if repo_file.startswith(self.repo_prefix):
-                    filectx = change[repo_file]
                     title = self._file_to_title(repo_file)
-                    rev = filectx.filerev()
-                    date = datetime.datetime.fromtimestamp(filectx.date()[0])
-                    author = unicode(filectx.user(), "utf-8",
-                                     'replace').split('<')[0].strip()
-                    comment = unicode(filectx.description(), "utf-8", 'replace')
+                    try:
+                        rev = change[repo_file].filerev()
+                    except mercurial.revlog.LookupError:
+                        rev = -1
                     yield title, rev, date, author, comment
+
 
     def all_pages(self):
         for filename in os.listdir(self.path):
@@ -620,6 +640,9 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
         for ident in self.backlinks[title.encode('utf-8', 'escape')]:
             yield self.titles[ident]
 
+    def page_links(self, title):
+        return self.links.get(title.encode('utf-8', 'escape'), [])
+
     def find(self, words):
         first = words[0]
         rest = words[1:]
@@ -743,6 +766,8 @@ class Wiki(object):
     front_page = 'Home'
     style_page = 'style.css'
     logo_page = 'logo.png'
+    menu_page = 'Menu'
+    locked_page = 'Locked'
     default_style = u"""html { background: #fff; color: #2e3436; 
 font-family: sans-serif; font-size: 96% }
 body { margin: 1em auto; line-height: 1.3; width: 40em }
@@ -767,6 +792,7 @@ h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
 div.buttons { text-align: center }
 input.button, div.buttons input { font-weight: bold; font-size: 100%;
 background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
+.history input.button { font-size: 75% }
 .editor textarea { width: 100%; display: block; font-size: 100%; 
 border: solid 1px #babdb6; }
 .editor label { display:block; text-align: right }
@@ -778,6 +804,9 @@ div.header h1 { margin: 0; }
 div.content { clear: left }
 form.search { margin:0; text-align: right; font-size: 80% }
 div.snippet { font-size: 80%; color: #888a85 }
+div.header div.menu { float: right }
+div.header div.menu a.current { color: #000 }
+hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #babdb6; clear: both }
 """
 
     favicon = ('\x00\x00\x01\x00\x01\x00\x10\x10\x10\x00\x01\x00\x04\x00(\x01'
@@ -806,11 +835,15 @@ div.snippet { font-size: 80%; color: #888a85 }
                                   endpoint=self.view,
                                   methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/edit/<title:title>', endpoint=self.edit,
-                                  methods=['GET', 'POST']),
+                                  methods=['GET']),
+            werkzeug.routing.Rule('/edit/<title:title>', endpoint=self.save,
+                                  methods=['POST']),
             werkzeug.routing.Rule('/history/<title:title>', endpoint=self.history,
-                                  methods=['GET', 'HEAD', 'POST']),
+                                  methods=['GET', 'HEAD']),
+            werkzeug.routing.Rule('/history/<title:title>', endpoint=self.undo,
+                                  methods=['POST']),
             werkzeug.routing.Rule('/history/', endpoint=self.recent_changes,
-                                  methods=['GET', 'HEAD', 'POST']),
+                                  methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/history/<title:title>/<int:rev>',
                                   endpoint=self.revision, methods=['GET']),
             werkzeug.routing.Rule('/history/<title:title>/<int:from_rev>:<int:to_rev>',
@@ -860,6 +893,18 @@ div.snippet { font-size: 80%; color: #888a85 }
         yield u'<input name="q" class="search">'
         yield u'<input class="button" type="submit" value="Search">'
         yield u'</div></form>'
+        if self.menu_page in self.storage:
+            menu = self.index.page_links(self.menu_page)
+            if menu:
+                yield u'<div class="menu">'
+                for link in menu:
+                    if link == title:
+                        css = u' class="current"'
+                    else:
+                        css = u''
+                    yield u'<a href="%s"%s>%s</a> ' % (
+                        request.get_page_url(link), css, werkzeug.escape(link))
+                yield u'</div>'
         yield u'<h1>%s</h1>' % werkzeug.escape(page_title or title)
         yield u'</div><div class="content">'
         for part in content:
@@ -920,49 +965,61 @@ div.snippet { font-size: 80%; color: #888a85 }
         response = werkzeug.Response(html, mimetype="text/html")
         return response
 
-    def edit(self, request, title):
-        if request.method == 'POST':
-            url = request.get_page_url(title)
-            if request.form.get('cancel'):
-                if title not in self.storage:
-                    url = request.get_page_url(self.front_page)
-            elif request.form.get('save'):
-                comment = request.form.get("comment", "")
-                author = request.get_author()
-                text = request.form.get("text")
-                if text is not None:
-                    data = text.encode('utf-8')
-                    self.storage.save_text(title, data, author, comment)
-                    self.index.add_words(title, text)
-                    self.index.add_links(title, data, self.parser)
-                    self.index.regenerate_backlinks()
-                else:
-                    f = request.files['data'].stream
-                    if f is not None:
-                        try:
-                            self.storage.save_file(title, f.tmpname, author,
-                                                   comment)
-                        except AttributeError:
-                            self.storage.save_text(title, f.read(), author,
-                                                   comment)
-            response = werkzeug.routing.redirect(url, code=303)
-            response.set_cookie('author',
-                                werkzeug.url_quote(request.get_author()),
-                                max_age=604800)
-            return response
-        else:
+    def check_lock(self, title):
+        if self.locked_page in self.storage:
+            if title in self.index.page_links(self.locked_page):
+                raise werkzeug.exceptions.Forbidden()
+
+    def save(self, request, title):
+        self.check_lock(title)
+        url = request.get_page_url(title)
+        if request.form.get('cancel'):
             if title not in self.storage:
-                status = '404 Not found'
+                url = request.get_page_url(self.front_page)
+        elif request.form.get('save'):
+            comment = request.form.get("comment", "")
+            author = request.get_author()
+            text = request.form.get("text")
+            if text is not None:
+                data = text.encode('utf-8')
+                self.index.add_links(title, data, self.parser)
+                if title in self.index.page_links(self.locked_page):
+                    raise werkzeug.exceptions.Forbidden()
+                if text.strip() == '':
+                    self.storage.delete_page(title, author, comment)
+                    url = request.get_page_url(self.front_page)
+                else:
+                    self.storage.save_text(title, data, author, comment)
+                self.index.add_words(title, text)
+                self.index.regenerate_backlinks()
             else:
-                status = None
-            if self.storage.page_mime(title).startswith('text/'):
-                form = self.editor_form
-            else:
-                form = self.upload_form
-            html = self.html_page(request, title, form(request, title),
-                                  page_title=u'Editing "%s"' % title)
-            return werkzeug.Response(html, mimetype="text/html", status=status)
-        raise werkzeug.exceptions.Forbidden()
+                f = request.files['data'].stream
+                if f is not None:
+                    try:
+                        self.storage.save_file(title, f.tmpname, author,
+                                               comment)
+                    except AttributeError:
+                        self.storage.save_text(title, f.read(), author,
+                                               comment)
+        response = werkzeug.routing.redirect(url, code=303)
+        response.set_cookie('author',
+                            werkzeug.url_quote(request.get_author()),
+                            max_age=604800)
+        return response
+
+    def edit(self, request, title):
+        self.check_lock(title)
+        if title not in self.storage:
+            status = '404 Not found'
+        else:
+            status = None
+        if self.storage.page_mime(title).startswith('text/'):
+            form = self.editor_form
+        else:
+            form = self.upload_form
+        html = self.html_page(request, title, form(request, title),
+                              page_title=u'Editing "%s"' % title)
+        return werkzeug.Response(html, mimetype="text/html", status=status)
 
     def highlight(self, text, mime=None, syntax=None):
         try:
@@ -1037,6 +1094,31 @@ div.snippet { font-size: 80%; color: #888a85 }
         response.make_conditional(request)
         return response
 
+    def undo(self, request, title):
+        self.check_lock(title)
+        rev = None
+        for key in request.form:
+            try:
+                rev = int(key)
+            except ValueError:
+                pass
+        author = request.get_author()
+        if rev is not None:
+            if rev == 0:
+                comment = u'Delete page %s' % title
+                data = ''
+                self.storage.delete_page(title, author, comment)
+            else:
+                comment = u'Undo of change %d of page %s' % (rev, title)
+                data = self.storage.page_revision(title, rev-1)
+                self.storage.save_text(title, data, author, comment)
+            self.index.add_words(title, data)
+            self.index.add_links(title, data, self.parser)
+            self.index.regenerate_backlinks()
+        url = request.adapter.build(self.history, {'title': title},
+                                    method='GET')
+        return werkzeug.redirect(url, 303)
+
     def history(self, request, title):
         content = self.html_page(request, title,
                                  self.history_list(request, title),
@@ -1046,7 +1128,7 @@ div.snippet { font-size: 80%; color: #888a85 }
 
     def history_list(self, request, title):
         yield '<p>History of changes for %s.</p>' % request.wiki_link(title, title)
-        yield u'<ul>'
+        yield u'<form action="" method="POST"><ul class="history">'
         for rev, date, author, comment in self.storage.page_history(title):
             if rev > 0:
                 url = request.adapter.build(self.diff, {
@@ -1055,15 +1137,17 @@ div.snippet { font-size: 80%; color: #888a85 }
                 url = request.adapter.build(self.revision, {
                     'title': title, 'rev': rev})
             yield u'<li>'
-            yield u'<a href="%s">%s</a> . . . . ' % (url,
-                                                     date.strftime('%F %H:%M'))
+            yield u'<a href="%s">%s</a> ' % (url, date.strftime('%F %H:%M'))
+            yield u'<input type="submit" name="%d" value="Undo" class="button">' % rev
+            yield u' . . . . '
             yield request.wiki_link(author, author)
             yield u'<div class="comment">%s</div>' % werkzeug.escape(comment)
             yield u'</li>'
-        yield u'</ul>'
+        yield u'</ul></form>'
 
     def recent_changes(self, request):
-        content = self.html_page(request, '', self.changes_list(request),
+        content = self.html_page(request, u'history',
+                                 self.changes_list(request),
                                  page_title=u'Recent changes')
         response = werkzeug.Response(content, mimetype='text/html')
         return response
@@ -1074,9 +1158,12 @@ div.snippet { font-size: 80%; color: #888a85 }
             if rev > 0:
                 url = request.adapter.build(self.diff, {
                     'title': title, 'from_rev': rev-1, 'to_rev': rev})
-            else:
+            elif rev == 0:
                 url = request.adapter.build(self.revision, {
                     'title': title, 'rev': rev})
+            else:
+                url = request.adapter.build(self.history, {
+                    'title': title})
             yield u'<li>'
             yield u'<a href="%s">%s</a> ' % (url, date.strftime('%F %H:%M'))
             yield request.wiki_link(title, title)

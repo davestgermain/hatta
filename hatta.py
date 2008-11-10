@@ -191,6 +191,7 @@ class WikiParser(object):
         "heading": heading_pat,
         "indent": ur"^[ \t]+",
         "rule": ur"^\s*---+\s*$",
+        "syntax": ur"^\{\{\{\#!\w+\s*$",
         "table": ur"^\|",
     } # note that the priority is alphabetical
     block_re = re.compile(ur"|".join("(?P<%s>%s)" % kv
@@ -332,6 +333,20 @@ class WikiParser(object):
             inside = u"\n".join(line.rstrip() for line in lines)
             yield u'<pre class="code">%s</pre>' % werkzeug.escape(inside)
 
+    def block_syntax(self, block):
+        # XXX A hack to handle {{{#!foo...}}} syntax blocks, 
+        # this method reads lines
+        # directly from input.
+        for part in block:
+            syntax = part.lstrip('{#!').strip()
+            line = self.lines.next()
+            lines = []
+            while not self.code_close_re.match(line):
+                lines.append(line)
+                line = self.lines.next()
+            inside = u"\n".join(line.rstrip() for line in lines)
+            return self.wiki_syntax(inside, syntax=syntax)
+
     def block_macro(self, block):
         # XXX A hack to handle <<...>> macro blocks, this method reads lines
         # directly from input.
@@ -400,7 +415,7 @@ class WikiParser(object):
             func = getattr(self, "line_%s" % m.lastgroup)
             yield func(m.groupdict())
 
-    def parse(self, lines, wiki_link=None, wiki_image=None):
+    def parse(self, lines, wiki_link=None, wiki_image=None, wiki_syntax=None):
         def key(line):
             match = self.block_re.match(line)
             if match:
@@ -410,6 +425,7 @@ class WikiParser(object):
         self.stack = []
         self.wiki_link = wiki_link
         self.wiki_image = wiki_image
+        self.wiki_syntax = wiki_syntax
         for kind, block in itertools.groupby(self.lines, key):
             func = getattr(self, "block_%s" % kind)
             for part in func(block):
@@ -783,13 +799,21 @@ div.snippet { font-size: 80%; color: #888a85 }
         mime = self.storage.page_mime(title)
         if mime == 'text/x-wiki':
             f = self.storage.open_page(title)
-            content = self.parser.parse(f, request.wiki_link, request.wiki_image)
+            content = self.parser.parse(f, request.wiki_link,
+                                        request.wiki_image, self.highlight)
         elif mime.startswith('image/'):
             content = ['<img src="%s" alt="%s">'
                        % (request.get_download_url(title),
                           werkzeug.escape(title))]
+        elif mime.startswith('text/'):
+            f = self.storage.open_page(title)
+            text = f.read()
+            f.close()
+            content = self.highlight(text, mime=mime)
         else:
-            content = self.highlight(title, mime)
+            content = ['<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>'
+                   % (request.get_download_url(title), werkzeug.escape(title),
+                      mime)]
         html = self.html_page(request, title, content)
         response = werkzeug.Response(html, mimetype="text/html")
         date = self.storage.page_date(title)
@@ -853,7 +877,7 @@ div.snippet { font-size: 80%; color: #888a85 }
             return werkzeug.Response(html, mimetype="text/html", status=status)
         raise werkzeug.exceptions.Forbidden()
 
-    def highlight(self, title, mime):
+    def highlight(self, text, mime=None, syntax=None):
         try:
             import pygments
             import pygments.util
@@ -861,11 +885,14 @@ div.snippet { font-size: 80%; color: #888a85 }
             import pygments.formatters
             formatter = pygments.formatters.HtmlFormatter()
             try:
-                lexer = pygments.lexers.get_lexer_for_mimetype(mime)
+                if mime:
+                    lexer = pygments.lexers.get_lexer_for_mimetype(mime)
+                elif syntax:
+                    lexer = pygments.lexers.get_lexer_by_name(syntax)
+                else:
+                    lexer = pygments.lexers.guess_lexer(text)
                 css = formatter.get_style_defs('.highlight')
-                f = self.storage.open_page(title)
-                html = pygments.highlight(f.read(), lexer, formatter)
-                f.close()
+                html = pygments.highlight(text, lexer, formatter)
                 yield u'<style type="text/css"><!--\n%s\n--></style>' % css
                 yield html
                 return
@@ -873,17 +900,7 @@ div.snippet { font-size: 80%; color: #888a85 }
                 pass
         except ImportError:
             pass
-        if mime.startswith('text/'):
-            yield u'<pre>'
-            f = self.storage.open_page(title)
-            for part in f:
-                yield f
-            f.close()
-            yield '</pre>'
-        else:
-            yield ('<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>'
-                   % (request.get_download_url(title), werkzeug.escape(title),
-                      mime))
+        yield u'<pre>%s</pre>' % werkzeug.escape(text)
 
     def editor_form(self, request, title):
         yield u'<form action="" method="POST" class="editor"><div>'

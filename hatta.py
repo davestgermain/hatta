@@ -909,10 +909,10 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
             if menu:
                 yield u'<div class="menu">'
                 try:
-                    menu_links = menu.iteritems()
+                    menu_links = list(menu.iteritems())
                     menu_links.sort()
                 except AttributeError:
-                    menu_links = menu
+                    menu_links = zip(menu, menu)
                 for link, label in menu_links:
                     if not label:
                         label = link

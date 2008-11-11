@@ -1173,7 +1173,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         content = [rss_head]+rss_body+[u'</channel></rss>']
         response = WikiResponse(content, mimetype="application/xml")
         response.set_etag(u'/rss/%s/%s' % (first_title, first_rev))
-        response.expires = first_date+datetime.timedelta(days=3)
+#        response.expires = first_date+datetime.timedelta(days=3)
         response.last_modified = first_date
         response.make_conditional(request)
         return response

@@ -1205,7 +1205,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         yield u'<ul>'
         last = {}
         for title, rev, date, author, comment in self.storage.history():
-            if author, comment == last.get(title, (None, None)):
+            if (author, comment) == last.get(title, (None, None)):
                 continue
             last[title] = author, comment
             if rev > 0:

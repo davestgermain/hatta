@@ -1127,6 +1127,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         yield u'</div></div></form>'
 
     def rss(self, request):
+        now = datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")
         rss_head = u"""<?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0"
 xmlns:dc="http://purl.org/dc/elements/1.1/"
@@ -1145,10 +1146,16 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             werkzeug.escape('Hatta Wiki'),
             request.adapter.build(self.rss),
             request.adapter.build(self.recent_changes),
-            datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")
+            now,
         )
         rss_body = []
+        first_date = now
+        first_title = u''
         for title, rev, date, author, comment in self.storage.history():
+            if not first_title:
+                first_title = title
+                first_rev = rev
+                first_date = date
             item = u'<item><title>%s</title><link>%s</link><description>%s</description><pubDate>%s</pubDate><dc:creator>%s</dc:creator><guid>%s</guid></item>' % (
                 werkzeug.escape(title),
                 request.get_page_url(title),
@@ -1161,6 +1168,10 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             rss_body.append(item)
         content = [rss_head]+rss_body+[u'</channel></rss>']
         response = WikiResponse(content, mimetype="application/xml")
+        response.set_etag(u'/rss/%s/%s' % (first_title, first_rev))
+        response.expires = first_date+datetime.timedelta(days=3)
+        response.last_modified = first_date
+        response.make_conditional(request)
         return response
 
     def response(self, request, title, content, mime, etag):

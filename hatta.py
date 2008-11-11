@@ -908,7 +908,12 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
             menu = self.index.page_links(self.menu_page)
             if menu:
                 yield u'<div class="menu">'
-                for link, label in menu.iteritems():
+                try:
+                    menu_links = menu.iteritems()
+                    menu_links.sort()
+                except AttributeError:
+                    menu_links = menu
+                for link, label in menu_links:
                     if not label:
                         label = link
                     if link == title:

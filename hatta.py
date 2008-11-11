@@ -140,7 +140,6 @@ class WikiStorage(object):
         author = unicode(filectx.user(), "utf-8",
                          'replace').split('<')[0].strip()
         comment = unicode(filectx.description(), "utf-8", 'replace')
-        print filectx, comment
         return rev, date, author, comment
 
     def page_mime(self, title):
@@ -955,9 +954,8 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
                       mime)]
         html = self.html_page(request, title, content)
         response = WikiResponse(html, mimetype="text/html")
-#        date = self.storage.page_date(title)
         rev, date, author, comment = self.storage.page_meta(title)
-#        response.last_modified = date
+        response.last_modified = date
         response.add_etag(u'%s/%s' % (title, rev))
         response.make_conditional(request)
         return response

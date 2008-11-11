@@ -843,7 +843,7 @@ div.header h1 { margin: 0; }
 div.content { clear: left }
 form.search { margin:0; text-align: right; font-size: 80% }
 div.snippet { font-size: 80%; color: #888a85 }
-div.header div.menu { float: right }
+div.header div.menu { float: right; margin-top: 1.25em }
 div.header div.menu a.current { color: #000 }
 hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #babdb6; clear: both }
 """
@@ -975,7 +975,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
                    % (request.get_download_url(title), werkzeug.escape(title),
                       mime)]
         html = self.html_page(request, title, content)
-        response = self.response(request, title, html, 'text/html', '')
+        response = self.response(request, title, html)
         return response
 
     def revision(self, request, title, rev):
@@ -989,6 +989,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         html = self.html_page(request, title, content,
                               page_title=u'Revision of "%s"' % title)
         response = werkzeug.Response(html, mimetype="text/html")
+        response = self.response(request, title, html, rev=rev)
         return response
 
     def check_lock(self, title):
@@ -1050,6 +1051,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
             form = self.upload_form
         html = self.html_page(request, title, form(request, title),
                               page_title=u'Editing "%s"' % title)
+        response = self.response(request, title, html, '/edit')
         return werkzeug.Response(html, mimetype="text/html", status=status)
 
     def highlight(self, text, mime=None, syntax=None):
@@ -1174,17 +1176,22 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response.make_conditional(request)
         return response
 
-    def response(self, request, title, content, mime, etag):
+    def response(self, request, title, content, etag='', mime='text/html',
+                 rev=None, date=None):
         headers = {
             'Cache-Control': 'max-age=60, public',
             'Vary': 'Transfer-Encoding',
             'Allow': 'GET, HEAD',
         }
         response = WikiResponse(content, mimetype=mime, headers=headers)
-#        date = self.storage.page_date(title)
-        rev, date, author, comment = self.storage.page_meta(title)
+        if not rev or not date:
+            nrev, ndate, author, comment = self.storage.page_meta(title)
+            if not rev:
+                rev = nrev
+            if not date:
+                date = ndate
         response.set_etag(u'%s/%s/%s' % (etag, title, rev))
-        response.expires = date+datetime.timedelta(days=3)
+        response.expires = date+datetime.timedelta(days=1)
         response.last_modified = date
         response.make_conditional(request)
         return response
@@ -1194,7 +1201,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         if mime == 'text/x-wiki':
             mime = 'text/plain'
         f = self.storage.open_page(title)
-        response = self.response(request, title, f, mime, '/download')
+        response = self.response(request, title, f, '/download', mime)
         response.content_length = self.storage.page_size(title)
         return response
 
@@ -1227,7 +1234,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         content = self.html_page(request, title,
                                  self.history_list(request, title),
                                  page_title=u'History of "%s"' % title)
-        response = werkzeug.Response(content, mimetype='text/html')
+        response = self.response(request, title, content, '/history')
         return response
 
     def history_list(self, request, title):
@@ -1356,7 +1363,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             title = 'Searching for "%s"' % u" ".join(words)
             content = self.page_search(request, words)
         html = self.html_page(request, u'', content, page_title=title)
-        return werkzeug.Response(html, mimetype='text/html')
+        return WikiResponse(html, mimetype='text/html')
 
     def page_index(self, request):
         yield u'<p>Index of all pages.</p>'
@@ -1394,7 +1401,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         content = self.page_backlinks(request, title)
         html = self.html_page(request, u'', content,
                               page_title=u'Links to "%s"' % title)
-        return werkzeug.Response(html, mimetype='text/html')
+        response = self.response(request, title, html, '/backlinks')
+        return response
 
     def page_backlinks(self, request, title):
         yield u'<p>Pages that contain a link to %s.</p>' % request.wiki_link(title, title)

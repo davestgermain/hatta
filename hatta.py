@@ -1210,7 +1210,10 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 continue
             if rev > 0:
                 url = request.adapter.build(self.diff, {
-                    'title': title, 'from_rev': lastrev.get(title, rev-1), 'to_rev': rev})
+                    'title': title,
+                    'from_rev': rev-1,
+                    'to_rev': lastrev.get(title, rev)
+                })
             elif rev == 0:
                 url = request.adapter.build(self.revision, {
                     'title': title, 'rev': rev})

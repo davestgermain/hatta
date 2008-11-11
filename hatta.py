@@ -665,7 +665,7 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
             yield self.titles[ident]
 
     def page_links(self, title):
-        return self.labels.get(title.encode('utf-8', 'escape'), [])
+        return self.links.get(title.encode('utf-8', 'escape'), [])
 
     def page_labels(self, title):
         return self.labels.get(title.encode('utf-8', 'escape'), [])

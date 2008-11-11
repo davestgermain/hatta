@@ -24,7 +24,7 @@ import difflib
 
 import werkzeug
 os.environ['HGENCODING'] = 'utf-8'
-os.environ["HGMERGE"] = "internal:fail"
+os.environ["HGMERGE"] = "internal:merge"
 import mercurial.hg
 import mercurial.ui
 import mercurial.revlog
@@ -816,6 +816,7 @@ background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
 .editor textarea { width: 100%; display: block; font-size: 100%; 
 border: solid 1px #babdb6; }
 .editor label { display:block; text-align: right }
+.editor .upload { margin: 2em auto; text-align: center }
 form.search input.search, .editor label input { font-size: 100%; 
 border: solid 1px #babdb6; margin: 0.125em 0 }
 .editor label.comment input  { width: 32em }
@@ -1079,10 +1080,11 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         yield u'</div></form>'
 
     def upload_form(self, request, title):
-        yield u'<form action="" method="POST" enctype="multipart/form-data">'
-        yield u'<div><input type="file" name="data">'
-        yield u'<input name="comment" value="%s">' % werkzeug.escape(u'comment')
-        yield u'<input name="author" value="%s">' % werkzeug.escape(request.get_author())
+        yield u"<p>This is a binary file, it can't be edited on a wiki. Please upload a new version instead.</p>"
+        yield u'<form action="" method="POST" class="editor" enctype="multipart/form-data">'
+        yield u'<div><div class="upload"><input type="file" name="data"></div>'
+        yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape(u'comment')
+        yield u'<label>Author <input name="author" value="%s"></label>' % werkzeug.escape(request.get_author())
         yield u'<div class="buttons">'
         yield u'<input type="submit" name="save" value="Save">'
         yield u'<input type="submit" name="cancel" value="Cancel">'

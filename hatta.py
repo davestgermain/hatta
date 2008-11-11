@@ -1187,7 +1187,15 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         rss_body = []
         first_date = now
         first_title = u''
+        count = 0
+        unqiue_titles = {}
         for title, rev, date, author, comment in self.storage.history():
+            if title in unique_titles:
+                continue
+            unique_titles[title] = True
+            count += 1
+            if count > 10:
+                break
             if not first_title:
                 first_title = title
                 first_rev = rev
@@ -1297,9 +1305,13 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         yield u'<ul>'
         last = {}
         lastrev = {}
+        count = 0
         for title, rev, date, author, comment in self.storage.history():
             if (author, comment) == last.get(title, (None, None)):
                 continue
+            count += 1
+            if count > 100:
+                break
             if rev > 0:
                 url = request.adapter.build(self.diff, {
                     'title': title,

@@ -1194,7 +1194,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             if date is None:
                 date = ndate
         response.set_etag(u'%s/%s/%s' % (etag, title, rev))
-        response.expires = datetime.now()+datetime.timedelta(days=3)
+        response.expires = datetime.datetime.now()+datetime.timedelta(days=3)
 #        response.last_modified = date
         response.make_conditional(request)
         return response

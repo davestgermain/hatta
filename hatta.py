@@ -530,10 +530,12 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
         self.filename = filename
         self.index_file = "%s.words" % self.filename
         self.links_file = "%s.links" % self.filename
+        self.labels_file = "%s.labels" % self.filename
         self.backlinks_file = "%s.back" % self.filename
         self.title_file = "%s.titles" % self.filename
         self.index = shelve.open(self.index_file, protocol=2)
         self.links = shelve.open(self.links_file, protocol=2)
+        self.labels = shelve.open(self.labels_file, protocol=2)
         self.backlinks = shelve.open(self.backlinks_file, protocol=2)
         try:
             f = open(self.title_file, "rb")
@@ -602,8 +604,10 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
     def _extract_links(self, text, parser):
         class LinkExtractor(object):
             def __init__(self):
-                self.links = {}
-                self.images = {}
+                self.links = []
+                self.link_labels = []
+                self.images = []
+                self.image_labels = []
 
             def wiki_link(self, addr, label=None, class_=None, image=None):
                 if external_link(addr):
@@ -612,7 +616,8 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
                     addr, chunk = addr.split('#', 1)
                 if addr == u'':
                     return u''
-                self.links[addr] = label
+                self.links.append(addr)
+                self.link_labels.append(label)
                 return u''
 
             def wiki_image(self, addr, alt=None, class_=None):
@@ -622,7 +627,8 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
                     addr, chunk = addr.split('#', 1)
                 if addr == u'':
                     return u''
-                self.images[addr] = alt
+                self.links.append(addr)
+                self.link_labels.append(label)
                 return u''
 
             def empty(*args, **kw):
@@ -633,14 +639,14 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
         for part in parser.parse(lines, helper.wiki_link,
                                  helper.wiki_image, helper.empty):
             pass
-        all_links = helper.links
-        all_links.update(helper.images)
-        return all_links
+        return helper.links, helper.link_labels
 
     def add_links(self, title, text, parser):
-        links = self._extract_links(text, parser)
+        links, labels = self._extract_links(text, parser)
         self.links[title.encode('utf-8', 'escape')] = links
         self.links.sync()
+        self.labels[title.encode('utf-8', 'escape')] = labels
+        self.labels.sync()
 
     def regenerate_backlinks(self):
         for key in self.backlinks:
@@ -659,7 +665,10 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
             yield self.titles[ident]
 
     def page_links(self, title):
-        return self.links.get(title.encode('utf-8', 'escape'), [])
+        return self.labels.get(title.encode('utf-8', 'escape'), [])
+
+    def page_labels(self, title):
+        return self.labels.get(title.encode('utf-8', 'escape'), [])
 
     def find(self, words):
         first = words[0]
@@ -906,16 +915,14 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         yield u'</div></form>'
         if self.menu_page in self.storage:
             menu = self.index.page_links(self.menu_page)
+            labels = self.index.page_labels(self.menu_page)
             if menu:
                 yield u'<div class="menu">'
-                try:
-                    menu_links = list(menu.iteritems())
-                    menu_links.sort()
-                except AttributeError:
-                    menu_links = zip(menu, menu)
-                for link, label in menu_links:
-                    if not label:
-                        label = link
+                for i, link in enumerate(menu):
+                    try:
+                        label = labels[i] or link
+                    except IndexError:
+                        pass
                     if link == title:
                         css = u' class="current"'
                     else:

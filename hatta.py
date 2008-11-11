@@ -1187,7 +1187,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 #            'Allow': 'GET, HEAD',
 #        }
         response = WikiResponse(content, mimetype=mime)
-        if rev is None or date is None:
+        if rev is None:# or date is None:
             nrev, ndate, author, comment = self.storage.page_meta(title)
             if rev is None:
                 rev = nrev

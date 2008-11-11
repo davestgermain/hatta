@@ -852,11 +852,16 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
     def __init__(self, path='docs/', cache='cache/'):
         self.path = os.path.abspath(path)
         self.cache = os.path.abspath(cache)
-        if not os.path.isdir(self.cache):
-            os.makedirs(self.cache)
         self.storage = WikiStorage(self.path)
         self.parser = WikiParser()
+        if not os.path.isdir(self.cache):
+            os.makedirs(self.cache)
+            reindex = True
+        else:
+            reindex = False
         self.index = WikiSearch(os.path.join(self.cache, 'index'))
+        if reindex:
+            self.reindex()
         self.url_map = werkzeug.routing.Map([
             werkzeug.routing.Rule('/', defaults={'title': self.front_page},
                                   endpoint=self.view,
@@ -1426,6 +1431,16 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                   'Disallow: /search\r\n'
                  )
         return werkzeug.Response(robots, mimetype='text/plain')
+
+    def reindex(self):
+        for title in self.storage.all_pages():
+            mime = self.storage.page_mime(title)
+            if mime.startswith('text/'):
+                data = self.storage.open_page(title).read()
+                self.index.add_words(title, data)
+                if mime == 'text/x-wiki':
+                    self.index.add_links(title, data, self.parser)
+        self.index.regenerate_backlinks()
 
     @werkzeug.responder
     def application(self, environ, start):

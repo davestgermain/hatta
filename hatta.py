@@ -816,6 +816,7 @@ class WikiRedirect(werkzeug.routing.RequestRedirect):
         return werkzeug.redirect(self.new_url, 303)
 
 class Wiki(object):
+    site_name = 'Hatta Wiki'
     front_page = 'Home'
     style_page = 'style.css'
     logo_page = 'logo.png'
@@ -918,7 +919,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         icon = request.adapter.build(self.favicon)
         yield (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
                '"http://www.w3.org/TR/html4/strict.dtd">')
-        yield u'<html><head><title>%s</title>' % werkzeug.escape(page_title or title)
+        yield u'<html><head><title>%s - %s</title>' % (werkzeug.escape(page_title or title), werkzeug.escape(self.site_name))
         if self.style_page in self.storage:
             css = request.get_download_url(self.style_page)
             yield u'<link rel="stylesheet" type="text/css" href="%s">' % css
@@ -1179,7 +1180,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
     <lastBuildDate>%s</lastBuildDate>
 
 """ % (
-            werkzeug.escape('Hatta Wiki'),
+            werkzeug.escape(self.site_name),
             request.adapter.build(self.rss),
             request.adapter.build(self.recent_changes),
             now,
@@ -1188,7 +1189,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         first_date = now
         first_title = u''
         count = 0
-        unqiue_titles = {}
+        unique_titles = {}
         for title, rev, date, author, comment in self.storage.history():
             if title in unique_titles:
                 continue

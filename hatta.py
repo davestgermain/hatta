@@ -1355,8 +1355,10 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
     def robots(self, request):
         robots = ('User-agent: *\r\n'
-                  'Disallow: /edit/\r\n'
+                  'Disallow: /edit\r\n'
                   'Disallow: /rss\r\n'
+                  'Disallow: /history\r\n'
+                  'Disallow: /search\r\n'
                  )
         return werkzeug.Response(robots, mimetype='text/plain')
 

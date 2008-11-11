@@ -1116,8 +1116,8 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         yield u'<form action="" method="POST" class="editor" enctype="multipart/form-data">'
         yield u'<div><div class="upload"><input type="file" name="data"></div>'
         yield u'<input type="hidden" name="parent" value="%d">' % rev
-        yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape(u'comment')
-        yield u'<label>Author <input name="author" value="%s"></label>' % werkzeug.escape(request.get_author())
+        yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape(comment)
+        yield u'<label>Author <input name="author" value="%s"></label>' % werkzeug.escape(author)
         yield u'<div class="buttons">'
         yield u'<input type="submit" name="save" value="Save">'
         yield u'<input type="submit" name="cancel" value="Cancel">'

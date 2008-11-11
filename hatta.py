@@ -628,7 +628,7 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
                 if addr == u'':
                     return u''
                 self.links.append(addr)
-                self.link_labels.append(label)
+                self.link_labels.append(alt)
                 return u''
 
             def empty(*args, **kw):

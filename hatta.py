@@ -133,12 +133,14 @@ class WikiStorage(object):
         return datetime.datetime.fromtimestamp(stamp)
 
     def page_meta(self, title):
-        filectx = self._find_filectx(title)
-        rev = filectx.filerev()
+        filectx_tip = self._find_filectx(title)
+        rev = filectx_tip.filerev()
+        filectx = filectx_tip.filectx(rev)
         date = datetime.datetime.fromtimestamp(filectx.date()[0])
         author = unicode(filectx.user(), "utf-8",
                          'replace').split('<')[0].strip()
         comment = unicode(filectx.description(), "utf-8", 'replace')
+        print filectx, comment
         return rev, date, author, comment
 
     def page_mime(self, title):

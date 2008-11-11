@@ -653,7 +653,7 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
         self.backlinks.sync()
 
     def page_backlinks(self, title):
-        for ident in self.backlinks[title.encode('utf-8', 'escape')]:
+        for ident in self.backlinks.get(title.encode('utf-8', 'escape'), []):
             yield self.titles[ident]
 
     def page_links(self, title):
@@ -1061,8 +1061,6 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         yield u'<pre>%s</pre>' % werkzeug.escape(text)
 
     def editor_form(self, request, title):
-        yield u'<form action="" method="POST" class="editor"><div>'
-        yield u'<textarea name="text" cols="80" rows="20">'
         author = request.get_author()
         try:
             f = self.storage.open_page(title)
@@ -1073,9 +1071,13 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         except werkzeug.exceptions.NotFound:
             f = []
             comment = 'created'
+            rev = -1
+        yield u'<form action="" method="POST" class="editor"><div>'
+        yield u'<textarea name="text" cols="80" rows="20">'
         for part in f:
             yield werkzeug.escape(part)
         yield u"""</textarea>"""
+        yield u'<input type="hidden" name="parent" value="%d">' % rev
         yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape(comment)
         yield u'<label>Author <input name="author" value="%s"></label>' % werkzeug.escape(request.get_author())
         yield u'<div class="buttons">'
@@ -1085,9 +1087,21 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         yield u'</div></form>'
 
     def upload_form(self, request, title):
+        author = request.get_author()
+        try:
+            f = self.storage.open_page(title)
+            comment = 'changed'
+            rev, old_date, old_author, old_comment = self.storage.page_meta(title)
+            if old_author == author:
+                comment = old_comment
+        except werkzeug.exceptions.NotFound:
+            f = []
+            comment = 'uploaded'
+            rev = -1
         yield u"<p>This is a binary file, it can't be edited on a wiki. Please upload a new version instead.</p>"
         yield u'<form action="" method="POST" class="editor" enctype="multipart/form-data">'
         yield u'<div><div class="upload"><input type="file" name="data"></div>'
+        yield u'<input type="hidden" name="parent" value="%d">' % rev
         yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape(u'comment')
         yield u'<label>Author <input name="author" value="%s"></label>' % werkzeug.escape(request.get_author())
         yield u'<div class="buttons">'

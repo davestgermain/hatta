@@ -1051,8 +1051,10 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
             form = self.upload_form
         html = self.html_page(request, title, form(request, title),
                               page_title=u'Editing "%s"' % title)
-        response = self.response(request, title, html, '/edit')
-        return werkzeug.Response(html, mimetype="text/html", status=status)
+        if title not in self.storage:
+            return werkzeug.Response(html, mimetype="text/html", status=status)
+        else:
+            return self.response(request, title, html, '/edit')
 
     def highlight(self, text, mime=None, syntax=None):
         try:

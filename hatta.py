@@ -353,7 +353,7 @@ class WikiParser(object):
             inside = self.line_image(match.groupdict())
         else:
             inside = werkzeug.escape(text)
-        return self.wiki_link(target, inside)
+        return self.wiki_link(target, text, image=inside)
 
     def line_image(self, groups):
         target = groups['image_target']
@@ -606,7 +606,7 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
                 self.links = []
                 self.images = []
 
-            def wiki_link(self, addr, label=None, class_=None):
+            def wiki_link(self, addr, label=None, class_=None, image=None):
                 if external_link(addr):
                     return u''
                 if '#' in addr:
@@ -701,7 +701,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         return self.adapter.build(self.wiki.download, {'title': title},
                                   method='GET')
 
-    def wiki_link(self, addr, label, class_='wiki'):
+    def wiki_link(self, addr, label, class_='wiki', image=None):
         if external_link(addr):
             return u'<a href="%s" class="external">%s</a>' % (
                 werkzeug.url_fix(addr), werkzeug.escape(label))
@@ -712,10 +712,11 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
             chunk = ''
         if addr == u'':
             return u'<a href="%s" class="%s">%s</a>' % (
-                chunk, class_, werkzeug.escape(label))
+                chunk, class_, image or werkzeug.escape(label))
         elif addr in self.wiki.storage:
             return u'<a href="%s%s" class="%s">%s</a>' % (
-                self.get_page_url(addr), chunk, class_, werkzeug.escape(label))
+                self.get_page_url(addr), chunk, class_,
+                image or werkzeug.escape(label))
         else:
             return u'<a href="%s%s" class="nonexistent">%s</a>' % (
                 self.get_page_url(addr), chunk, werkzeug.escape(label))

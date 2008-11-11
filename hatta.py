@@ -1204,19 +1204,21 @@ xmlns:atom="http://www.w3.org/2005/Atom"
     def changes_list(self, request):
         yield u'<ul>'
         last = {}
+        lastrev = {}
         for title, rev, date, author, comment in self.storage.history():
             if (author, comment) == last.get(title, (None, None)):
                 continue
-            last[title] = author, comment
             if rev > 0:
                 url = request.adapter.build(self.diff, {
-                    'title': title, 'from_rev': rev-1, 'to_rev': rev})
+                    'title': title, 'from_rev': lastrev.get(title, rev-1), 'to_rev': rev})
             elif rev == 0:
                 url = request.adapter.build(self.revision, {
                     'title': title, 'rev': rev})
             else:
                 url = request.adapter.build(self.history, {
                     'title': title})
+            last[title] = author, comment
+            lastrev[title] = rev
             yield u'<li>'
             yield u'<a href="%s">%s</a> ' % (url, date.strftime('%F %H:%M'))
             yield request.wiki_link(title, title)

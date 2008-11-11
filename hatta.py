@@ -12,6 +12,7 @@ try:
 except ImportError:
     import pickle
 import datetime
+import difflib
 import itertools
 import imghdr
 import mimetypes
@@ -19,8 +20,10 @@ import os
 import re
 import shelve
 import tempfile
+import traceback
+import urllib
 import weakref
-import difflib
+
 
 import werkzeug
 os.environ['HGENCODING'] = 'utf-8'
@@ -139,12 +142,16 @@ class WikiStorage(object):
 
     def page_meta(self, title):
         filectx_tip = self._find_filectx(title)
+        if filectx_tip is None:
+            return -1, None, u'', u''
         rev = filectx_tip.filerev()
         filectx = filectx_tip.filectx(rev)
         date = datetime.datetime.fromtimestamp(filectx.date()[0])
         author = unicode(filectx.user(), "utf-8",
                          'replace').split('<')[0].strip()
         comment = unicode(filectx.description(), "utf-8", 'replace')
+        if filectx_tip is None:
+            return -1, None, u'', u''
         return rev, date, author, comment
 
     def page_mime(self, title):
@@ -648,9 +655,9 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
 
     def add_links(self, title, text, parser):
         links, labels = self._extract_links(text, parser)
-        self.links[title.encode('utf-8', 'escape')] = links
+        self.links[title.encode('utf-8', 'backslashreplace')] = links
         self.links.sync()
-        self.labels[title.encode('utf-8', 'escape')] = labels
+        self.labels[title.encode('utf-8', 'backslashreplace')] = labels
         self.labels.sync()
 
     def regenerate_backlinks(self):
@@ -659,21 +666,21 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
         for title, links in self.links.iteritems():
             ident = self.get_title_id(title)
             for link in links:
-                encoded = link.encode('utf-8', 'escape')
+                encoded = link.encode('utf-8', 'backslashreplace')
                 backlinks = self.backlinks.get(encoded, [])
                 backlinks.append(ident)
                 self.backlinks[encoded] = backlinks
         self.backlinks.sync()
 
     def page_backlinks(self, title):
-        for ident in self.backlinks.get(title.encode('utf-8', 'escape'), []):
+        for ident in self.backlinks.get(title.encode('utf-8', 'backslashreplace'), []):
             yield self.titles[ident]
 
     def page_links(self, title):
-        return self.links.get(title.encode('utf-8', 'escape'), [])
+        return self.links.get(title.encode('utf-8', 'backslashreplace'), [])
 
     def page_labels(self, title):
-        return self.labels.get(title.encode('utf-8', 'escape'), [])
+        return self.labels.get(title.encode('utf-8', 'backslashreplace'), [])
 
     def find(self, words):
         first = words[0]
@@ -701,6 +708,8 @@ class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
        pass
 
 class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
+    charset = 'utf-8'
+    encoding_errors = 'ignore'
     def __init__(self, wiki, adapter, environ, populate_request=True,
                  shallow=False):
         werkzeug.BaseRequest.__init__(self, environ, populate_request, shallow)
@@ -708,6 +717,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         self.adapter = adapter
         self.tmpfiles = []
         self.tmppath = wiki.path
+        self.links = []
 
     def get_page_url(self, title):
         return self.adapter.build(self.wiki.view, {'title': title},
@@ -729,7 +739,8 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         if addr == u'':
             return u'<a href="%s" class="%s">%s</a>' % (
                 chunk, class_, image or werkzeug.escape(label))
-        elif addr in self.wiki.storage:
+        self.links.append(addr)
+        if addr in self.wiki.storage:
             return u'<a href="%s%s" class="%s">%s</a>' % (
                 self.get_page_url(addr), chunk, class_,
                 image or werkzeug.escape(label))
@@ -743,6 +754,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
                 werkzeug.url_fix(addr), werkzeug.escape(alt))
         if '#' in addr:
             addr, chunk = addr.split('#', 1)
+        self.links.append(addr)
         if addr in self.wiki.storage:
             return u'<img src="%s" class="%s" alt="%s">' % (
                 self.get_download_url(addr), class_, werkzeug.escape(alt))
@@ -789,10 +801,11 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
 
 class WikiTitle(werkzeug.routing.BaseConverter):
     def to_python(self, value):
-        return werkzeug.url_unquote_plus(value)
+        # XXX work around a bug in Werkzeug
+        return unicode(urllib.unquote_plus(value.encode('utf-8')), 'utf-8')
 
     def to_url(self, value):
-        return werkzeug.url_quote_plus(value, safe='')
+        return werkzeug.url_quote_plus(value.encode('utf-8', 'ignore'), safe='')
 
 class WikiRedirect(werkzeug.routing.RequestRedirect):
     code = 303
@@ -962,10 +975,17 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
             url = request.adapter.build(self.edit, {'title':title})
             raise WikiRedirect(url)
         mime = self.storage.page_mime(title)
+        rev = None
         if mime == 'text/x-wiki':
             f = self.storage.open_page(title)
-            content = self.parser.parse(f, request.wiki_link,
-                                        request.wiki_image, self.highlight)
+            content = u''.join(self.parser.parse(f, request.wiki_link,
+                               request.wiki_image, self.highlight))
+            rev, date, author, comment = self.storage.page_meta(title)
+            revs = ['%d' % rev]
+            for link in request.links:
+                rev, date, author, comment = self.storage.page_meta(link)
+                revs.append(u'%s/%d' % (werkzeug.url_quote(link), rev))
+            rev = u','.join(revs)
         elif mime.startswith('image/'):
             content = ['<img src="%s" alt="%s">'
                        % (request.get_download_url(title),
@@ -980,7 +1000,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
                    % (request.get_download_url(title), werkzeug.escape(title),
                       mime)]
         html = self.html_page(request, title, content)
-        response = self.response(request, title, html)
+        response = self.response(request, title, html, rev=rev)
         return response
 
     def revision(self, request, title, rev):
@@ -1193,7 +1213,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 rev = nrev
             if date is None:
                 date = ndate
-        response.set_etag(u'%s/%s/%s' % (etag, title, rev))
+        response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title), rev))
 #        response.expires = datetime.datetime.now()+datetime.timedelta(days=3)
 #        response.last_modified = date
         response.make_conditional(request)
@@ -1446,6 +1466,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             endpoint, values = adapter.match()
             response = endpoint(request, **values)
         except werkzeug.exceptions.HTTPException, e:
+            traceback.print_exc()
             return e
         finally:
             request.cleanup()

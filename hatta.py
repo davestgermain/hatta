@@ -602,8 +602,8 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
     def _extract_links(self, text, parser):
         class LinkExtractor(object):
             def __init__(self):
-                self.links = []
-                self.images = []
+                self.links = {}
+                self.images = {}
 
             def wiki_link(self, addr, label=None, class_=None, image=None):
                 if external_link(addr):
@@ -612,7 +612,7 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
                     addr, chunk = addr.split('#', 1)
                 if addr == u'':
                     return u''
-                self.links.append(addr)
+                self.links[addr] = label
                 return u''
 
             def wiki_image(self, addr, alt=None, class_=None):
@@ -622,7 +622,7 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
                     addr, chunk = addr.split('#', 1)
                 if addr == u'':
                     return u''
-                self.images.append(addr)
+                self.images[addr] = alt
                 return u''
 
             def empty(*args, **kw):
@@ -633,7 +633,9 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
         for part in parser.parse(lines, helper.wiki_link,
                                  helper.wiki_image, helper.empty):
             pass
-        return helper.links+helper.images
+        all_links = helper.links
+        all_links.update(helper.images)
+        return all_links
 
     def add_links(self, title, text, parser):
         links = self._extract_links(text, parser)
@@ -906,25 +908,25 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
             menu = self.index.page_links(self.menu_page)
             if menu:
                 yield u'<div class="menu">'
-                for link in menu:
+                for link, label in menu.iteritems():
+                    if not label:
+                        label = link
                     if link == title:
                         css = u' class="current"'
                     else:
                         css = u''
                     yield u'<a href="%s"%s>%s</a> ' % (
-                        request.get_page_url(link), css, werkzeug.escape(link))
+                        request.get_page_url(link), css, werkzeug.escape(label))
                 yield u'</div>'
         yield u'<h1>%s</h1>' % werkzeug.escape(page_title or title)
         yield u'</div><div class="content">'
         for part in content:
             yield part
         if not page_title:
-#            download = request.adapter.build(self.download, {'title': title})
             history = request.adapter.build(self.history, {'title': title})
             backlinks = request.adapter.build(self.backlinks, {'title': title})
             yield u'<div class="footer">'
             yield u'<a href="%s" class="edit">Edit</a> ' % edit
-#            yield u'<a href="%s" class="download">Download</a> ' % download
             yield u'<a href="%s" class="history">History</a> ' % history
             yield u'<a href="%s" class="history">Backlinks</a> ' % backlinks
             yield u'</div>'

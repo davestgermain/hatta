@@ -1203,7 +1203,11 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
     def changes_list(self, request):
         yield u'<ul>'
+        last = {}
         for title, rev, date, author, comment in self.storage.history():
+            if author, comment == last.get(title, (None, None)):
+                continue
+            last[title] = author, comment
             if rev > 0:
                 url = request.adapter.build(self.diff, {
                     'title': title, 'from_rev': rev-1, 'to_rev': rev})

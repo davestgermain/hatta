@@ -698,7 +698,7 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):
-       pass 
+       pass
 
 class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
     def __init__(self, wiki, adapter, environ, populate_request=True,
@@ -1194,7 +1194,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             if not date:
                 date = ndate
         response.set_etag(u'%s/%s/%s' % (etag, title, rev))
-        response.expires = date+datetime.timedelta(days=3)
+#        response.expires = date+datetime.timedelta(days=3)
         response.last_modified = date
         response.make_conditional(request)
         return response

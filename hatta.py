@@ -982,6 +982,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
     def save(self, request, title):
         self.check_lock(title)
         url = request.get_page_url(title)
+        mime = self.storage.page_mime(title)
         if request.form.get('cancel'):
             if title not in self.storage:
                 url = request.get_page_url(self.front_page)
@@ -991,16 +992,20 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
             text = request.form.get("text")
             if text is not None:
                 data = text.encode('utf-8')
-                self.index.add_links(title, data, self.parser)
-                if title in self.index.page_links(self.locked_page):
-                    raise werkzeug.exceptions.Forbidden()
+                if title == self.locked_page:
+                    self.index.add_links(title, data, self.parser)
+                    if title in self.index.page_links(self.locked_page):
+                        raise werkzeug.exceptions.Forbidden()
                 if text.strip() == '':
                     self.storage.delete_page(title, author, comment)
                     url = request.get_page_url(self.front_page)
                 else:
                     self.storage.save_text(title, data, author, comment)
-                self.index.add_words(title, text)
-                self.index.regenerate_backlinks()
+                if mime.startswith('text/'):
+                    self.index.add_words(title, text)
+                if mime == 'text/x-wiki':
+                    self.index.add_links(title, data, self.parser)
+                    self.index.regenerate_backlinks()
             else:
                 f = request.files['data'].stream
                 if f is not None:

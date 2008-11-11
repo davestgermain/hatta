@@ -138,9 +138,9 @@ class WikiStorage(object):
         return st_size
 
     def page_meta(self, title):
-        filectx_tip = self._find_filectx(title)
-        rev = filectx_tip.filerev()
-        filectx = filectx_tip.filectx(rev)
+        filectx = self.repo.chnagectx.filectx() #self._find_filectx(title)
+        rev = filectx.filerev()
+#        filectx = filectx_tip.filectx(rev)
         date = datetime.datetime.fromtimestamp(filectx.date()[0])
         author = unicode(filectx.user(), "utf-8",
                          'replace').split('<')[0].strip()
@@ -1187,14 +1187,14 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 #            'Allow': 'GET, HEAD',
 #        }
         response = WikiResponse(content, mimetype=mime)
-        if not rev or not date:
+        if rev is None or date is None:
             nrev, ndate, author, comment = self.storage.page_meta(title)
-            if not rev:
+            if rev is None:
                 rev = nrev
-            if not date:
+            if date is None:
                 date = ndate
         response.set_etag(u'%s/%s/%s' % (etag, title, rev))
-#        response.expires = date+datetime.timedelta(days=3)
+        response.expires = date+datetime.timedelta(days=3)
         response.last_modified = date
         response.make_conditional(request)
         return response

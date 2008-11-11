@@ -1176,21 +1176,17 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             )
             rss_body.append(item)
         content = [rss_head]+rss_body+[u'</channel></rss>']
-        response = WikiResponse(content, mimetype="application/xml")
-        response.set_etag(u'/rss/%s/%s' % (first_title, first_rev))
-#        response.expires = first_date+datetime.timedelta(days=3)
-        response.last_modified = first_date
-        response.make_conditional(request)
-        return response
+        return self.response(request, 'rss', content, '/rss', 'application/xml',
+                             first_rev, first_date)
 
     def response(self, request, title, content, etag='', mime='text/html',
                  rev=None, date=None):
-        headers = {
-            'Cache-Control': 'max-age=60, public',
-            'Vary': 'Transfer-Encoding',
-            'Allow': 'GET, HEAD',
-        }
-        response = WikiResponse(content, mimetype=mime, headers=headers)
+#        headers = {
+#            'Cache-Control': 'max-age=60, public',
+#            'Vary': 'Transfer-Encoding',
+#            'Allow': 'GET, HEAD',
+#        }
+        response = WikiResponse(content, mimetype=mime)
         if not rev or not date:
             nrev, ndate, author, comment = self.storage.page_meta(title)
             if not rev:
@@ -1198,7 +1194,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             if not date:
                 date = ndate
         response.set_etag(u'%s/%s/%s' % (etag, title, rev))
-        response.expires = date+datetime.timedelta(days=1)
+        response.expires = date+datetime.timedelta(days=3)
         response.last_modified = date
         response.make_conditional(request)
         return response

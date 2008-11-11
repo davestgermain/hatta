@@ -132,6 +132,11 @@ class WikiStorage(object):
         stamp = os.path.getmtime(self._file_path(title))
         return datetime.datetime.fromtimestamp(stamp)
 
+    def page_size(self, title):
+        (st_mode, st_ino, st_dev, st_nlink, st_uid, st_gid, st_size, st_atime,
+         st_mtime, st_ctime) = os.stat(self._file_path(title))
+        return st_size
+
     def page_meta(self, title):
         filectx_tip = self._find_filectx(title)
         rev = filectx_tip.filerev()
@@ -691,8 +696,9 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
             if score > 0:
                 yield score, self.titles[ident]
 
-class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin):
-    pass
+class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
+                   werkzeug.CommonResponseDescriptorsMixin):
+       pass 
 
 class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
     def __init__(self, wiki, adapter, environ, populate_request=True,
@@ -799,6 +805,7 @@ class Wiki(object):
     logo_page = 'logo.png'
     menu_page = 'Menu'
     locked_page = 'Locked'
+    alias_page = 'Alias'
     default_style = u"""html { background: #fff; color: #2e3436; 
 font-family: sans-serif; font-size: 96% }
 body { margin: 1em auto; line-height: 1.3; width: 40em }
@@ -891,17 +898,17 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         yield (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
                '"http://www.w3.org/TR/html4/strict.dtd">')
         yield u'<html><head><title>%s</title>' % werkzeug.escape(page_title or title)
+        if self.style_page in self.storage:
+            css = request.get_download_url(self.style_page)
+            yield u'<link rel="stylesheet" type="text/css" href="%s">' % css
+        else:
+            yield u'<style type="text/css">%s</style>' % self.default_style
         yield u'<link rel="shortcut icon" type="image/x-icon" href="%s">' % icon
         if not page_title:
             edit = request.adapter.build(self.edit, {'title': title})
             yield u'<link rel="alternate" type="application/wiki" href="%s">' % edit
         yield (u'<link rel="alternate" type="application/rss+xml" '
                u'title="Recent Changes" href="%s">' % rss)
-        if self.style_page in self.storage:
-            css = request.get_download_url(self.style_page)
-            yield u'<link rel="stylesheet" type="text/css" href="%s">' % css
-        else:
-            yield u'<style type="text/css">%s</style>' % self.default_style
         yield u'</head><body><div class="header">'
         if self.logo_page in self.storage:
             home = request.get_page_url(self.front_page)
@@ -968,11 +975,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
                    % (request.get_download_url(title), werkzeug.escape(title),
                       mime)]
         html = self.html_page(request, title, content)
-        response = WikiResponse(html, mimetype="text/html")
-        rev, date, author, comment = self.storage.page_meta(title)
-        response.last_modified = date
-        response.add_etag(u'%s/%s' % (title, rev))
-        response.make_conditional(request)
+        response = self.response(request, title, html, 'text/html', '')
         return response
 
     def revision(self, request, title, rev):
@@ -1160,22 +1163,28 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response = WikiResponse(content, mimetype="application/xml")
         return response
 
-    def download(self, request, title):
+    def response(self, request, title, content, mime, etag):
         headers = {
             'Cache-Control': 'max-age=60, public',
             'Vary': 'Transfer-Encoding',
             'Allow': 'GET, HEAD',
         }
+        response = WikiResponse(content, mimetype=mime, headers=headers)
+#        date = self.storage.page_date(title)
+        rev, date, author, comment = self.storage.page_meta(title)
+        response.set_etag(u'%s/%s/%s' % (etag, title, rev))
+        response.expires = date+datetime.timedelta(days=3)
+        response.last_modified = date
+        response.make_conditional(request)
+        return response
+
+    def download(self, request, title):
         mime = self.storage.page_mime(title)
         if mime == 'text/x-wiki':
             mime = 'text/plain'
         f = self.storage.open_page(title)
-        response = WikiResponse(f, mimetype=mime, headers=headers)
-#        date = self.storage.page_date(title)
-        rev, date, author, comment = self.storage.page_meta(title)
-        response.add_etag(u'download/%s/%s' % (title, rev))
-        response.last_modified = date
-        response.make_conditional(request)
+        response = self.response(request, title, f, mime, '/download')
+        response.content_length = self.storage.page_size(title)
         return response
 
     def undo(self, request, title):

@@ -1242,7 +1242,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response = WikiResponse(content, mimetype=mime)
         if rev is None:
             inode, size, mtime = self.storage.page_file_meta(title)
-            response.set_etag(u'%s/%s/%d/%f' % (etag, werkzeug.url_quote(title),
+            response.set_etag(u'%s/%s/%d-%d' % (etag, werkzeug.url_quote(title),
                                                     inode, mtime))
             if set_size:
                 response.content_length = size

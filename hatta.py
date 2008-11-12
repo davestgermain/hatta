@@ -20,7 +20,6 @@ import os
 import re
 import shelve
 import tempfile
-import traceback
 import urllib
 import weakref
 
@@ -1486,7 +1485,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             endpoint, values = adapter.match()
             response = endpoint(request, **values)
         except werkzeug.exceptions.HTTPException, e:
-            traceback.print_exc()
+#            import traceback
+#            traceback.print_exc()
             return e
         finally:
             request.cleanup()

@@ -153,6 +153,9 @@ class WikiStorage(object):
             return -1, None, u'', u''
         return rev, date, author, comment
 
+    def repo_revision(self):
+        return self.repo.changectx('tip').rev()
+
     def page_mime(self, title):
         file_path = self._file_path(title)
         mime, encoding = mimetypes.guess_type(file_path, strict=False)
@@ -1215,8 +1218,11 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             )
             rss_body.append(item)
         content = [rss_head]+rss_body+[u'</channel></rss>']
-        return self.response(request, 'rss', content, '/rss', 'application/xml',
-                             first_rev, first_date)
+        response = self.response(request, 'rss', content, '/rss',
+                                 'application/xml', first_rev, first_date)
+        response.set_etag('/recentchanges/%d' % self.storage.repo_revision())
+        response.make_conditional(request)
+        return response
 
     def response(self, request, title, content, etag='', mime='text/html',
                  rev=None, date=None):
@@ -1303,6 +1309,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                                  self.changes_list(request),
                                  page_title=u'Recent changes')
         response = werkzeug.Response(content, mimetype='text/html')
+        response.set_etag('/recentchanges/%d' % self.storage.repo_revision())
+        response.make_conditional(request)
         return response
 
     def changes_list(self, request):

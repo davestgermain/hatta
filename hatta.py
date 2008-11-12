@@ -7,10 +7,10 @@ It requires Mercurial and Werkzeug python modules.
 
 """
 
-try:
-    import psyco
-except ImportError:
-    pass
+#try:
+#    import psyco
+#except ImportError:
+#    pass
 
 try:
     import cPickle as pickle

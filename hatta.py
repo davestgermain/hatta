@@ -130,19 +130,10 @@ class WikiStorage(object):
         except IOError:
             raise werkzeug.exceptions.NotFound()
 
-    def page_date(self, title):
-        stamp = os.path.getmtime(self._file_path(title))
-        return datetime.datetime.fromtimestamp(stamp)
-
-    def page_size(self, title):
+    def page_file_meta(self, title):
         (st_mode, st_ino, st_dev, st_nlink, st_uid, st_gid, st_size, st_atime,
          st_mtime, st_ctime) = os.stat(self._file_path(title))
-        return st_size
-
-    def page_inode_size_timestamp(self, title):
-        (st_mode, st_ino, st_dev, st_nlink, st_uid, st_gid, st_size, st_atime,
-         st_mtime, st_ctime) = os.stat(self._file_path(title))
-        return st_ino, st_size, st_mtime
+        return st_inode, st_size, st_mtime
 
     def page_meta(self, title):
         filectx_tip = self._find_filectx(title)
@@ -1261,14 +1252,13 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         if mime == 'text/x-wiki':
             mime = 'text/plain'
         f = self.storage.open_page(title)
-        response = self.response(request, title, f, '/download', mime)
-        response.content_length = self.storage.page_size(title)
+        inode, size, mtime = self.storage.get_file_meta(title)
+#        response = self.response(request, title, f, '/download', mime)
+        response = WikiResponse(content, mimetype=mime)
+        response.set_etag(u'/download/%s/%f' % (werkzeug.url_quote(title),
+                                                inode, mtime))
+        response.content_length = size
         return response
-#        response = WikiResponse(f, mimetype=mime)
-#        inode, size, timestamp = self.storage.page_inode_size_timestamp(title)
-#        response.set_etag(u'/download/%s/%s/%s' % (werkzeug.url_quote(title), inode, timestamp))
-#        response.make_conditional(request)
-#        return response
 
     def undo(self, request, title):
         self.check_lock(title)

@@ -342,7 +342,10 @@ class WikiParser(object):
         return werkzeug.escape(groups["text"])
 
     def line_math(self, groups):
-        return "<var>%s</var>" % werkzeug.escape(groups["math_text"])
+        if self.wiki_math:
+            return self.wiki_math(groups["math_text"])
+        else:
+            return "<var>%s</var>" % werkzeug.escape(groups["math_text"])
 
     def line_code(self, groups):
         return u'<code>%s</code>' % werkzeug.escape(groups["code_text"])
@@ -400,7 +403,10 @@ class WikiParser(object):
                 lines.append(line)
                 line = self.lines.next()
             inside = u"\n".join(line.rstrip() for line in lines)
-            return self.wiki_syntax(inside, syntax=syntax)
+            if self.wiki_syntax:
+                return self.wiki_syntax(inside, syntax=syntax)
+            else:
+                return [u'<div class="highlight"><pre>%s</pre></div>' % werkzeug.escape(inside)]
 
     def block_macro(self, block):
         # XXX A hack to handle <<...>> macro blocks, this method reads lines
@@ -470,7 +476,8 @@ class WikiParser(object):
             func = getattr(self, "line_%s" % m.lastgroup)
             yield func(m.groupdict())
 
-    def parse(self, lines, wiki_link=None, wiki_image=None, wiki_syntax=None):
+    def parse(self, lines, wiki_link, wiki_image, wiki_syntax=None,
+              wiki_math=None):
         def key(line):
             match = self.block_re.match(line)
             if match:
@@ -481,6 +488,7 @@ class WikiParser(object):
         self.wiki_link = wiki_link
         self.wiki_image = wiki_image
         self.wiki_syntax = wiki_syntax
+        self.wiki_math = wiki_math
         for kind, block in itertools.groupby(self.lines, key):
             func = getattr(self, "block_%s" % kind)
             for part in func(block):
@@ -642,13 +650,9 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
                 self.link_labels.append(alt)
                 return u''
 
-            def empty(*args, **kw):
-                return u''
-
         helper = LinkExtractor()
         lines = text.split('\n')
-        for part in parser.parse(lines, helper.wiki_link,
-                                 helper.wiki_image, helper.empty):
+        for part in parser.parse(lines, helper.wiki_link, helper.wiki_image):
             pass
         return helper.links, helper.link_labels
 
@@ -822,6 +826,7 @@ class Wiki(object):
     menu_page = 'Menu'
     locked_page = 'Locked'
     alias_page = 'Alias'
+    math_url = 'http://www.mathtran.org/cgi-bin/mathtran?tex='
     default_style = u"""html { background: #fff; color: #2e3436; 
 font-family: sans-serif; font-size: 96% }
 body { margin: 1em auto; line-height: 1.3; width: 40em }
@@ -832,7 +837,7 @@ a.nonexistent { color: #a40000; }
 a.external { color: #3465a4; text-decoration: underline }
 a.external:visited { color: #75507b }
 a img { border: none }
-img.smiley { vertical-align: middle }
+img.math, img.smiley { vertical-align: middle }
 pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word; 
 white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap;
 line-height: 1.2; color: #555753 }
@@ -982,7 +987,8 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         if mime == 'text/x-wiki':
             f = self.storage.open_page(title)
             content = self.parser.parse(f, request.wiki_link,
-                               request.wiki_image, self.highlight)
+                               request.wiki_image, self.highlight,
+                               self.wiki_math)
             rev, date, author, comment = self.storage.page_meta(title)
             revs = ['%d' % rev]
             unique_titles = {}
@@ -1473,6 +1479,14 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 if mime == 'text/x-wiki':
                     self.index.add_links(title, data, self.parser)
         self.index.regenerate_backlinks()
+
+    def wiki_math(self, math):
+        if '%s' in self.math_url:
+            url = self.math_url % werkzeug.url_quote(math)
+        else:
+            url = ''.join([self.math_url, werkzeug.url_quote(math)])
+        return u'<img src="%s" alt="%s" class="math">' % (url,
+                                             werkzeug.escape(math, quote=True))
 
     @werkzeug.responder
     def application(self, environ, start):

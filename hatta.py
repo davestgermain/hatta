@@ -139,7 +139,7 @@ class WikiStorage(object):
          st_mtime, st_ctime) = os.stat(self._file_path(title))
         return st_size
 
-    def page_inode_size_date(self, title)
+    def page_inode_size_date(self, title):
         (st_mode, st_ino, st_dev, st_nlink, st_uid, st_gid, st_size, st_atime,
          st_mtime, st_ctime) = os.stat(self._file_path(title))
         return st_ino, st_size, datetime.datetime.fromtimestamp(st_mtime)

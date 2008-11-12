@@ -7,11 +7,6 @@ It requires Mercurial and Werkzeug python modules.
 
 """
 
-#try:
-#    import psyco
-#except ImportError:
-#    pass
-
 try:
     import cPickle as pickle
 except ImportError:
@@ -154,8 +149,8 @@ class WikiStorage(object):
         author = unicode(filectx.user(), "utf-8",
                          'replace').split('<')[0].strip()
         comment = unicode(filectx.description(), "utf-8", 'replace')
-        if filectx_tip is None:
-            return -1, None, u'', u''
+        del filectx_tip
+        del filectx
         return rev, date, author, comment
 
     def repo_revision(self):

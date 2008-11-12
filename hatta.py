@@ -1238,12 +1238,16 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return response
 
     def response(self, request, title, content, etag='', mime='text/html',
-                 rev=None, date=None):
+                 rev=None, date=None, set_size=False):
         response = WikiResponse(content, mimetype=mime)
         if rev is None:
-            rev, date, author, comment = self.storage.page_meta(title)
-            del date
-        response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title), rev))
+            inode, size, mtime = self.storage.page_file_meta(title)
+            response.set_etag(u'%s/%s/%d/%f' % (etag, werkzeug.url_quote(title),
+                                                    inode, mtime))
+            if set_size:
+                response.content_length = size
+        else:
+            response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title), rev))
         response.make_conditional(request)
         return response
 
@@ -1253,11 +1257,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             mime = 'text/plain'
         f = self.storage.open_page(title)
         inode, size, mtime = self.storage.page_file_meta(title)
-#        response = self.response(request, title, f, '/download', mime)
-        response = WikiResponse(f, mimetype=mime)
-        response.set_etag(u'/download/%s/%d/%f' % (werkzeug.url_quote(title),
-                                                inode, mtime))
-        response.content_length = size
+        response = self.response(request, title, f, '/download', mime,
+                                 set_size=True)
         return response
 
     def undo(self, request, title):

@@ -1163,7 +1163,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
             for part in self.view_content(request, title, preview):
                 yield part
 
-    def upload_form(self, request, title):
+    def upload_form(self, request, title, preview=None):
         author = request.get_author()
         try:
             f = self.storage.open_page(title)

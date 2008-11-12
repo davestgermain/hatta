@@ -723,7 +723,6 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         self.adapter = adapter
         self.tmpfiles = []
         self.tmppath = wiki.path
-        self.links = []
 
     def get_page_url(self, title):
         return self.adapter.build(self.wiki.view, {'title': title},
@@ -745,7 +744,6 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         if addr == u'':
             return u'<a href="%s" class="%s">%s</a>' % (
                 chunk, class_, image or werkzeug.escape(label))
-        self.links.append(addr)
         if addr in self.wiki.storage:
             return u'<a href="%s%s" class="%s">%s</a>' % (
                 self.get_page_url(addr), chunk, class_,
@@ -760,7 +758,6 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
                 werkzeug.url_fix(addr), werkzeug.escape(alt))
         if '#' in addr:
             addr, chunk = addr.split('#', 1)
-        self.links.append(addr)
         if addr in self.wiki.storage:
             return u'<img src="%s" class="%s" alt="%s">' % (
                 self.get_download_url(addr), class_, werkzeug.escape(alt))
@@ -922,8 +919,8 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         ], converters={'title':WikiTitle})
 
     def html_page(self, request, title, content, page_title=u''):
-        rss = request.adapter.build(self.rss)
-        icon = request.adapter.build(self.favicon)
+        rss = request.adapter.build(self.rss, method='GET')
+        icon = request.adapter.build(self.favicon, method='GET')
         yield (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
                '"http://www.w3.org/TR/html4/strict.dtd">')
         yield u'<html><head><title>%s - %s</title>' % (werkzeug.escape(page_title or title), werkzeug.escape(self.site_name))
@@ -944,7 +941,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
             logo = request.get_download_url(self.logo_page)
             yield u'<a href="%s" class="logo"><img src="%s" alt="[%s]"></a>' % (
                 home, logo, werkzeug.escape(self.front_page))
-        search = request.adapter.build(self.search)
+        search = request.adapter.build(self.search, method='GET')
         yield u'<form class="search" action="%s" method="GET"><div>' % search
         yield u'<input name="q" class="search">'
         yield u'<input class="button" type="submit" value="Search">'
@@ -971,8 +968,8 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         for part in content:
             yield part
         if not page_title:
-            history = request.adapter.build(self.history, {'title': title})
-            backlinks = request.adapter.build(self.backlinks, {'title': title})
+            history = request.adapter.build(self.history, {'title': title}, method='GET')
+            backlinks = request.adapter.build(self.backlinks, {'title': title}, method='GET')
             yield u'<div class="footer">'
             yield u'<a href="%s" class="edit">Edit</a> ' % edit
             yield u'<a href="%s" class="history">History</a> ' % history
@@ -985,37 +982,42 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         if title not in self.storage:
             url = request.adapter.build(self.edit, {'title':title})
             raise WikiRedirect(url)
+        content = self.view_content(request, title)
+        html = self.html_page(request, title, content)
+        rev, date, author, comment = self.storage.page_meta(title)
+        revs = ['%d' % rev]
+        unique_titles = {}
+        for link in self.index.page_links(title):
+            if link not in self.storage and link not in unique_titles:
+                unique_titles[link] = True
+                revs.append(u'%s' % werkzeug.url_quote(link))
+        rev = u','.join(revs)
+        response = self.response(request, title, html, rev=rev)
+        return response
+
+    def view_content(self, request, title, data=None):
         mime = self.storage.page_mime(title)
-        rev = None
         if mime == 'text/x-wiki':
-            f = self.storage.open_page(title)
-            content = self.parser.parse(f, request.wiki_link,
-                               request.wiki_image, self.highlight,
-                               self.wiki_math)
-            rev, date, author, comment = self.storage.page_meta(title)
-            revs = ['%d' % rev]
-            unique_titles = {}
-            for link in self.index.page_links(title):
-                if link not in self.storage and link not in unique_titles:
-                    unique_titles[link] = True
-                    revs.append(u'%s' % werkzeug.url_quote(link))
-            rev = u','.join(revs)
+            if data is None:
+                data = self.storage.open_page(title)
+            content = self.parser.parse(data, request.wiki_link,
+                                        request.wiki_image, self.highlight,
+                                        self.wiki_math)
         elif mime.startswith('image/'):
             content = ['<img src="%s" alt="%s">'
                        % (request.get_download_url(title),
                           werkzeug.escape(title))]
         elif mime.startswith('text/'):
-            f = self.storage.open_page(title)
-            text = f.read()
-            f.close()
-            content = self.highlight(text, mime=mime)
+            if data is None:
+                data = self.storage.open_page(title).read()
+            else:
+                data = ''.join(data)
+            content = self.highlight(data, mime=mime)
         else:
             content = ['<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>'
                    % (request.get_download_url(title), werkzeug.escape(title),
                       mime)]
-        html = self.html_page(request, title, content)
-        response = self.response(request, title, html, rev=rev)
-        return response
+        return content
 
     def revision(self, request, title, rev):
         data = self.storage.page_revision(title, rev)
@@ -1043,6 +1045,13 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         if request.form.get('cancel'):
             if title not in self.storage:
                 url = request.get_page_url(self.front_page)
+        if request.form.get('preview'):
+            text = request.form.get("text")
+            if text is not None:
+                data = text.encode('utf-8').split('\n')
+            else:
+                data = request.files['data'].stream
+            return self.edit(request, title, preview=data)
         elif request.form.get('save'):
             comment = request.form.get("comment", "")
             author = request.get_author()
@@ -1078,20 +1087,19 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
                             max_age=604800)
         return response
 
-    def edit(self, request, title):
+    def edit(self, request, title, preview=None):
         self.check_lock(title)
-        if title not in self.storage:
-            status = '404 Not found'
-        else:
-            status = None
         if self.storage.page_mime(title).startswith('text/'):
             form = self.editor_form
         else:
             form = self.upload_form
-        html = self.html_page(request, title, form(request, title),
+        html = self.html_page(request, title, form(request, title, preview),
                               page_title=u'Editing "%s"' % title)
         if title not in self.storage:
-            return werkzeug.Response(html, mimetype="text/html", status=status)
+            return werkzeug.Response(html, mimetype="text/html",
+                                     status='404 Not found')
+        elif preview:
+            return werkzeug.Response(html, mimetype="text/html")
         else:
             return self.response(request, title, html, '/edit')
 
@@ -1120,21 +1128,25 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
             pass
         yield u'<pre>%s</pre>' % werkzeug.escape(text)
 
-    def editor_form(self, request, title):
+    def editor_form(self, request, title, preview=None):
         author = request.get_author()
-        try:
-            f = self.storage.open_page(title)
+        if title in self.storage:
+            data = self.storage.open_page(title)
             comment = 'modified'
-            rev, old_date, old_author, old_comment = self.storage.page_meta(title)
+            (rev, old_date,
+             old_author, old_comment) = self.storage.page_meta(title)
             if old_author == author:
                 comment = old_comment
-        except werkzeug.exceptions.NotFound:
-            f = []
+        else:
+            data = []
             comment = 'created'
             rev = -1
-        yield u'<form action="" method="POST" class="editor"><div>'
+        if preview:
+            data = preview
+            comment = request.form.get('comment', comment)
+        yield u'<form action="#preview" method="POST" class="editor"><div>'
         yield u'<textarea name="text" cols="80" rows="20">'
-        for part in f:
+        for part in data:
             yield werkzeug.escape(part)
         yield u"""</textarea>"""
         yield u'<input type="hidden" name="parent" value="%d">' % rev
@@ -1142,9 +1154,14 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         yield u'<label>Author <input name="author" value="%s"></label>' % werkzeug.escape(request.get_author())
         yield u'<div class="buttons">'
         yield u'<input type="submit" name="save" value="Save">'
+        yield u'<input type="submit" name="preview" value="Preview">'
         yield u'<input type="submit" name="cancel" value="Cancel">'
         yield u'</div>'
         yield u'</div></form>'
+        if preview:
+            yield u'<h1 id="preview">Preview, not saved</h1>'
+            for part in self.view_content(request, title, preview):
+                yield part
 
     def upload_form(self, request, title):
         author = request.get_author()

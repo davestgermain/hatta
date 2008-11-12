@@ -133,7 +133,7 @@ class WikiStorage(object):
     def page_file_meta(self, title):
         (st_mode, st_ino, st_dev, st_nlink, st_uid, st_gid, st_size, st_atime,
          st_mtime, st_ctime) = os.stat(self._file_path(title))
-        return st_inode, st_size, st_mtime
+        return st_ino, st_size, st_mtime
 
     def page_meta(self, title):
         filectx_tip = self._find_filectx(title)
@@ -1252,10 +1252,10 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         if mime == 'text/x-wiki':
             mime = 'text/plain'
         f = self.storage.open_page(title)
-        inode, size, mtime = self.storage.get_file_meta(title)
+        inode, size, mtime = self.storage.page_file_meta(title)
 #        response = self.response(request, title, f, '/download', mime)
-        response = WikiResponse(content, mimetype=mime)
-        response.set_etag(u'/download/%s/%f' % (werkzeug.url_quote(title),
+        response = WikiResponse(f, mimetype=mime)
+        response.set_etag(u'/download/%s/%d/%f' % (werkzeug.url_quote(title),
                                                 inode, mtime))
         response.content_length = size
         return response

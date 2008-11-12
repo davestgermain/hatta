@@ -139,10 +139,10 @@ class WikiStorage(object):
          st_mtime, st_ctime) = os.stat(self._file_path(title))
         return st_size
 
-    def page_inode_size_date(self, title):
+    def page_inode_size_timestamp(self, title):
         (st_mode, st_ino, st_dev, st_nlink, st_uid, st_gid, st_size, st_atime,
          st_mtime, st_ctime) = os.stat(self._file_path(title))
-        return st_ino, st_size, datetime.datetime.fromtimestamp(st_mtime)
+        return st_ino, st_size, st_mtime
 
     def page_meta(self, title):
         filectx_tip = self._find_filectx(title)
@@ -1261,8 +1261,13 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         if mime == 'text/x-wiki':
             mime = 'text/plain'
         f = self.storage.open_page(title)
-        response = self.response(request, title, f, '/download', mime)
-        response.content_length = self.storage.page_size(title)
+        #response = self.response(request, title, f, '/download', mime)
+        #response.content_length = self.storage.page_size(title)
+        #return response
+        response = WikiResponse(f, mimetype=mime)
+        inode, size, timestamp = self.storage.page_inode_size_timestamp(title)
+        response.set_etag(u'/download/%s/%s/%s' % (werkzeug.url_quote(title), inode, timestamp))
+        response.make_conditional(request)
         return response
 
     def undo(self, request, title):

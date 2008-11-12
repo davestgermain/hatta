@@ -980,15 +980,16 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
             raise WikiRedirect(url)
         content = self.view_content(request, title)
         html = self.html_page(request, title, content)
-        rev, date, author, comment = self.storage.page_meta(title)
-        revs = ['%d' % rev]
+        revs = []
         unique_titles = {}
-        for link in self.index.page_links(title):
+        for link in itertools.chain(self.index.page_links(title),
+                                    [self.style_page, self.logo_page,
+                                     self.menu_page]):
             if link not in self.storage and link not in unique_titles:
                 unique_titles[link] = True
                 revs.append(u'%s' % werkzeug.url_quote(link))
-        rev = u','.join(revs)
-        response = self.response(request, title, html, rev=rev)
+        etag = '/(%s)' % u','.join(revs)
+        response = self.response(request, title, html, etag=etag)
         return response
 
     def view_content(self, request, title, data=None):

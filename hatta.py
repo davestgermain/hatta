@@ -981,17 +981,15 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         rev = None
         if mime == 'text/x-wiki':
             f = self.storage.open_page(title)
-            content = u''.join(self.parser.parse(f, request.wiki_link,
-                               request.wiki_image, self.highlight))
+            content = self.parser.parse(f, request.wiki_link,
+                               request.wiki_image, self.highlight)
             rev, date, author, comment = self.storage.page_meta(title)
             revs = ['%d' % rev]
-            for link in request.links:
-                if not external_link(link):
-                    if link in self.storage:
-                        exists = '+'
-                    else:
-                        exists = '-'
-                    revs.append(u'%s%s' % (exists, werkzeug.url_quote(link)))
+            unique_titles = {}
+            for link in self.index.page_links(title):
+                if link not in self.storage and link not in unique_titles:
+                    unique_titles[link] = True
+                    revs.append(u'%s' % werkzeug.url_quote(link))
             rev = u','.join(revs)
         elif mime.startswith('image/'):
             content = ['<img src="%s" alt="%s">'
@@ -1452,7 +1450,6 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         for link in self.index.page_backlinks(title):
             yield '<li>%s</li>' % request.wiki_link(link, link)
         yield u'</ul>'
-
 
 
     def favicon(self, request):

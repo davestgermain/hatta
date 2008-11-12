@@ -139,6 +139,11 @@ class WikiStorage(object):
          st_mtime, st_ctime) = os.stat(self._file_path(title))
         return st_size
 
+    def page_inode_size_date(self, title)
+        (st_mode, st_ino, st_dev, st_nlink, st_uid, st_gid, st_size, st_atime,
+         st_mtime, st_ctime) = os.stat(self._file_path(title))
+        return st_ino, st_size, datetime.datetime.fromtimestamp(st_mtime)
+
     def page_meta(self, title):
         filectx_tip = self._find_filectx(title)
         if filectx_tip is None:
@@ -1243,21 +1248,11 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
     def response(self, request, title, content, etag='', mime='text/html',
                  rev=None, date=None):
-#        headers = {
-#            'Cache-Control': 'max-age=60, public',
-#            'Vary': 'Transfer-Encoding',
-#            'Allow': 'GET, HEAD',
-#        }
         response = WikiResponse(content, mimetype=mime)
-        if rev is None:# or date is None:
-            nrev, ndate, author, comment = self.storage.page_meta(title)
-            if rev is None:
-                rev = nrev
-            if date is None:
-                date = ndate
+        if rev is None:
+            rev, date, author, comment = self.storage.page_meta(title)
+            del date
         response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title), rev))
-#        response.expires = datetime.datetime.now()+datetime.timedelta(days=3)
-#        response.last_modified = date
         response.make_conditional(request)
         return response
 
@@ -1519,7 +1514,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         request = WikiRequest(self, adapter, environ)
         try:
             endpoint, values = adapter.match()
-            response = endpoint(request, **values)
+            return endpoint(request, **values)
         except werkzeug.exceptions.HTTPException, e:
 #            import traceback
 #            traceback.print_exc()
@@ -1527,7 +1522,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         finally:
             request.cleanup()
             del request
-        return response
+            del adapter
 
 if __name__ == "__main__":
     # You can change some internal config here.

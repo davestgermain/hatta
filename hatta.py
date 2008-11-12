@@ -1531,6 +1531,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             return e
         finally:
             request.cleanup()
+            del request
         return response
 
 if __name__ == "__main__":

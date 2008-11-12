@@ -8,14 +8,19 @@ It requires Mercurial and Werkzeug python modules.
 """
 
 try:
+    import psyco
+except ImportError:
+    pass
+
+try:
     import cPickle as pickle
 except ImportError:
     import pickle
 import datetime
 import difflib
 import itertools
-import imghdr
 import mimetypes
+import optparse
 import os
 import re
 import shelve

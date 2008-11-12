@@ -925,6 +925,8 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
             yield u'<link rel="stylesheet" type="text/css" href="%s">' % css
         else:
             yield u'<style type="text/css">%s</style>' % self.default_style
+        if page_title:
+            yield u'<meta name="robots" content="NOINDEX,NOFOLLOW">'
         yield u'<link rel="shortcut icon" type="image/x-icon" href="%s">' % icon
         if not page_title:
             edit = request.adapter.build(self.edit, {'title': title})

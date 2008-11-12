@@ -161,11 +161,11 @@ class WikiStorage(object):
         mime, encoding = mimetypes.guess_type(file_path, strict=False)
         if encoding:
             mime = 'archive/%s' % encoding
-        if mime is None and title in self:
-            sample = self.open_page(title).read(8)
-            image = imghdr.what(file_path, sample)
-            if image is not None:
-                mime = 'image/%s' % image
+#        if mime is None and title in self:
+#            sample = self.open_page(title).read(8)
+#            image = imghdr.what(file_path, sample)
+#            if image is not None:
+#                mime = 'image/%s' % image
         if mime is None:
             mime = 'text/x-wiki'
         return mime

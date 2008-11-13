@@ -31,7 +31,6 @@ import mercurial.ui
 import mercurial.revlog
 
 
-# ---------------- You can change some internal config here.
 class WikiConfig(object):
     interface = ''
     port = 8080
@@ -90,7 +89,8 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
 """
     icon = '\x00\x00\x01\x00\x01\x00\x10\x10\x10\x00\x01\x00\x04\x00(\x01\x00\x00\x16\x00\x00\x00(\x00\x00\x00\x10\x00\x00\x00 \x00\x00\x00\x01\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0064.\x00SWU\x00\x85\x8a\x88\x00\xcf\xd7\xd3\x00\xec\xee\xee\x00\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00b\x11\x11\x11\x11\x11\x11\x16bUUUUUU\x16bTDDB\x02E\x16bTBD@0E\x16bTD\x14@@E\x16bTD@A\x02E\x16bTDD\x03\x04E\x16bR\x02  05\x16bS\x03\x03\x04\x14E\x16bT\x04\x04\x04BE\x16bT\x04\x04\x04DE\x16bR\x04\x03\x04DE\x16bS\x14 $DE\x16bTDDDDE\x16bUUUUUU\x16c""""""&\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00'
 
-# ---------------- end of config
+    def __init__(self, **kw):
+        self.__dict__.update(kw)
 
 def external_link(addr):
     return (addr.startswith('http://') or addr.startswith('https://')
@@ -1058,7 +1058,7 @@ class Wiki(object):
         mime = self.storage.page_mime(title)
         if request.form.get('cancel'):
             if title not in self.storage:
-                url = request.get_page_url(self.front_page)
+                url = request.get_page_url(self.config.front_page)
         if request.form.get('preview'):
             text = request.form.get("text")
             if text is not None:
@@ -1079,7 +1079,7 @@ class Wiki(object):
                         raise werkzeug.exceptions.Forbidden()
                 if text.strip() == '':
                     self.storage.delete_page(title, author, comment)
-                    url = request.get_page_url(self.front_page)
+                    url = request.get_page_url(self.config.front_page)
                 else:
                     self.storage.save_text(title, data, author, comment)
                 if mime.startswith('text/'):
@@ -1160,7 +1160,7 @@ class Wiki(object):
         if preview:
             data = preview
             comment = request.form.get('comment', comment)
-        yield u'<form action="#preview" method="POST" class="editor"><div>'
+        yield u'<form action="" method="POST" class="editor"><div>'
         yield u'<textarea name="text" cols="80" rows="20">'
         for part in data:
             yield werkzeug.escape(part)
@@ -1547,7 +1547,12 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             del adapter
 
 if __name__ == "__main__":
-    config = WikiConfig()
+    config = WikiConfig(
+        # interface=''
+        # port=8080
+        # pages_path = 'docs'
+        # cache_path = 'cache'
+    )
     application = Wiki(config).application
     werkzeug.run_simple(config.interface, config.port, application,
                         use_reloader=True)

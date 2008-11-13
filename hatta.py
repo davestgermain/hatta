@@ -744,7 +744,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
             return u'<a href="%s%s" class="%s">%s</a>' % (
                 self.get_page_url(addr), chunk, class_,
                 image or werkzeug.escape(label))
-        elif add in ('history', 'search'):
+        elif addr in ('history', 'search'):
             return u'<a href="%s%s" class="special">%s</a>' % (
                 self.get_page_url(addr), chunk, werkzeug.escape(label))
         else:

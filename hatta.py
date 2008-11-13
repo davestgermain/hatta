@@ -969,13 +969,13 @@ class Wiki(object):
         response = self.response(request, title, html, etag=etag)
         return response
 
-    def view_content(self, request, title, data=None):
+    def view_content(self, request, title, lines=None):
         mime = self.storage.page_mime(title)
         if mime == 'text/x-wiki':
-            if data is None:
-                data = self.storage.open_page(title)
-            lines = (unicode(line, self.config.page_charset,
-                             "replace") for line in data)
+            if lines is None:
+                f = self.storage.open_page(title)
+                lines = (unicode(line, self.config.page_charset,
+                         "replace") for line in f)
             content = self.parser.parse(lines, request.wiki_link,
                                         request.wiki_image, self.highlight,
                                         self.wiki_math)
@@ -984,12 +984,12 @@ class Wiki(object):
                        % (request.get_download_url(title),
                           werkzeug.escape(title))]
         elif mime.startswith('text/'):
-            if data is None:
-                data = unicode(self.storage.open_page(title).read(),
+            if lines is None:
+                text = unicode(self.storage.open_page(title).read(),
                                self.config.page_charset, 'replace')
             else:
-                data = ''.join(data)
-            content = self.highlight(data, mime=mime)
+                text = ''.join(lines)
+            content = self.highlight(text, mime=mime)
         else:
             content = ['<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>'
                    % (request.get_download_url(title), werkzeug.escape(title),
@@ -997,17 +997,16 @@ class Wiki(object):
         return content
 
     def revision(self, request, title, rev):
-        data = self.storage.page_revision(title, rev)
+        text = unicode(self.storage.page_revision(title, rev),
+                       self.config.page_charset, 'replace')
         content = [
             u'<p>Content of revision %d of page %s:</p>'
                 % (rev, request.wiki_link(title, title)),
-            u'<pre>%s</pre>'
-                % werkzeug.escape(unicode(data, 'utf-8', 'replace')),
+            u'<pre>%s</pre>' % werkzeug.escape(text),
         ]
         html = self.html_page(request, title, content,
                               page_title=u'Revision of "%s"' % title)
-        response = werkzeug.Response(html, mimetype="text/html")
-        response = self.response(request, title, html, rev=rev)
+        response = self.response(request, title, html, rev=rev, etag='/old')
         return response
 
     def check_lock(self, title):
@@ -1062,16 +1061,15 @@ class Wiki(object):
         if request.form.get('preview'):
             text = request.form.get("text")
             if text is not None:
-                data = text.encode('utf-8').split('\n')
+                lines = text.encode('utf-8').split('\n')
             else:
-                data = request.files['data'].stream
-            return self.edit(request, title, preview=data)
+                lines = request.files['data'].stream
+            return self.edit(request, title, preview=lines)
         elif request.form.get('save'):
             comment = request.form.get("comment", "")
             author = request.get_author()
             text = request.form.get("text")
             if text is not None:
-                data = text.encode(self.config.page_charset)
                 if title == self.config.locked_page:
                     links_and_labels = self.extract_links(text)
                     self.index.add_links(title, links_and_labels)
@@ -1081,6 +1079,7 @@ class Wiki(object):
                     self.storage.delete_page(title, author, comment)
                     url = request.get_page_url(self.config.front_page)
                 else:
+                    data = text.encode(self.config.page_charset)
                     self.storage.save_text(title, data, author, comment)
                 if mime.startswith('text/'):
                     self.index.add_words(title, text)
@@ -1147,23 +1146,23 @@ class Wiki(object):
     def editor_form(self, request, title, preview=None):
         author = request.get_author()
         if title in self.storage:
-            data = self.storage.open_page(title)
+            lines = self.storage.open_page(title)
             comment = 'modified'
             (rev, old_date,
              old_author, old_comment) = self.storage.page_meta(title)
             if old_author == author:
                 comment = old_comment
         else:
-            data = []
+            lines = []
             comment = 'created'
             rev = -1
         if preview:
-            data = preview
+            lines = preview
             comment = request.form.get('comment', comment)
         yield u'<form action="" method="POST" class="editor"><div>'
         yield u'<textarea name="text" cols="80" rows="20">'
-        for part in data:
-            yield werkzeug.escape(part)
+        for line in lines:
+            yield werkzeug.escape(line)
         yield u"""</textarea>"""
         yield u'<input type="hidden" name="parent" value="%d">' % rev
         yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape(comment)
@@ -1378,8 +1377,10 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         yield u'</ul>'
 
     def diff(self, request, title, from_rev, to_rev):
-        from_page = self.storage.page_revision(title, from_rev)
-        to_page = self.storage.page_revision(title, to_rev)
+        from_page = unicode(self.storage.page_revision(title, from_rev),
+                            self.config.page_charset, 'replace')
+        to_page = unicode(self.storage.page_revision(title, to_rev),
+                          self.config.page_charset, 'replace')
         content = self.html_page(request, title, itertools.chain(
             [u'<p>Differences between revisions %d and %d of page %s.</p>'
              % (from_rev, to_rev, request.wiki_link(title, title))],
@@ -1388,8 +1389,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response = werkzeug.Response(content, mimetype='text/html')
         return response
 
-    def diff_content(self, data, other_data):
-        diff = difflib._mdiff(data.split('\n'), other_data.split('\n'))
+    def diff_content(self, text, other_text):
+        diff = difflib._mdiff(text.split('\n'), other_text.split('\n'))
         stack = []
         def infiniter(iterator):
             for i in iterator:
@@ -1413,28 +1414,23 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                         if buff:
                             yield werkzeug.escape(buff)
                             buff = u''
-                        yield (u'<del>%s</del>'
-                               % werkzeug.escape(unicode(old.group(1),
-                                                         'utf-8', 'replace')))
+                        yield u'<del>%s</del>' % werkzeug.escape(old.group(1))
                         old = old_iter.next()
                     while new and new.group(1):
                         if buff:
                             yield werkzeug.escape(buff)
                             buff = u''
-                        yield (u'<ins>%s</ins>'
-                               % werkzeug.escape(unicode(new.group(1),
-                                                         'utf-8', 'replace')))
+                        yield u'<ins>%s</ins>' % werkzeug.escape(new.group(1))
                         new = new_iter.next()
                     if new:
-                        buff += unicode(new.group(2), 'utf-8', 'replace')
+                        buff += new.group(2)
                     old = old_iter.next()
                     new = new_iter.next()
                 if buff:
                     yield werkzeug.escape(buff)
                 yield u'</div>'
             else:
-                yield (u'<div class="orig">%s</div>'
-                       % werkzeug.escape(unicode(old_text, 'utf-8', 'replace')))
+                yield u'<div class="orig">%s</div>' % werkzeug.escape(old_text)
         yield u'</pre>'
 
     def search(self, request):

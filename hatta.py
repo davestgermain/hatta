@@ -23,13 +23,74 @@ import tempfile
 import urllib
 import weakref
 
-
 import werkzeug
 os.environ['HGENCODING'] = 'utf-8'
 os.environ["HGMERGE"] = "internal:merge"
 import mercurial.hg
 import mercurial.ui
 import mercurial.revlog
+
+
+# ---------------- You can change some internal config here.
+class WikiConfig(object):
+    interface = ''
+    port = 8080
+    pages_path = 'docs'
+    cache_path = 'cache'
+    site_name = 'Hatta Wiki'
+    front_page = 'Home'
+    style_page = 'style.css'
+    logo_page = 'logo.png'
+    menu_page = 'Menu'
+    locked_page = 'Locked'
+    alias_page = 'Alias'
+    math_url = 'http://www.mathtran.org/cgi-bin/mathtran?tex='
+    script_name = None
+    page_charset = 'utf-8'
+    default_style = u"""html { background: #fff; color: #2e3436; 
+font-family: sans-serif; font-size: 96% }
+body { margin: 1em auto; line-height: 1.3; width: 40em }
+a { color: #3465a4; text-decoration: none }
+a:hover { text-decoration: underline }
+a.wiki:visited { color: #204a87 }
+a.nonexistent { color: #a40000; }
+a.external { color: #3465a4; text-decoration: underline }
+a.external:visited { color: #75507b }
+a img { border: none }
+img.math, img.smiley { vertical-align: middle }
+pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word; 
+white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap;
+line-height: 1.2; color: #555753 }
+pre.diff div.orig { font-size: 75%; color: #babdb6 }
+b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e; color: #ce5c00; 
+text-decoration: none }
+pre.diff del { background: #eeeeec; color: #888a85; text-decoration: none }
+pre.diff div.change { border-left: 2px solid #fcaf3e }
+div.footer { border-top: solid 1px #babdb6; text-align: right }
+h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
+div.buttons { text-align: center }
+input.button, div.buttons input { font-weight: bold; font-size: 100%;
+background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
+.history input.button { font-size: 75% }
+.editor textarea { width: 100%; display: block; font-size: 100%; 
+border: solid 1px #babdb6; }
+.editor label { display:block; text-align: right }
+.editor .upload { margin: 2em auto; text-align: center }
+form.search input.search, .editor label input { font-size: 100%; 
+border: solid 1px #babdb6; margin: 0.125em 0 }
+.editor label.comment input  { width: 32em }
+a.logo { float: left; display: block; margin: 0.25em }
+div.header h1 { margin: 0; }
+div.content { clear: left }
+form.search { margin:0; text-align: right; font-size: 80% }
+div.snippet { font-size: 80%; color: #888a85 }
+div.header div.menu { float: right; margin-top: 1.25em }
+div.header div.menu a.current { color: #000 }
+hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #babdb6; clear: both }
+"""
+    icon = '\x00\x00\x01\x00\x01\x00\x10\x10\x10\x00\x01\x00\x04\x00(\x01\x00\x00\x16\x00\x00\x00(\x00\x00\x00\x10\x00\x00\x00 \x00\x00\x00\x01\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0064.\x00SWU\x00\x85\x8a\x88\x00\xcf\xd7\xd3\x00\xec\xee\xee\x00\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00b\x11\x11\x11\x11\x11\x11\x16bUUUUUU\x16bTDDB\x02E\x16bTBD@0E\x16bTD\x14@@E\x16bTD@A\x02E\x16bTDD\x03\x04E\x16bR\x02  05\x16bS\x03\x03\x04\x14E\x16bT\x04\x04\x04BE\x16bT\x04\x04\x04DE\x16bR\x04\x03\x04DE\x16bS\x14 $DE\x16bTDDDDE\x16bUUUUUU\x16c""""""&\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00'
+
+# ---------------- end of config
 
 def external_link(addr):
     return (addr.startswith('http://') or addr.startswith('https://')
@@ -157,11 +218,6 @@ class WikiStorage(object):
         mime, encoding = mimetypes.guess_type(file_path, strict=False)
         if encoding:
             mime = 'archive/%s' % encoding
-#        if mime is None and title in self:
-#            sample = self.open_page(title).read(8)
-#            image = imghdr.what(file_path, sample)
-#            if image is not None:
-#                mime = 'image/%s' % image
         if mime is None:
             mime = 'text/x-wiki'
         return mime
@@ -482,7 +538,7 @@ class WikiParser(object):
             if match:
                 return match.lastgroup
             return "paragraph"
-        self.lines = (unicode(line, "utf-8", "replace") for line in lines)
+        self.lines = lines
         self.stack = []
         self.wiki_link = wiki_link
         self.wiki_image = wiki_image
@@ -619,44 +675,9 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
             self.index[encoded] = stored
         self.index.sync()
 
-    def _extract_links(self, text, parser):
-        class LinkExtractor(object):
-            def __init__(self):
-                self.links = []
-                self.link_labels = []
-                self.images = []
-                self.image_labels = []
 
-            def wiki_link(self, addr, label=None, class_=None, image=None):
-                if external_link(addr):
-                    return u''
-                if '#' in addr:
-                    addr, chunk = addr.split('#', 1)
-                if addr == u'':
-                    return u''
-                self.links.append(addr)
-                self.link_labels.append(label)
-                return u''
-
-            def wiki_image(self, addr, alt=None, class_=None):
-                if external_link(addr):
-                    return u''
-                if '#' in addr:
-                    addr, chunk = addr.split('#', 1)
-                if addr == u'':
-                    return u''
-                self.links.append(addr)
-                self.link_labels.append(alt)
-                return u''
-
-        helper = LinkExtractor()
-        lines = text.split('\n')
-        for part in parser.parse(lines, helper.wiki_link, helper.wiki_image):
-            pass
-        return helper.links, helper.link_labels
-
-    def add_links(self, title, text, parser):
-        links, labels = self._extract_links(text, parser)
+    def add_links(self, title, links_and_labels):
+        links, labels = links_and_labels
         self.links[title.encode('utf-8', 'backslashreplace')] = links
         self.links.sync()
         self.labels[title.encode('utf-8', 'backslashreplace')] = labels
@@ -818,60 +839,11 @@ class WikiRedirect(werkzeug.routing.RequestRedirect):
         return werkzeug.redirect(self.new_url, 303)
 
 class Wiki(object):
-    site_name = 'Hatta Wiki'
-    front_page = 'Home'
-    style_page = 'style.css'
-    logo_page = 'logo.png'
-    menu_page = 'Menu'
-    locked_page = 'Locked'
-    alias_page = 'Alias'
-    math_url = 'http://www.mathtran.org/cgi-bin/mathtran?tex='
-    default_style = u"""html { background: #fff; color: #2e3436; 
-font-family: sans-serif; font-size: 96% }
-body { margin: 1em auto; line-height: 1.3; width: 40em }
-a { color: #3465a4; text-decoration: none }
-a:hover { text-decoration: underline }
-a.wiki:visited { color: #204a87 }
-a.nonexistent { color: #a40000; }
-a.external { color: #3465a4; text-decoration: underline }
-a.external:visited { color: #75507b }
-a img { border: none }
-img.math, img.smiley { vertical-align: middle }
-pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word; 
-white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap;
-line-height: 1.2; color: #555753 }
-pre.diff div.orig { font-size: 75%; color: #babdb6 }
-b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e; color: #ce5c00; 
-text-decoration: none }
-pre.diff del { background: #eeeeec; color: #888a85; text-decoration: none }
-pre.diff div.change { border-left: 2px solid #fcaf3e }
-div.footer { border-top: solid 1px #babdb6; text-align: right }
-h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
-div.buttons { text-align: center }
-input.button, div.buttons input { font-weight: bold; font-size: 100%;
-background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
-.history input.button { font-size: 75% }
-.editor textarea { width: 100%; display: block; font-size: 100%; 
-border: solid 1px #babdb6; }
-.editor label { display:block; text-align: right }
-.editor .upload { margin: 2em auto; text-align: center }
-form.search input.search, .editor label input { font-size: 100%; 
-border: solid 1px #babdb6; margin: 0.125em 0 }
-.editor label.comment input  { width: 32em }
-a.logo { float: left; display: block; margin: 0.25em }
-div.header h1 { margin: 0; }
-div.content { clear: left }
-form.search { margin:0; text-align: right; font-size: 80% }
-div.snippet { font-size: 80%; color: #888a85 }
-div.header div.menu { float: right; margin-top: 1.25em }
-div.header div.menu a.current { color: #000 }
-hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #babdb6; clear: both }
-"""
-    icon = '\x00\x00\x01\x00\x01\x00\x10\x10\x10\x00\x01\x00\x04\x00(\x01\x00\x00\x16\x00\x00\x00(\x00\x00\x00\x10\x00\x00\x00 \x00\x00\x00\x01\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0064.\x00SWU\x00\x85\x8a\x88\x00\xcf\xd7\xd3\x00\xec\xee\xee\x00\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00b\x11\x11\x11\x11\x11\x11\x16bUUUUUU\x16bTDDB\x02E\x16bTBD@0E\x16bTD\x14@@E\x16bTD@A\x02E\x16bTDD\x03\x04E\x16bR\x02  05\x16bS\x03\x03\x04\x14E\x16bT\x04\x04\x04BE\x16bT\x04\x04\x04DE\x16bR\x04\x03\x04DE\x16bS\x14 $DE\x16bTDDDDE\x16bUUUUUU\x16c""""""&\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00'
 
-    def __init__(self, path='docs/', cache='cache/'):
-        self.path = os.path.abspath(path)
-        self.cache = os.path.abspath(cache)
+    def __init__(self, config):
+        self.config = config
+        self.path = os.path.abspath(config.pages_path)
+        self.cache = os.path.abspath(config.cache_path)
         self.storage = WikiStorage(self.path)
         self.parser = WikiParser()
         if not os.path.isdir(self.cache):
@@ -883,9 +855,9 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         if reindex:
             self.reindex()
         self.url_map = werkzeug.routing.Map([
-            werkzeug.routing.Rule('/', defaults={'title': self.front_page},
-                                  endpoint=self.view,
-                                  methods=['GET', 'HEAD']),
+            werkzeug.routing.Rule('/',
+                                  defaults={'title': self.config.front_page},
+                                  endpoint=self.view, methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/edit/<title:title>', endpoint=self.edit,
                                   methods=['GET']),
             werkzeug.routing.Rule('/edit/<title:title>', endpoint=self.save,
@@ -922,12 +894,12 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         icon = request.adapter.build(self.favicon, method='GET')
         yield (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
                '"http://www.w3.org/TR/html4/strict.dtd">')
-        yield u'<html><head><title>%s - %s</title>' % (werkzeug.escape(page_title or title), werkzeug.escape(self.site_name))
-        if self.style_page in self.storage:
-            css = request.get_download_url(self.style_page)
+        yield u'<html><head><title>%s - %s</title>' % (werkzeug.escape(page_title or title), werkzeug.escape(self.config.site_name))
+        if self.config.style_page in self.storage:
+            css = request.get_download_url(self.config.style_page)
             yield u'<link rel="stylesheet" type="text/css" href="%s">' % css
         else:
-            yield u'<style type="text/css">%s</style>' % self.default_style
+            yield u'<style type="text/css">%s</style>' % self.config.default_style
         if page_title:
             yield u'<meta name="robots" content="NOINDEX,NOFOLLOW">'
         yield u'<link rel="shortcut icon" type="image/x-icon" href="%s">' % icon
@@ -937,19 +909,19 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         yield (u'<link rel="alternate" type="application/rss+xml" '
                u'title="Recent Changes" href="%s">' % rss)
         yield u'</head><body><div class="header">'
-        if self.logo_page in self.storage:
-            home = request.get_page_url(self.front_page)
-            logo = request.get_download_url(self.logo_page)
+        if self.config.logo_page in self.storage:
+            home = request.get_page_url(self.config.front_page)
+            logo = request.get_download_url(self.config.logo_page)
             yield u'<a href="%s" class="logo"><img src="%s" alt="[%s]"></a>' % (
-                home, logo, werkzeug.escape(self.front_page))
+                home, logo, werkzeug.escape(self.config.front_page))
         search = request.adapter.build(self.search, method='GET')
         yield u'<form class="search" action="%s" method="GET"><div>' % search
         yield u'<input name="q" class="search">'
         yield u'<input class="button" type="submit" value="Search">'
         yield u'</div></form>'
-        if self.menu_page in self.storage:
-            menu = self.index.page_links(self.menu_page)
-            labels = self.index.page_labels(self.menu_page)
+        if self.config.menu_page in self.storage:
+            menu = self.index.page_links(self.config.menu_page)
+            labels = self.index.page_labels(self.config.menu_page)
             if menu:
                 yield u'<div class="menu">'
                 for i, link in enumerate(menu):
@@ -978,7 +950,6 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
             yield u'</div>'
         yield u'</div></body></html>'
 
-
     def view(self, request, title):
         if title not in self.storage:
             url = request.adapter.build(self.edit, {'title':title})
@@ -988,8 +959,9 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         revs = []
         unique_titles = {}
         for link in itertools.chain(self.index.page_links(title),
-                                    [self.style_page, self.logo_page,
-                                     self.menu_page]):
+                                    [self.config.style_page,
+                                     self.config.logo_page,
+                                     self.config.menu_page]):
             if link not in self.storage and link not in unique_titles:
                 unique_titles[link] = True
                 revs.append(u'%s' % werkzeug.url_quote(link))
@@ -1002,7 +974,9 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         if mime == 'text/x-wiki':
             if data is None:
                 data = self.storage.open_page(title)
-            content = self.parser.parse(data, request.wiki_link,
+            lines = (unicode(line, self.config.page_charset,
+                             "replace") for line in data)
+            content = self.parser.parse(lines, request.wiki_link,
                                         request.wiki_image, self.highlight,
                                         self.wiki_math)
         elif mime.startswith('image/'):
@@ -1011,7 +985,8 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
                           werkzeug.escape(title))]
         elif mime.startswith('text/'):
             if data is None:
-                data = self.storage.open_page(title).read()
+                data = unicode(self.storage.open_page(title).read(),
+                               self.config.page_charset, 'replace')
             else:
                 data = ''.join(data)
             content = self.highlight(data, mime=mime)
@@ -1036,9 +1011,46 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         return response
 
     def check_lock(self, title):
-        if self.locked_page in self.storage:
-            if title in self.index.page_links(self.locked_page):
+        if self.config.locked_page in self.storage:
+            if title in self.index.page_links(self.config.locked_page):
                 raise werkzeug.exceptions.Forbidden()
+
+    def extract_links(self, text):
+        class LinkExtractor(object):
+            def __init__(self):
+                self.links = []
+                self.link_labels = []
+                self.images = []
+                self.image_labels = []
+
+            def wiki_link(self, addr, label=None, class_=None, image=None):
+                if external_link(addr):
+                    return u''
+                if '#' in addr:
+                    addr, chunk = addr.split('#', 1)
+                if addr == u'':
+                    return u''
+                self.links.append(addr)
+                self.link_labels.append(label)
+                return u''
+
+            def wiki_image(self, addr, alt=None, class_=None):
+                if external_link(addr):
+                    return u''
+                if '#' in addr:
+                    addr, chunk = addr.split('#', 1)
+                if addr == u'':
+                    return u''
+                self.links.append(addr)
+                self.link_labels.append(alt)
+                return u''
+
+        helper = LinkExtractor()
+        lines = text.split('\n')
+        for part in self.parser.parse(lines, helper.wiki_link,
+                                      helper.wiki_image):
+            pass
+        return helper.links, helper.link_labels
 
     def save(self, request, title):
         self.check_lock(title)
@@ -1059,10 +1071,11 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
             author = request.get_author()
             text = request.form.get("text")
             if text is not None:
-                data = text.encode('utf-8')
-                if title == self.locked_page:
-                    self.index.add_links(title, data, self.parser)
-                    if title in self.index.page_links(self.locked_page):
+                data = text.encode(self.config.page_charset)
+                if title == self.config.locked_page:
+                    links_and_labels = self.extract_links(text)
+                    self.index.add_links(title, links_and_labels)
+                    if title in self.index.page_links(self.config.locked_page):
                         raise werkzeug.exceptions.Forbidden()
                 if text.strip() == '':
                     self.storage.delete_page(title, author, comment)
@@ -1071,9 +1084,10 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
                     self.storage.save_text(title, data, author, comment)
                 if mime.startswith('text/'):
                     self.index.add_words(title, text)
-                if mime == 'text/x-wiki':
-                    self.index.add_links(title, data, self.parser)
-                    self.index.regenerate_backlinks()
+                    if mime == 'text/x-wiki':
+                        links_and_labels = self.extract_links(text)
+                        self.index.add_links(title, links_and_labels)
+                        self.index.regenerate_backlinks()
             else:
                 f = request.files['data'].stream
                 if f is not None:
@@ -1205,7 +1219,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
     <lastBuildDate>%s</lastBuildDate>
 
 """ % (
-            werkzeug.escape(self.site_name),
+            werkzeug.escape(self.config.site_name),
             request.adapter.build(self.rss),
             request.adapter.build(self.recent_changes),
             now,
@@ -1285,8 +1299,10 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 comment = u'Undo of change %d of page %s' % (rev, title)
                 data = self.storage.page_revision(title, rev-1)
                 self.storage.save_text(title, data, author, comment)
-            self.index.add_words(title, data)
-            self.index.add_links(title, data, self.parser)
+            text = unicode(data, self.config.page_charset, 'replace')
+            self.index.add_words(title, text)
+            links_and_labels = self.extract_links(text)
+            self.index.add_links(title, links_and_labels)
             self.index.regenerate_backlinks()
         url = request.adapter.build(self.history, {'title': title},
                                     method='GET')
@@ -1481,7 +1497,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
 
     def favicon(self, request):
-        return werkzeug.Response(self.icon, mimetype='image/x-icon')
+        return werkzeug.Response(self.config.icon, mimetype='image/x-icon')
 
     def robots(self, request):
         robots = ('User-agent: *\r\n'
@@ -1497,21 +1513,25 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             mime = self.storage.page_mime(title)
             if mime.startswith('text/'):
                 data = self.storage.open_page(title).read()
-                self.index.add_words(title, data)
+                text = unicode(data, self.config.page_charset, 'replace')
+                self.index.add_words(title, text)
                 if mime == 'text/x-wiki':
-                    self.index.add_links(title, data, self.parser)
+                    links_and_labels = self.extract_links(text)
+                    self.index.add_links(title, links_and_labels)
         self.index.regenerate_backlinks()
 
     def wiki_math(self, math):
-        if '%s' in self.math_url:
-            url = self.math_url % werkzeug.url_quote(math)
+        if '%s' in self.config.math_url:
+            url = self.config.math_url % werkzeug.url_quote(math)
         else:
-            url = ''.join([self.math_url, werkzeug.url_quote(math)])
+            url = ''.join([self.config.math_url, werkzeug.url_quote(math)])
         return u'<img src="%s" alt="%s" class="math">' % (url,
                                              werkzeug.escape(math, quote=True))
 
     @werkzeug.responder
     def application(self, environ, start):
+        if self.config.script_name is not None:
+            environ['SCRIPT_NAME'] = self.config.script_name
         adapter = self.url_map.bind_to_environ(environ)
         request = WikiRequest(self, adapter, environ)
         try:
@@ -1527,10 +1547,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             del adapter
 
 if __name__ == "__main__":
-    # You can change some internal config here.
-    interface = ''
-    port = 8080
-    pages_path = 'docs'
-    cache_path = 'cache'
-    application = Wiki(pages_path, cache_path).application
-    werkzeug.run_simple(interface, port, application, use_reloader=True)
+    config = WikiConfig()
+    application = Wiki(config).application
+    werkzeug.run_simple(config.interface, config.port, application,
+                        use_reloader=True)

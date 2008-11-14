@@ -1026,7 +1026,7 @@ class Wiki(object):
             if lines is None:
                 f = self.storage.open_page(title)
                 lines = (unicode(line, self.config.page_charset,
-                         "replace") for line in f)
+                     "replace") for line in f)
             content = self.parser.parse(lines, request.wiki_link,
                                         request.wiki_image, self.highlight,
                                         self.wiki_math)
@@ -1112,9 +1112,9 @@ class Wiki(object):
         if request.form.get('preview'):
             text = request.form.get("text")
             if text is not None:
-                lines = text.encode('utf-8').split('\n')
+                lines = text.split('\n')
             else:
-                lines = request.files['data'].stream
+                lines = [u'No preview for binaries.']
             return self.edit(request, title, preview=lines)
         elif request.form.get('save'):
             comment = request.form.get("comment", "")

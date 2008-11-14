@@ -11,6 +11,7 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+import base64
 import datetime
 import difflib
 import itertools
@@ -86,9 +87,23 @@ form.search { margin:0; text-align: right; font-size: 80% }
 div.snippet { font-size: 80%; color: #888a85 }
 div.header div.menu { float: right; margin-top: 1.25em }
 div.header div.menu a.current { color: #000 }
-hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #babdb6; clear: both }
-"""
-    icon = '\x00\x00\x01\x00\x01\x00\x10\x10\x10\x00\x01\x00\x04\x00(\x01\x00\x00\x16\x00\x00\x00(\x00\x00\x00\x10\x00\x00\x00 \x00\x00\x00\x01\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0064.\x00SWU\x00\x85\x8a\x88\x00\xcf\xd7\xd3\x00\xec\xee\xee\x00\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00b\x11\x11\x11\x11\x11\x11\x16bUUUUUU\x16bTDDB\x02E\x16bTBD@0E\x16bTD\x14@@E\x16bTD@A\x02E\x16bTDD\x03\x04E\x16bR\x02  05\x16bS\x03\x03\x04\x14E\x16bT\x04\x04\x04BE\x16bT\x04\x04\x04DE\x16bR\x04\x03\x04DE\x16bS\x14 $DE\x16bTDDDDE\x16bUUUUUU\x16c""""""&\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00'
+hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #babdb6; clear: both }"""
+    icon = base64.b64decode(
+'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhki'
+'AAAAAlwSFlzAAAEnQAABJ0BfDRroQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBo'
+'AAALWSURBVDiNbdNLaFxlFMDx//fd19x5JdNJm0lIImPaYm2MfSUggrssXBVaChUfi1JwpQtxK7gqu'
+'LMbQQQ3bipU0G3Rgg98DBpraWob00kzM6Z5TF7tdObm3vvd46K0TBo/OLtzfnychxIRut+Zo2/19vT'
+'kLxXze6biONbGJMRipL39MJyt33rvp+rVT7rzVTfw2vFzLxwcLf/V7oSq1W4hACIkIigUtnaoNecXG'
+'2u14T8blQRAd2v7yyN/RLFR6IRM1iedSeFnUvhpDydlI9ow0lcedG3348c1djeQz+WcThjgYZMgGBG'
+'SJMEYgzGGODLEoTBYGH4DeHcXoDSSzaRVogQjyaMwhtgYcoUco+Nl5qbnubFw7fr//uB2tXp78uj4c'
+'0YJsSTESUxsDCemjjH6YhnbtbA8xaVv7n/0uGZHDx48aH8+17iLJQrf9vCdFL7tkcn7/Pb7r8zdmWP'
+'2zqwopa7sAl4/cV4NlvrPbgch7aBN1vUIOw9ZWmmw2dqkb18fQSegOrOgfD9zahfQ37/3su+ljj1T6'
+'uCnAyxtoZVGa41tWSilULWfCZdaPD986MsjQxOHdwC9PdmT2tLk0oozpxfYf2SZwp4Iz1X4UZWBe1+'
+'z9+5X+OkiruWpYr744ZMmvjn5dvrwoVHLdRzWtobY2Kwx9soyz5ZXuV9fQ5pXCBabXKuXcBwbYwxYe'
+'kIppTXAF5VP2xutrVYmm8bzM1z9foSZik1z1SWMNLW1AtMrB/gnnMJxbSxbUV2a/QHQT8Y4c+vvC8V'
+'C74VCoZcodvnxux5Msg+THCSKHy2R48YgIb/crITrreZlEYl33MKrYycvvnx88p2BUkkpRyGSEBmDi'
+'WI6QcC95UUqM9PBzdqN99fbzc9EJNwBKKUoFw+8NDY8/sFQ/8CE57l5pZRdX6kHqxurW43mv98urM9'
+'fjJPouohE8NQ1dkEayAJ5wAe2gRawJSKmO/c/aERMn5m9/ksAAAAASUVORK5CYII=')
 
     def __init__(self, **kw):
         self._parse_environ()

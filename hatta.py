@@ -716,8 +716,13 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
 
     def add_words(self, title, text):
         ident = self.get_title_id(title)
-        words = self.count_words(self.filter_words(self.split_text(text)))
-        words[title] = words.get(title, 0) + 1
+        if text:
+            words = self.count_words(self.filter_words(self.split_text(text)))
+        else:
+            words = {}
+        title_words = self.count_words(self.filter_words(self.split_text(title)))
+        for word, count in title_words.iteritems():
+            words[word] = words.get(word, 0) + count
         for word, count in words.iteritems():
             encoded = word.encode("utf-8")
             if encoded not in self.index:
@@ -1132,6 +1137,8 @@ class Wiki(object):
                         links_and_labels = self.extract_links(text)
                         self.index.add_links(title, links_and_labels)
                         self.index.regenerate_backlinks()
+                else:
+                    self.index.add_words(title, u'')
             else:
                 f = request.files['data'].stream
                 if f is not None:
@@ -1141,6 +1148,7 @@ class Wiki(object):
                     except AttributeError:
                         self.storage.save_text(title, f.read(), author,
                                                comment)
+                self.index.add_words(title, u'')
         response = werkzeug.routing.redirect(url, code=303)
         response.set_cookie('author',
                             werkzeug.url_quote(request.get_author()),
@@ -1566,6 +1574,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 if mime == 'text/x-wiki':
                     links_and_labels = self.extract_links(text)
                     self.index.add_links(title, links_and_labels)
+            else:
+                self.index.add_words(title, u'')
         self.index.regenerate_backlinks()
 
     def wiki_math(self, math):

@@ -29,6 +29,7 @@ os.environ["HGMERGE"] = "internal:merge"
 import mercurial.hg
 import mercurial.ui
 import mercurial.revlog
+import mercurial.util
 
 
 class WikiConfig(object):
@@ -147,7 +148,7 @@ class WikiStorage(object):
         file_path = self._file_path(title)
         lock = self._lock()
         try:
-            os.rename(file_name, file_path)
+            mercurial.util.rename(file_name, file_path)
             if repo_file not in self.repo.changectx():
                 self.repo.add([repo_file])
             self.repo.commit(files=[repo_file], text=text, user=user,

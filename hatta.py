@@ -33,6 +33,7 @@ import mercurial.util
 
 
 class WikiConfig(object):
+    # Please see the bottom of the script for modifying these values.
     interface = ''
     port = 8080
     pages_path = 'docs'
@@ -91,7 +92,48 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
     icon = '\x00\x00\x01\x00\x01\x00\x10\x10\x10\x00\x01\x00\x04\x00(\x01\x00\x00\x16\x00\x00\x00(\x00\x00\x00\x10\x00\x00\x00 \x00\x00\x00\x01\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0064.\x00SWU\x00\x85\x8a\x88\x00\xcf\xd7\xd3\x00\xec\xee\xee\x00\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00b\x11\x11\x11\x11\x11\x11\x16bUUUUUU\x16bTDDB\x02E\x16bTBD@0E\x16bTD\x14@@E\x16bTD@A\x02E\x16bTDD\x03\x04E\x16bR\x02  05\x16bS\x03\x03\x04\x14E\x16bT\x04\x04\x04BE\x16bT\x04\x04\x04DE\x16bR\x04\x03\x04DE\x16bS\x14 $DE\x16bTDDDDE\x16bUUUUUU\x16c""""""&\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00'
 
     def __init__(self, **kw):
+        self._parse_environ()
         self.__dict__.update(kw)
+
+    def _parse_environ(self):
+        prefix = 'HATTA_'
+        settings = {}
+        for key, value in os.environ.iteritems():
+            if key.startswith(prefix):
+                name = key[len(prefix):].lower()
+                settings[name] = value
+        self.__dict__.update(settings)
+
+    def _parse_args(self):
+        import optparse
+        parser = optparse.OptionParser()
+        parser.add_option('-d', '--pages-dir', dest='pages_path',
+                          help='Store pages in DIR', metavar='DIR')
+        parser.add_option('-t', '--cache-dir', dest='cache_path',
+                          help='Store cache in DIR', metavar='DIR')
+        parser.add_option('-i', '--interface', dest='interface',
+                          help='Listen on interface INT', metavar='INT')
+        parser.add_option('-p', '--port', dest='port', type='int',
+                          help='Listen on port PORT', metavar='PORT')
+        parser.add_option('-s', '--script-name', dest='script_name',
+                          help='Override SCRIPT_NAME to NAME', metavar='NAME')
+        parser.add_option('-n', '--site-name', dest='site_name',
+                          help='Set the name of the site to NAME',
+                          metavar='NAME')
+        parser.add_option('-m', '--front-page', dest='front_page',
+                          help='Use PAGE as the front page', metavar='PAGE')
+        parser.add_option('-e', '--encoding', dest='page_charset',
+                          help='Use encoding ENS to read and write pages',
+                          metavar='ENC')
+        options, args = parser.parse_args()
+        self.pages_path = options.pages_path or self.pages_path
+        self.cache_path = options.cache_path or self.cache_path
+        self.interface = options.interface or self.interface
+        self.port = options.port or self.port
+        self.script_name = options.script_name or self.script_name
+        self.site_name = options.site_name or self.site_name
+        self.page_charset = options.page_charset or self.page_charset
+        self.front_page = options.front_page or self.front_page
 
 def external_link(addr):
     return (addr.startswith('http://') or addr.startswith('https://')
@@ -1545,11 +1587,19 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
 if __name__ == "__main__":
     config = WikiConfig(
+        # Here you can modify the configuration: uncomment and change the ones
+        # you need. Note that it's better use environment variables or command
+        # line switches.
+
         # interface=''
         # port=8080
         # pages_path = 'docs'
         # cache_path = 'cache'
+        # front_page = 'Home'
+        # site_name = 'Hatta Wiki'
+        # page_charset = 'UTF-8'
     )
+    config._parse_args()
     application = Wiki(config).application
-    werkzeug.run_simple(config.interface, config.port, application,
+    werkzeug.run_simple(config.interface, int(config.port), application,
                         use_reloader=True)

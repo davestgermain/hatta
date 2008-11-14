@@ -581,7 +581,7 @@ class WikiParser(object):
             if match:
                 return match.lastgroup
             return "paragraph"
-        self.lines = lines
+        self.lines = iter(lines)
         self.stack = []
         self.wiki_link = wiki_link
         self.wiki_image = wiki_image

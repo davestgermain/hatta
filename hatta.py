@@ -877,19 +877,10 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
 
 class WikiTitle(werkzeug.routing.BaseConverter):
     def to_python(self, value):
-        # XXX work around a bug in Werkzeug
-        return unicode(urllib.unquote_plus(value.encode('utf-8', 'ignore')),
-                       'utf-8', 'ignore')
+        return value.replace('+', ' ')
 
     def to_url(self, value):
-        #return werkzeug.url_quote_plus(value.encode('utf-8', 'ignore'), safe='')
-        return unicode(urllib.quote_plus(value.encode('utf-8', 'ignore'),
-                                         safe=''), 'utf-8', 'ignore')
-
-class WikiRedirect(werkzeug.routing.RequestRedirect):
-    code = 303
-    def get_response(self, environ):
-        return werkzeug.redirect(self.new_url, 303)
+        return werkzeug.url_quote(value.replace(' ', '+'))
 
 class Wiki(object):
 

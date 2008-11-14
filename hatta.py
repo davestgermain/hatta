@@ -749,7 +749,8 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
             for link in links:
                 encoded = link.encode('utf-8', 'backslashreplace')
                 backlinks = self.backlinks.get(encoded, [])
-                backlinks.append(ident)
+                if ident not in backlinks:
+                    backlinks.append(ident)
                 self.backlinks[encoded] = backlinks
         self.backlinks.sync()
 

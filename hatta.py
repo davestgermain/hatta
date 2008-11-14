@@ -31,7 +31,6 @@ import mercurial.ui
 import mercurial.revlog
 import mercurial.util
 
-
 class WikiConfig(object):
     # Please see the bottom of the script for modifying these values.
     interface = ''
@@ -48,6 +47,7 @@ class WikiConfig(object):
     math_url = 'http://www.mathtran.org/cgi-bin/mathtran?tex='
     script_name = None
     page_charset = 'utf-8'
+    config_file = 'hatta.conf'
     default_style = u"""html { background: #fff; color: #2e3436; 
 font-family: sans-serif; font-size: 96% }
 body { margin: 1em auto; line-height: 1.3; width: 40em }
@@ -125,6 +125,8 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         parser.add_option('-e', '--encoding', dest='page_charset',
                           help='Use encoding ENS to read and write pages',
                           metavar='ENC')
+        parser.add_option('-c', '--config-file', dest='config_file',
+                          help='Read configuration from FILE', metavar='FILE')
         options, args = parser.parse_args()
         self.pages_path = options.pages_path or self.pages_path
         self.cache_path = options.cache_path or self.cache_path
@@ -134,6 +136,10 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         self.site_name = options.site_name or self.site_name
         self.page_charset = options.page_charset or self.page_charset
         self.front_page = options.front_page or self.front_page
+        self.config_file = options.config_file or self.config_file
+
+    def _parse_files(self, files=()):
+        import ConfigParser
 
 def external_link(addr):
     return (addr.startswith('http://') or addr.startswith('https://')
@@ -235,14 +241,18 @@ class WikiStorage(object):
             raise werkzeug.exceptions.NotFound()
 
     def page_file_meta(self, title):
-        (st_mode, st_ino, st_dev, st_nlink, st_uid, st_gid, st_size, st_atime,
-         st_mtime, st_ctime) = os.stat(self._file_path(title))
+        try:
+            (st_mode, st_ino, st_dev, st_nlink, st_uid, st_gid, st_size,
+             st_atime, st_mtime, st_ctime) = os.stat(self._file_path(title))
+        except OSError:
+            return 0, 0, 0
         return st_ino, st_size, st_mtime
 
     def page_meta(self, title):
         filectx_tip = self._find_filectx(title)
         if filectx_tip is None:
-            return -1, None, u'', u''
+            raise werkzeug.exceptions.NotFound()
+            #return -1, None, u'', u''
         rev = filectx_tip.filerev()
         filectx = filectx_tip.filectx(rev)
         date = datetime.datetime.fromtimestamp(filectx.date()[0])
@@ -945,10 +955,10 @@ class Wiki(object):
             yield u'<style type="text/css">%s</style>' % self.config.default_style
         if page_title:
             yield u'<meta name="robots" content="NOINDEX,NOFOLLOW">'
-        yield u'<link rel="shortcut icon" type="image/x-icon" href="%s">' % icon
-        if not page_title:
+        else:
             edit = request.adapter.build(self.edit, {'title': title})
             yield u'<link rel="alternate" type="application/wiki" href="%s">' % edit
+        yield u'<link rel="shortcut icon" type="image/x-icon" href="%s">' % icon
         yield (u'<link rel="alternate" type="application/rss+xml" '
                u'title="Recent Changes" href="%s">' % rss)
         yield u'</head><body><div class="header">'
@@ -994,22 +1004,23 @@ class Wiki(object):
         yield u'</div></body></html>'
 
     def view(self, request, title):
-        if title not in self.storage:
+        try:
+            content = self.view_content(request, title)
+            html = self.html_page(request, title, content)
+            revs = []
+            unique_titles = {}
+            for link in itertools.chain(self.index.page_links(title),
+                                        [self.config.style_page,
+                                         self.config.logo_page,
+                                         self.config.menu_page]):
+                if link not in self.storage and link not in unique_titles:
+                    unique_titles[link] = True
+                    revs.append(u'%s' % werkzeug.url_quote(link))
+            etag = '/(%s)' % u','.join(revs)
+            response = self.response(request, title, html, etag=etag)
+        except werkzeug.exceptions.NotFound:
             url = request.adapter.build(self.edit, {'title':title})
-            raise WikiRedirect(url)
-        content = self.view_content(request, title)
-        html = self.html_page(request, title, content)
-        revs = []
-        unique_titles = {}
-        for link in itertools.chain(self.index.page_links(title),
-                                    [self.config.style_page,
-                                     self.config.logo_page,
-                                     self.config.menu_page]):
-            if link not in self.storage and link not in unique_titles:
-                unique_titles[link] = True
-                revs.append(u'%s' % werkzeug.url_quote(link))
-        etag = '/(%s)' % u','.join(revs)
-        response = self.response(request, title, html, etag=etag)
+            response = werkzeug.routing.redirect(url, code=303)
         return response
 
     def view_content(self, request, title, lines=None):
@@ -1188,14 +1199,14 @@ class Wiki(object):
 
     def editor_form(self, request, title, preview=None):
         author = request.get_author()
-        if title in self.storage:
+        try:
             lines = self.storage.open_page(title)
             comment = 'modified'
             (rev, old_date,
              old_author, old_comment) = self.storage.page_meta(title)
             if old_author == author:
                 comment = old_comment
-        else:
+        except werkzeug.exceptions.NotFound:
             lines = []
             comment = 'created'
             rev = -1
@@ -1424,9 +1435,16 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                             self.config.page_charset, 'replace')
         to_page = unicode(self.storage.page_revision(title, to_rev),
                           self.config.page_charset, 'replace')
+        from_url = request.adapter.build(self.revision,
+                                         {'title': title, 'rev': from_rev})
+        to_url = request.adapter.build(self.revision,
+                                       {'title': title, 'rev': to_rev})
         content = self.html_page(request, title, itertools.chain(
-            [u'<p>Differences between revisions %d and %d of page %s.</p>'
-             % (from_rev, to_rev, request.wiki_link(title, title))],
+            [u'<p>Differences between revisions ',
+             u'<a href="%s">%d</a>' % (from_url, from_rev),
+             u' and ',
+             u'<a href="%s">%d</a>' % (to_url, to_rev),
+             u' of page %s.</p>' % request.wiki_link(title, title)],
             self.diff_content(from_page, to_page)),
             page_title=u'Diff for "%s"' % title)
         response = werkzeug.Response(content, mimetype='text/html')

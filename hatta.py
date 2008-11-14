@@ -20,7 +20,6 @@ import os
 import re
 import shelve
 import tempfile
-import urllib
 import weakref
 
 import werkzeug
@@ -718,6 +717,7 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
     def add_words(self, title, text):
         ident = self.get_title_id(title)
         words = self.count_words(self.filter_words(self.split_text(text)))
+        words[title] = words.get(title, 0) + 1
         for word, count in words.iteritems():
             encoded = word.encode("utf-8")
             if encoded not in self.index:

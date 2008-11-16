@@ -968,10 +968,10 @@ class Wiki(object):
             yield u'<link rel="alternate" type="application/wiki" href="%s">' % edit
         yield u'<link rel="shortcut icon" type="image/x-icon" href="%s">' % icon
         yield (u'<link rel="alternate" type="application/rss+xml" '
-               u'title="%s - Recent Changes (RSS)" href="%s">' % (
+               u'title="%s (RSS)" href="%s">' % (
                     werkzeug.escape(self.config.site_name, quote=True), rss))
         yield (u'<link rel="alternate" type="application/rss+xml" '
-               u'title="%s - Recent Changes (ATOM)" href="%s">' % (
+               u'title="%s (ATOM)" href="%s">' % (
                     werkzeug.escape(self.config.site_name, quote=True), atom))
         yield u'</head><body><div class="header">'
         if self.config.logo_page in self.storage:

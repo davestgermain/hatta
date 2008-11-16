@@ -937,6 +937,10 @@ class Wiki(object):
                                   methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/rss', endpoint=self.rss,
                                   methods=['GET', 'HEAD']),
+            werkzeug.routing.Rule('/feed/rss', endpoint=self.rss,
+                                  methods=['GET', 'HEAD']),
+            werkzeug.routing.Rule('/feed/atom', endpoint=self.atom,
+                                  methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/favicon.ico', endpoint=self.favicon,
                                   methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/robots.txt', endpoint=self.robots,
@@ -1263,6 +1267,74 @@ class Wiki(object):
         yield u'<input type="submit" name="cancel" value="Cancel">'
         yield u'</div></div></form>'
 
+    def atom(self, request):
+        date_format = "%Y-%m-%dT%H:%M:%SZ"
+        first_date = datetime.datetime.now()
+        now = first_date.strftime(date_format)
+        body = []
+        first_title = u''
+        count = 0
+        unique_titles = {}
+        for title, rev, date, author, comment in self.storage.history():
+            if title in unique_titles:
+                continue
+            unique_titles[title] = True
+            count += 1
+            if count > 10:
+                break
+            if not first_title:
+                first_title = title
+                first_rev = rev
+                first_date = date
+            item = u"""<entry>
+    <title>%(title)s</title>
+    <link href="%(page_url)s" />
+    <content>%(comment)s</content>
+    <updated>%(date)s</updated>
+    <author>
+        <name>%(author)s</name>
+        <uri>%(author_url)s</uri>
+    </author>
+    <id>%(url)s</id>
+</entry>""" % {
+                'title': werkzeug.escape(title),
+                'page_url': request.adapter.build(self.view, {'title': title},
+                                                  force_external=True),
+                'comment': werkzeug.escape(comment),
+                'date': date.strftime(date_format),
+                'author': werkzeug.escape(author),
+                'author_url': request.adapter.build(self.view,
+                                                    {'title': author},
+                                                    force_external=True),
+                'url': request.adapter.build(self.revision,
+                                             {'title': title, 'rev': rev},
+                                             force_external=True),
+            }
+            body.append(item)
+        content = u"""<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>%(title)s</title>
+  <link rel="self" href="%(atom)s"/>
+  <link href="%(home)s"/>
+  <id>%(home)s</id>
+  <updated>%(date)s</updated>
+  <logo>%(logo)s</logo>
+%(body)s
+</feed>""" % {
+            'title': self.config.site_name,
+            'home': request.adapter.build(self.view, force_external=True),
+            'atom': request.adapter.build(self.atom, force_external=True),
+            'date': first_date.strftime(date_format),
+            'logo': request.adapter.build(self.download,
+                                          {'title': self.config.logo_page},
+                                          force_external=True),
+            'body': u''.join(body),
+        }
+        response = self.response(request, 'atom', content, '/atom',
+                                 'application/xml', first_rev, first_date)
+        response.set_etag('/atom/%d' % self.storage.repo_revision())
+        response.make_conditional(request)
+        return response
 
 
     def rss(self, request):
@@ -1316,7 +1388,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         content = [rss_head]+rss_body+[u'</channel></rss>']
         response = self.response(request, 'rss', content, '/rss',
                                  'application/xml', first_rev, first_date)
-        response.set_etag('/recentchanges/%d' % self.storage.repo_revision())
+        response.set_etag('/rss/%d' % self.storage.repo_revision())
         response.make_conditional(request)
         return response
 

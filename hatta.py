@@ -1308,10 +1308,11 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         adapter = self.url_map.bind_to_environ(environ)
         request = WikiRequest(self, adapter, environ)
         try:
-            endpoint, values = adapter.match()
-            response = endpoint(request, **values)
-        except werkzeug.exceptions.HTTPException, e:
-            return e
+            try:
+                endpoint, values = adapter.match()
+                response = endpoint(request, **values)
+            except werkzeug.exceptions.HTTPException, e:
+                response = e
         finally:
             request.cleanup()
         return response

@@ -1,28 +1,163 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+"""
+Hatta Wiki is a wiki engine designed to be used with Mercurial repositories.
+It requires Mercurial and Werkzeug python modules.
+
+"""
+
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
+import base64
 import datetime
+import difflib
 import itertools
-import imghdr
 import mimetypes
 import os
 import re
 import shelve
 import tempfile
 import weakref
-import difflib
+import threading
 
 import werkzeug
 os.environ['HGENCODING'] = 'utf-8'
-os.environ["HGMERGE"] = "internal:fail"
+os.environ["HGMERGE"] = "internal:merge"
 import mercurial.hg
 import mercurial.ui
 import mercurial.revlog
+<<<<<<< /home/sheep/devel/hatta/hatta.py
 import mercurial.util
+=======
+import mercurial.util
+
+class WikiConfig(object):
+    # Please see the bottom of the script for modifying these values.
+    interface = ''
+    port = 8080
+    pages_path = 'docs'
+    cache_path = 'cache'
+    site_name = 'Hatta Wiki'
+    front_page = 'Home'
+    style_page = 'style.css'
+    logo_page = 'logo.png'
+    menu_page = 'Menu'
+    locked_page = 'Locked'
+    alias_page = 'Alias'
+    math_url = 'http://www.mathtran.org/cgi-bin/mathtran?tex='
+    script_name = None
+    page_charset = 'utf-8'
+    config_file = 'hatta.conf'
+    default_style = u"""html { background: #fff; color: #2e3436; 
+font-family: sans-serif; font-size: 96% }
+body { margin: 1em auto; line-height: 1.3; width: 40em }
+a { color: #3465a4; text-decoration: none }
+a:hover { text-decoration: underline }
+a.wiki:visited { color: #204a87 }
+a.nonexistent { color: #a40000; }
+a.external { color: #3465a4; text-decoration: underline }
+a.external:visited { color: #75507b }
+a img { border: none }
+img.math, img.smiley { vertical-align: middle }
+pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word; 
+white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap;
+line-height: 1.2; color: #555753 }
+pre.diff div.orig { font-size: 75%; color: #babdb6 }
+b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e; color: #ce5c00; 
+text-decoration: none }
+pre.diff del { background: #eeeeec; color: #888a85; text-decoration: none }
+pre.diff div.change { border-left: 2px solid #fcaf3e }
+div.footer { border-top: solid 1px #babdb6; text-align: right }
+h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
+div.buttons { text-align: center }
+input.button, div.buttons input { font-weight: bold; font-size: 100%;
+background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
+.history input.button { font-size: 75% }
+.editor textarea { width: 100%; display: block; font-size: 100%; 
+border: solid 1px #babdb6; }
+.editor label { display:block; text-align: right }
+.editor .upload { margin: 2em auto; text-align: center }
+form.search input.search, .editor label input { font-size: 100%; 
+border: solid 1px #babdb6; margin: 0.125em 0 }
+.editor label.comment input  { width: 32em }
+a.logo { float: left; display: block; margin: 0.25em }
+div.header h1 { margin: 0; }
+div.content { clear: left }
+form.search { margin:0; text-align: right; font-size: 80% }
+div.snippet { font-size: 80%; color: #888a85 }
+div.header div.menu { float: right; margin-top: 1.25em }
+div.header div.menu a.current { color: #000 }
+hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #babdb6; clear: both }"""
+    icon = base64.b64decode(
+'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhki'
+'AAAAAlwSFlzAAAEnQAABJ0BfDRroQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBo'
+'AAALWSURBVDiNbdNLaFxlFMDx//fd19x5JdNJm0lIImPaYm2MfSUggrssXBVaChUfi1JwpQtxK7gqu'
+'LMbQQQ3bipU0G3Rgg98DBpraWob00kzM6Z5TF7tdObm3vvd46K0TBo/OLtzfnychxIRut+Zo2/19vT'
+'kLxXze6biONbGJMRipL39MJyt33rvp+rVT7rzVTfw2vFzLxwcLf/V7oSq1W4hACIkIigUtnaoNecXG'
+'2u14T8blQRAd2v7yyN/RLFR6IRM1iedSeFnUvhpDydlI9ow0lcedG3348c1djeQz+WcThjgYZMgGBG'
+'SJMEYgzGGODLEoTBYGH4DeHcXoDSSzaRVogQjyaMwhtgYcoUco+Nl5qbnubFw7fr//uB2tXp78uj4c'
+'0YJsSTESUxsDCemjjH6YhnbtbA8xaVv7n/0uGZHDx48aH8+17iLJQrf9vCdFL7tkcn7/Pb7r8zdmWP'
+'2zqwopa7sAl4/cV4NlvrPbgch7aBN1vUIOw9ZWmmw2dqkb18fQSegOrOgfD9zahfQ37/3su+ljj1T6'
+'uCnAyxtoZVGa41tWSilULWfCZdaPD986MsjQxOHdwC9PdmT2tLk0oozpxfYf2SZwp4Iz1X4UZWBe1+'
+'z9+5X+OkiruWpYr744ZMmvjn5dvrwoVHLdRzWtobY2Kwx9soyz5ZXuV9fQ5pXCBabXKuXcBwbYwxYe'
+'kIppTXAF5VP2xutrVYmm8bzM1z9foSZik1z1SWMNLW1AtMrB/gnnMJxbSxbUV2a/QHQT8Y4c+vvC8V'
+'C74VCoZcodvnxux5Msg+THCSKHy2R48YgIb/crITrreZlEYl33MKrYycvvnx88p2BUkkpRyGSEBmDi'
+'WI6QcC95UUqM9PBzdqN99fbzc9EJNwBKKUoFw+8NDY8/sFQ/8CE57l5pZRdX6kHqxurW43mv98urM9'
+'fjJPouohE8NQ1dkEayAJ5wAe2gRawJSKmO/c/aERMn5m9/ksAAAAASUVORK5CYII=')
+
+    def __init__(self, **kw):
+        self._parse_environ()
+        self.__dict__.update(kw)
+
+    def _parse_environ(self):
+        prefix = 'HATTA_'
+        settings = {}
+        for key, value in os.environ.iteritems():
+            if key.startswith(prefix):
+                name = key[len(prefix):].lower()
+                settings[name] = value
+        self.__dict__.update(settings)
+
+    def _parse_args(self):
+        import optparse
+        parser = optparse.OptionParser()
+        parser.add_option('-d', '--pages-dir', dest='pages_path',
+                          help='Store pages in DIR', metavar='DIR')
+        parser.add_option('-t', '--cache-dir', dest='cache_path',
+                          help='Store cache in DIR', metavar='DIR')
+        parser.add_option('-i', '--interface', dest='interface',
+                          help='Listen on interface INT', metavar='INT')
+        parser.add_option('-p', '--port', dest='port', type='int',
+                          help='Listen on port PORT', metavar='PORT')
+        parser.add_option('-s', '--script-name', dest='script_name',
+                          help='Override SCRIPT_NAME to NAME', metavar='NAME')
+        parser.add_option('-n', '--site-name', dest='site_name',
+                          help='Set the name of the site to NAME',
+                          metavar='NAME')
+        parser.add_option('-m', '--front-page', dest='front_page',
+                          help='Use PAGE as the front page', metavar='PAGE')
+        parser.add_option('-e', '--encoding', dest='page_charset',
+                          help='Use encoding ENS to read and write pages',
+                          metavar='ENC')
+        parser.add_option('-c', '--config-file', dest='config_file',
+                          help='Read configuration from FILE', metavar='FILE')
+        options, args = parser.parse_args()
+        self.pages_path = options.pages_path or self.pages_path
+        self.cache_path = options.cache_path or self.cache_path
+        self.interface = options.interface or self.interface
+        self.port = options.port or self.port
+        self.script_name = options.script_name or self.script_name
+        self.site_name = options.site_name or self.site_name
+        self.page_charset = options.page_charset or self.page_charset
+        self.front_page = options.front_page or self.front_page
+        self.config_file = options.config_file or self.config_file
+
+    def _parse_files(self, files=()):
+        import ConfigParser
+>>>>>>> /tmp/hatta.py~other.IZKlry
 
 def external_link(addr):
     return (addr.startswith('http://') or addr.startswith('https://')
@@ -123,20 +258,37 @@ class WikiStorage(object):
         except IOError:
             raise werkzeug.exceptions.NotFound()
 
-    def page_date(self, title):
-        stamp = os.path.getmtime(self._file_path(title))
-        return datetime.datetime.fromtimestamp(stamp)
+    def page_file_meta(self, title):
+        try:
+            (st_mode, st_ino, st_dev, st_nlink, st_uid, st_gid, st_size,
+             st_atime, st_mtime, st_ctime) = os.stat(self._file_path(title))
+        except OSError:
+            return 0, 0, 0
+        return st_ino, st_size, st_mtime
+
+    def page_meta(self, title):
+        filectx_tip = self._find_filectx(title)
+        if filectx_tip is None:
+            raise werkzeug.exceptions.NotFound()
+            #return -1, None, u'', u''
+        rev = filectx_tip.filerev()
+        filectx = filectx_tip.filectx(rev)
+        date = datetime.datetime.fromtimestamp(filectx.date()[0])
+        author = unicode(filectx.user(), "utf-8",
+                         'replace').split('<')[0].strip()
+        comment = unicode(filectx.description(), "utf-8", 'replace')
+        del filectx_tip
+        del filectx
+        return rev, date, author, comment
+
+    def repo_revision(self):
+        return self.repo.changectx('tip').rev()
 
     def page_mime(self, title):
         file_path = self._file_path(title)
         mime, encoding = mimetypes.guess_type(file_path, strict=False)
         if encoding:
             mime = 'archive/%s' % encoding
-        if mime is None and title in self:
-            sample = self.open_page(title).read(8)
-            image = imghdr.what(file_path, sample)
-            if image is not None:
-                mime = 'image/%s' % image
         if mime is None:
             mime = 'text/x-wiki'
         return mime
@@ -316,7 +468,10 @@ class WikiParser(object):
         return werkzeug.escape(groups["text"])
 
     def line_math(self, groups):
-        return "<var>%s</var>" % werkzeug.escape(groups["math_text"])
+        if self.wiki_math:
+            return self.wiki_math(groups["math_text"])
+        else:
+            return "<var>%s</var>" % werkzeug.escape(groups["math_text"])
 
     def line_code(self, groups):
         return u'<code>%s</code>' % werkzeug.escape(groups["code_text"])
@@ -337,7 +492,7 @@ class WikiParser(object):
             inside = self.line_image(match.groupdict())
         else:
             inside = werkzeug.escape(text)
-        return self.wiki_link(target, inside)
+        return self.wiki_link(target, text, image=inside)
 
     def line_image(self, groups):
         target = groups['image_target']
@@ -374,7 +529,10 @@ class WikiParser(object):
                 lines.append(line)
                 line = self.lines.next()
             inside = u"\n".join(line.rstrip() for line in lines)
-            return self.wiki_syntax(inside, syntax=syntax)
+            if self.wiki_syntax:
+                return self.wiki_syntax(inside, syntax=syntax)
+            else:
+                return [u'<div class="highlight"><pre>%s</pre></div>' % werkzeug.escape(inside)]
 
     def block_macro(self, block):
         # XXX A hack to handle <<...>> macro blocks, this method reads lines
@@ -444,17 +602,19 @@ class WikiParser(object):
             func = getattr(self, "line_%s" % m.lastgroup)
             yield func(m.groupdict())
 
-    def parse(self, lines, wiki_link=None, wiki_image=None, wiki_syntax=None):
+    def parse(self, lines, wiki_link, wiki_image, wiki_syntax=None,
+              wiki_math=None):
         def key(line):
             match = self.block_re.match(line)
             if match:
                 return match.lastgroup
             return "paragraph"
-        self.lines = (unicode(line, "utf-8", "replace") for line in lines)
+        self.lines = iter(lines)
         self.stack = []
         self.wiki_link = wiki_link
         self.wiki_image = wiki_image
         self.wiki_syntax = wiki_syntax
+        self.wiki_math = wiki_math
         for kind, block in itertools.groupby(self.lines, key):
             func = getattr(self, "block_%s" % kind)
             for part in func(block):
@@ -515,10 +675,12 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
         self.filename = filename
         self.index_file = "%s.words" % self.filename
         self.links_file = "%s.links" % self.filename
+        self.labels_file = "%s.labels" % self.filename
         self.backlinks_file = "%s.back" % self.filename
         self.title_file = "%s.titles" % self.filename
         self.index = shelve.open(self.index_file, protocol=2)
         self.links = shelve.open(self.links_file, protocol=2)
+        self.labels = shelve.open(self.labels_file, protocol=2)
         self.backlinks = shelve.open(self.backlinks_file, protocol=2)
         try:
             f = open(self.title_file, "rb")
@@ -573,7 +735,13 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
 
     def add_words(self, title, text):
         ident = self.get_title_id(title)
-        words = self.count_words(self.filter_words(self.split_text(text)))
+        if text:
+            words = self.count_words(self.filter_words(self.split_text(text)))
+        else:
+            words = {}
+        title_words = self.count_words(self.filter_words(self.split_text(title)))
+        for word, count in title_words.iteritems():
+            words[word] = words.get(word, 0) + count
         for word, count in words.iteritems():
             encoded = word.encode("utf-8")
             if encoded not in self.index:
@@ -584,46 +752,13 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
             self.index[encoded] = stored
         self.index.sync()
 
-    def _extract_links(self, text, parser):
-        class LinkExtractor(object):
-            def __init__(self):
-                self.links = []
-                self.images = []
 
-            def wiki_link(self, addr, label=None, class_=None):
-                if external_link(addr):
-                    return u''
-                if '#' in addr:
-                    addr, chunk = addr.split('#', 1)
-                if addr == u'':
-                    return u''
-                self.links.append(addr)
-                return u''
-
-            def wiki_image(self, addr, alt=None, class_=None):
-                if external_link(addr):
-                    return u''
-                if '#' in addr:
-                    addr, chunk = addr.split('#', 1)
-                if addr == u'':
-                    return u''
-                self.images.append(addr)
-                return u''
-
-            def empty(*args, **kw):
-                return u''
-
-        helper = LinkExtractor()
-        lines = text.split('\n')
-        for part in parser.parse(lines, helper.wiki_link,
-                                 helper.wiki_image, helper.empty):
-            pass
-        return helper.links+helper.images
-
-    def add_links(self, title, text, parser):
-        links = self._extract_links(text, parser)
-        self.links[title.encode('utf-8', 'escape')] = links
+    def add_links(self, title, links_and_labels):
+        links, labels = links_and_labels
+        self.links[title.encode('utf-8', 'backslashreplace')] = links
         self.links.sync()
+        self.labels[title.encode('utf-8', 'backslashreplace')] = labels
+        self.labels.sync()
 
     def regenerate_backlinks(self):
         for key in self.backlinks:
@@ -631,18 +766,22 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
         for title, links in self.links.iteritems():
             ident = self.get_title_id(title)
             for link in links:
-                encoded = link.encode('utf-8', 'escape')
+                encoded = link.encode('utf-8', 'backslashreplace')
                 backlinks = self.backlinks.get(encoded, [])
-                backlinks.append(ident)
+                if ident not in backlinks:
+                    backlinks.append(ident)
                 self.backlinks[encoded] = backlinks
         self.backlinks.sync()
 
     def page_backlinks(self, title):
-        for ident in self.backlinks[title.encode('utf-8', 'escape')]:
+        for ident in self.backlinks.get(title.encode('utf-8', 'backslashreplace'), []):
             yield self.titles[ident]
 
     def page_links(self, title):
-        return self.links.get(title.encode('utf-8', 'escape'), [])
+        return self.links.get(title.encode('utf-8', 'backslashreplace'), [])
+
+    def page_labels(self, title):
+        return self.labels.get(title.encode('utf-8', 'backslashreplace'), [])
 
     def find(self, words):
         first = words[0]
@@ -665,7 +804,13 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
             if score > 0:
                 yield score, self.titles[ident]
 
+class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
+                   werkzeug.CommonResponseDescriptorsMixin):
+       pass
+
 class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
+    charset = 'utf-8'
+    encoding_errors = 'ignore'
     def __init__(self, wiki, adapter, environ, populate_request=True,
                  shallow=False):
         werkzeug.BaseRequest.__init__(self, environ, populate_request, shallow)
@@ -682,7 +827,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         return self.adapter.build(self.wiki.download, {'title': title},
                                   method='GET')
 
-    def wiki_link(self, addr, label, class_='wiki'):
+    def wiki_link(self, addr, label, class_='wiki', image=None):
         if external_link(addr):
             return u'<a href="%s" class="external">%s</a>' % (
                 werkzeug.url_fix(addr), werkzeug.escape(label))
@@ -693,10 +838,14 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
             chunk = ''
         if addr == u'':
             return u'<a href="%s" class="%s">%s</a>' % (
-                chunk, class_, werkzeug.escape(label))
-        elif addr in self.wiki.storage:
+                chunk, class_, image or werkzeug.escape(label))
+        if addr in self.wiki.storage:
             return u'<a href="%s%s" class="%s">%s</a>' % (
-                self.get_page_url(addr), chunk, class_, werkzeug.escape(label))
+                self.get_page_url(addr), chunk, class_,
+                image or werkzeug.escape(label))
+        elif addr in ('history', 'search'):
+            return u'<a href="%s%s" class="special">%s</a>' % (
+                self.get_page_url(addr), chunk, werkzeug.escape(label))
         else:
             return u'<a href="%s%s" class="nonexistent">%s</a>' % (
                 self.get_page_url(addr), chunk, werkzeug.escape(label))
@@ -751,110 +900,48 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
             except OSError:
                 pass
 
-class WikiTitle(werkzeug.routing.BaseConverter):
-    def to_python(self, value):
-        return werkzeug.url_unquote_plus(value)
-
-    def to_url(self, value):
-        return werkzeug.url_quote_plus(value, safe='')
-
-class WikiRedirect(werkzeug.routing.RequestRedirect):
-    code = 303
-    def get_response(self, environ):
-        return werkzeug.redirect(self.new_url, 303)
-
 class Wiki(object):
-    front_page = 'Home'
-    style_page = 'style.css'
-    logo_page = 'logo.png'
-    menu_page = 'Menu'
-    locked_page = 'Locked'
-    default_style = u"""html { background: #fff; color: #2e3436; 
-font-family: sans-serif; font-size: 96% }
-body { margin: 1em auto; line-height: 1.3; width: 40em }
-a { color: #3465a4; text-decoration: none }
-a:hover { text-decoration: underline }
-a.wiki:visited { color: #204a87 }
-a.nonexistent { color: #a40000; }
-a.external { color: #3465a4; text-decoration: underline }
-a.external:visited { color: #75507b }
-a img { border: none }
-img.smiley { vertical-align: middle }
-pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word; 
-white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap;
-line-height: 1.2; color: #555753 }
-pre.diff div.orig { font-size: 75%; color: #babdb6 }
-b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e; color: #ce5c00; 
-text-decoration: none }
-pre.diff del { background: #eeeeec; color: #888a85; text-decoration: none }
-pre.diff div.change { border-left: 2px solid #fcaf3e }
-div.footer { border-top: solid 1px #babdb6; text-align: right }
-h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
-div.buttons { text-align: center }
-input.button, div.buttons input { font-weight: bold; font-size: 100%;
-background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
-.history input.button { font-size: 75% }
-.editor textarea { width: 100%; display: block; font-size: 100%; 
-border: solid 1px #babdb6; }
-.editor label { display:block; text-align: right }
-form.search input.search, .editor label input { font-size: 100%; 
-border: solid 1px #babdb6; margin: 0.125em 0 }
-.editor label.comment input  { width: 32em }
-a.logo { float: left; display: block; margin: 0.25em }
-div.header h1 { margin: 0; }
-div.content { clear: left }
-form.search { margin:0; text-align: right; font-size: 80% }
-div.snippet { font-size: 80%; color: #888a85 }
-div.header div.menu { float: right }
-div.header div.menu a.current { color: #000 }
-hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #babdb6; clear: both }
-"""
 
-    favicon = ('\x00\x00\x01\x00\x01\x00\x10\x10\x10\x00\x01\x00\x04\x00(\x01'
-'\x00\x00\x16\x00\x00\x00(\x00\x00\x00\x10\x00\x00\x00 \x00\x00\x00\x01\x00\x04'
-'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-'\x00\x00\x00\x00\x00\x00=$;\x00_0T\x00oDl\x00\x80Vx\x00Nf\xa4\x00\x95m\x9a\x00'
-'\xa7\x80\xa8\x00?\x83\xc5\x00\x1a\x86\xe1\x00\x98\x97\xa3\x00|\x97\xc4\x00u'
-'\xb3\xd7\x00\xb4\xb7\xb5\x00R\xd2\xf5\x00\xd8\xd4\xd6\x00\x00\x00\x00\x00\xff'
-'\xff!\x00\x00\x01\xff\xff\xff#fUUU\x10\xff\xf0feUS33\x0f\xf2UY\xbd\xdds3\x1f'
-'\xf23m\xdd\xd8\x883\x1f\xf23\xad\xa5>\xb8A\x1f\xff\x13\xa5U>\xcc@\xff\xff\x125'
-'e<\xecP\xff\xff\x116f^\xcc\x90\xff\xff\x12fU^\xee\xe0\xff\xff%UV3l\xe1\xff\xff'
-'&5333!\xff\xff%32231\xff\xff"3""3!\xff\xff\xf2#331\x1f\xff\xff\xff\xf2!\x11'
-'\x1f\xff\xff\xf0\x0f\x00\x00\xc0\x03\x00\x00\x80\x01\x00\x00\x80\x01\x00\x00'
-'\x80\x01\x00\x00\x80\x01\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00'
-'\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03\x00\x00\xc0\x03'
-'\x00\x00\xe0\x07\x00\x00\xf8\x1f\x00\x00')
-
-    def __init__(self, path='docs/', cache='/tmp/'):
-        self.path = os.path.abspath(path)
-        self.cache = os.path.abspath(cache)
+    def __init__(self, config):
+        self.config = config
+        self.path = os.path.abspath(config.pages_path)
+        self.cache = os.path.abspath(config.cache_path)
         self.storage = WikiStorage(self.path)
         self.parser = WikiParser()
-        self.index = WikiSearch(os.path.join(self.cache, 'words'))
+        if not os.path.isdir(self.cache):
+            os.makedirs(self.cache)
+            reindex = True
+        else:
+            reindex = False
+        self.index = WikiSearch(os.path.join(self.cache, 'index'))
+        if reindex:
+            self.reindex()
         self.url_map = werkzeug.routing.Map([
-            werkzeug.routing.Rule('/', defaults={'title': self.front_page},
-                                  endpoint=self.view,
-                                  methods=['GET', 'HEAD']),
-            werkzeug.routing.Rule('/edit/<title:title>', endpoint=self.edit,
+            werkzeug.routing.Rule('/',
+                                  defaults={'title': self.config.front_page},
+                                  endpoint=self.view, methods=['GET', 'HEAD']),
+            werkzeug.routing.Rule('/edit/<title>', endpoint=self.edit,
                                   methods=['GET']),
-            werkzeug.routing.Rule('/edit/<title:title>', endpoint=self.save,
+            werkzeug.routing.Rule('/edit/<title>', endpoint=self.save,
                                   methods=['POST']),
-            werkzeug.routing.Rule('/history/<title:title>', endpoint=self.history,
+            werkzeug.routing.Rule('/history/<title>', endpoint=self.history,
                                   methods=['GET', 'HEAD']),
-            werkzeug.routing.Rule('/history/<title:title>', endpoint=self.undo,
+            werkzeug.routing.Rule('/history/<title>', endpoint=self.undo,
                                   methods=['POST']),
             werkzeug.routing.Rule('/history/', endpoint=self.recent_changes,
                                   methods=['GET', 'HEAD']),
-            werkzeug.routing.Rule('/history/<title:title>/<int:rev>',
+            werkzeug.routing.Rule('/history/<title>/<int:rev>',
                                   endpoint=self.revision, methods=['GET']),
-            werkzeug.routing.Rule('/history/<title:title>/<int:from_rev>:<int:to_rev>',
+            werkzeug.routing.Rule('/history/<title>/<int:from_rev>:<int:to_rev>',
                                   endpoint=self.diff, methods=['GET']),
-            werkzeug.routing.Rule('/download/<title:title>',
+            werkzeug.routing.Rule('/download/<title>',
                                   endpoint=self.download,
                                   methods=['GET', 'HEAD']),
-            werkzeug.routing.Rule('/<title:title>', endpoint=self.view,
+            werkzeug.routing.Rule('/<title>', endpoint=self.view,
                                   methods=['GET', 'HEAD']),
-            werkzeug.routing.Rule('/rss', endpoint=self.rss,
+            werkzeug.routing.Rule('/feed/rss', endpoint=self.rss,
+                                  methods=['GET', 'HEAD']),
+            werkzeug.routing.Rule('/feed/atom', endpoint=self.atom,
                                   methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/favicon.ico', endpoint=self.favicon,
                                   methods=['GET', 'HEAD']),
@@ -862,137 +949,216 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
                                   methods=['GET']),
             werkzeug.routing.Rule('/search', endpoint=self.search,
                                   methods=['GET', 'POST']),
-            werkzeug.routing.Rule('/search/<title:title>', endpoint=self.backlinks,
+            werkzeug.routing.Rule('/search/<title>', endpoint=self.backlinks,
                                   methods=['GET', 'POST']),
-        ], converters={'title':WikiTitle})
+        ])
 
     def html_page(self, request, title, content, page_title=u''):
-        rss = request.adapter.build(self.rss)
-        icon = request.adapter.build(self.favicon)
+        rss = request.adapter.build(self.rss, method='GET')
+        atom = request.adapter.build(self.atom, method='GET')
+        icon = request.adapter.build(self.favicon, method='GET')
         yield (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
                '"http://www.w3.org/TR/html4/strict.dtd">')
-        yield u'<html><head><title>%s</title>' % werkzeug.escape(page_title or title)
-        yield u'<link rel="shortcut icon" type="image/x-icon" href="%s">' % icon
-        if not page_title:
-            edit = request.adapter.build(self.edit, {'title': title})
-            yield u'<link rel="alternate" type="application/wiki" href="%s">' % edit
-        yield (u'<link rel="alternate" type="application/rss+xml" '
-               u'title="Recent Changes" href="%s">' % rss)
-        if self.style_page in self.storage:
-            css = request.get_download_url(self.style_page)
+        yield u'<html><head><title>%s - %s</title>' % (werkzeug.escape(page_title or title), werkzeug.escape(self.config.site_name))
+        if self.config.style_page in self.storage:
+            css = request.get_download_url(self.config.style_page)
             yield u'<link rel="stylesheet" type="text/css" href="%s">' % css
         else:
-            yield u'<style type="text/css">%s</style>' % self.default_style
+            yield u'<style type="text/css">%s</style>' % self.config.default_style
+        if page_title:
+            yield u'<meta name="robots" content="NOINDEX,NOFOLLOW">'
+        else:
+            edit = request.adapter.build(self.edit, {'title': title})
+            yield u'<link rel="alternate" type="application/wiki" href="%s">' % edit
+        yield u'<link rel="shortcut icon" type="image/x-icon" href="%s">' % icon
+        yield (u'<link rel="alternate" type="application/rss+xml" '
+               u'title="%s (RSS)" href="%s">' % (
+                    werkzeug.escape(self.config.site_name, quote=True), rss))
+        yield (u'<link rel="alternate" type="application/rss+xml" '
+               u'title="%s (ATOM)" href="%s">' % (
+                    werkzeug.escape(self.config.site_name, quote=True), atom))
         yield u'</head><body><div class="header">'
-        if self.logo_page in self.storage:
-            home = request.get_page_url(self.front_page)
-            logo = request.get_download_url(self.logo_page)
+        if self.config.logo_page in self.storage:
+            home = request.get_page_url(self.config.front_page)
+            logo = request.get_download_url(self.config.logo_page)
             yield u'<a href="%s" class="logo"><img src="%s" alt="[%s]"></a>' % (
-                home, logo, werkzeug.escape(self.front_page))
-        search = request.adapter.build(self.search)
+                home, logo, werkzeug.escape(self.config.front_page))
+        search = request.adapter.build(self.search, method='GET')
         yield u'<form class="search" action="%s" method="GET"><div>' % search
         yield u'<input name="q" class="search">'
         yield u'<input class="button" type="submit" value="Search">'
         yield u'</div></form>'
-        if self.menu_page in self.storage:
-            menu = self.index.page_links(self.menu_page)
+        if self.config.menu_page in self.storage:
+            menu = self.index.page_links(self.config.menu_page)
+            labels = self.index.page_labels(self.config.menu_page)
             if menu:
                 yield u'<div class="menu">'
-                for link in menu:
+                for i, link in enumerate(menu):
+                    try:
+                        label = labels[i] or link
+                    except IndexError:
+                        pass
                     if link == title:
                         css = u' class="current"'
                     else:
                         css = u''
                     yield u'<a href="%s"%s>%s</a> ' % (
-                        request.get_page_url(link), css, werkzeug.escape(link))
+                        request.get_page_url(link), css, werkzeug.escape(label))
                 yield u'</div>'
         yield u'<h1>%s</h1>' % werkzeug.escape(page_title or title)
         yield u'</div><div class="content">'
         for part in content:
             yield part
         if not page_title:
-#            download = request.adapter.build(self.download, {'title': title})
-            history = request.adapter.build(self.history, {'title': title})
-            backlinks = request.adapter.build(self.backlinks, {'title': title})
+            history = request.adapter.build(self.history, {'title': title}, method='GET')
+            backlinks = request.adapter.build(self.backlinks, {'title': title}, method='GET')
             yield u'<div class="footer">'
             yield u'<a href="%s" class="edit">Edit</a> ' % edit
-#            yield u'<a href="%s" class="download">Download</a> ' % download
             yield u'<a href="%s" class="history">History</a> ' % history
             yield u'<a href="%s" class="history">Backlinks</a> ' % backlinks
             yield u'</div>'
         yield u'</div></body></html>'
 
-
     def view(self, request, title):
-        if title not in self.storage:
+        try:
+            content = self.view_content(request, title)
+            html = self.html_page(request, title, content)
+            revs = []
+            unique_titles = {}
+            for link in itertools.chain(self.index.page_links(title),
+                                        [self.config.style_page,
+                                         self.config.logo_page,
+                                         self.config.menu_page]):
+                if link not in self.storage and link not in unique_titles:
+                    unique_titles[link] = True
+                    revs.append(u'%s' % werkzeug.url_quote(link))
+            etag = '/(%s)' % u','.join(revs)
+            response = self.response(request, title, html, etag=etag)
+        except werkzeug.exceptions.NotFound:
             url = request.adapter.build(self.edit, {'title':title})
-            raise WikiRedirect(url)
+            response = werkzeug.routing.redirect(url, code=303)
+        return response
+
+    def view_content(self, request, title, lines=None):
         mime = self.storage.page_mime(title)
         if mime == 'text/x-wiki':
-            f = self.storage.open_page(title)
-            content = self.parser.parse(f, request.wiki_link,
-                                        request.wiki_image, self.highlight)
+            if lines is None:
+                f = self.storage.open_page(title)
+                lines = (unicode(line, self.config.page_charset,
+                     "replace") for line in f)
+            content = self.parser.parse(lines, request.wiki_link,
+                                        request.wiki_image, self.highlight,
+                                        self.wiki_math)
         elif mime.startswith('image/'):
             content = ['<img src="%s" alt="%s">'
                        % (request.get_download_url(title),
                           werkzeug.escape(title))]
         elif mime.startswith('text/'):
-            f = self.storage.open_page(title)
-            text = f.read()
-            f.close()
+            if lines is None:
+                text = unicode(self.storage.open_page(title).read(),
+                               self.config.page_charset, 'replace')
+            else:
+                text = ''.join(lines)
             content = self.highlight(text, mime=mime)
         else:
             content = ['<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>'
                    % (request.get_download_url(title), werkzeug.escape(title),
                       mime)]
-        html = self.html_page(request, title, content)
-        response = werkzeug.Response(html, mimetype="text/html")
-        date = self.storage.page_date(title)
-        response.last_modified = date
-        response.add_etag(u'%s/%s' % (title, date))
-        response.make_conditional(request)
-        return response
+        return content
 
     def revision(self, request, title, rev):
-        data = self.storage.page_revision(title, rev)
+        text = unicode(self.storage.page_revision(title, rev),
+                       self.config.page_charset, 'replace')
         content = [
             u'<p>Content of revision %d of page %s:</p>'
                 % (rev, request.wiki_link(title, title)),
-            u'<pre>%s</pre>'
-                % werkzeug.escape(unicode(data, 'utf-8', 'replace')),
+            u'<pre>%s</pre>' % werkzeug.escape(text),
         ]
         html = self.html_page(request, title, content,
                               page_title=u'Revision of "%s"' % title)
-        response = werkzeug.Response(html, mimetype="text/html")
+        response = self.response(request, title, html, rev=rev, etag='/old')
         return response
 
     def check_lock(self, title):
-        if self.locked_page in self.storage:
-            if title in self.index.page_links(self.locked_page):
+        if self.config.locked_page in self.storage:
+            if title in self.index.page_links(self.config.locked_page):
                 raise werkzeug.exceptions.Forbidden()
+
+    def extract_links(self, text):
+        class LinkExtractor(object):
+            def __init__(self):
+                self.links = []
+                self.link_labels = []
+                self.images = []
+                self.image_labels = []
+
+            def wiki_link(self, addr, label=None, class_=None, image=None):
+                if external_link(addr):
+                    return u''
+                if '#' in addr:
+                    addr, chunk = addr.split('#', 1)
+                if addr == u'':
+                    return u''
+                self.links.append(addr)
+                self.link_labels.append(label)
+                return u''
+
+            def wiki_image(self, addr, alt=None, class_=None):
+                if external_link(addr):
+                    return u''
+                if '#' in addr:
+                    addr, chunk = addr.split('#', 1)
+                if addr == u'':
+                    return u''
+                self.links.append(addr)
+                self.link_labels.append(alt)
+                return u''
+
+        helper = LinkExtractor()
+        lines = text.split('\n')
+        for part in self.parser.parse(lines, helper.wiki_link,
+                                      helper.wiki_image):
+            pass
+        return helper.links, helper.link_labels
 
     def save(self, request, title):
         self.check_lock(title)
         url = request.get_page_url(title)
+        mime = self.storage.page_mime(title)
         if request.form.get('cancel'):
             if title not in self.storage:
-                url = request.get_page_url(self.front_page)
+                url = request.get_page_url(self.config.front_page)
+        if request.form.get('preview'):
+            text = request.form.get("text")
+            if text is not None:
+                lines = text.split('\n')
+            else:
+                lines = [u'No preview for binaries.']
+            return self.edit(request, title, preview=lines)
         elif request.form.get('save'):
             comment = request.form.get("comment", "")
             author = request.get_author()
             text = request.form.get("text")
             if text is not None:
-                data = text.encode('utf-8')
-                self.index.add_links(title, data, self.parser)
-                if title in self.index.page_links(self.locked_page):
-                    raise werkzeug.exceptions.Forbidden()
+                if title == self.config.locked_page:
+                    links_and_labels = self.extract_links(text)
+                    self.index.add_links(title, links_and_labels)
+                    if title in self.index.page_links(self.config.locked_page):
+                        raise werkzeug.exceptions.Forbidden()
                 if text.strip() == '':
                     self.storage.delete_page(title, author, comment)
-                    url = request.get_page_url(self.front_page)
+                    url = request.get_page_url(self.config.front_page)
                 else:
+                    data = text.encode(self.config.page_charset)
                     self.storage.save_text(title, data, author, comment)
-                self.index.add_words(title, text)
-                self.index.regenerate_backlinks()
+                if mime.startswith('text/'):
+                    self.index.add_words(title, text)
+                    if mime == 'text/x-wiki':
+                        links_and_labels = self.extract_links(text)
+                        self.index.add_links(title, links_and_labels)
+                        self.index.regenerate_backlinks()
+                else:
+                    self.index.add_words(title, u'')
             else:
                 f = request.files['data'].stream
                 if f is not None:
@@ -1002,25 +1168,28 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
                     except AttributeError:
                         self.storage.save_text(title, f.read(), author,
                                                comment)
+                self.index.add_words(title, u'')
         response = werkzeug.routing.redirect(url, code=303)
         response.set_cookie('author',
                             werkzeug.url_quote(request.get_author()),
                             max_age=604800)
         return response
 
-    def edit(self, request, title):
+    def edit(self, request, title, preview=None):
         self.check_lock(title)
-        if title not in self.storage:
-            status = '404 Not found'
-        else:
-            status = None
         if self.storage.page_mime(title).startswith('text/'):
             form = self.editor_form
         else:
             form = self.upload_form
-        html = self.html_page(request, title, form(request, title),
+        html = self.html_page(request, title, form(request, title, preview),
                               page_title=u'Editing "%s"' % title)
-        return werkzeug.Response(html, mimetype="text/html", status=status)
+        if title not in self.storage:
+            return werkzeug.Response(html, mimetype="text/html",
+                                     status='404 Not found')
+        elif preview:
+            return werkzeug.Response(html, mimetype="text/html")
+        else:
+            return self.response(request, title, html, '/edit')
 
     def highlight(self, text, mime=None, syntax=None):
         try:
@@ -1047,52 +1216,211 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
             pass
         yield u'<pre>%s</pre>' % werkzeug.escape(text)
 
-    def editor_form(self, request, title):
+    def editor_form(self, request, title, preview=None):
+        author = request.get_author()
+        try:
+            lines = self.storage.open_page(title)
+            comment = 'modified'
+            (rev, old_date,
+             old_author, old_comment) = self.storage.page_meta(title)
+            if old_author == author:
+                comment = old_comment
+        except werkzeug.exceptions.NotFound:
+            lines = []
+            comment = 'created'
+            rev = -1
+        if preview:
+            lines = preview
+            comment = request.form.get('comment', comment)
         yield u'<form action="" method="POST" class="editor"><div>'
         yield u'<textarea name="text" cols="80" rows="20">'
-        try:
-            f = self.storage.open_page(title)
-        except werkzeug.exceptions.NotFound:
-            f = []
-        for part in f:
-            yield werkzeug.escape(part)
+        for line in lines:
+            yield werkzeug.escape(line)
         yield u"""</textarea>"""
-        yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape('comment')
+        yield u'<input type="hidden" name="parent" value="%d">' % rev
+        yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape(comment)
         yield u'<label>Author <input name="author" value="%s"></label>' % werkzeug.escape(request.get_author())
         yield u'<div class="buttons">'
         yield u'<input type="submit" name="save" value="Save">'
+        yield u'<input type="submit" name="preview" value="Preview">'
         yield u'<input type="submit" name="cancel" value="Cancel">'
         yield u'</div>'
         yield u'</div></form>'
+        if preview:
+            yield u'<h1 id="preview">Preview, not saved</h1>'
+            for part in self.view_content(request, title, preview):
+                yield part
 
-    def upload_form(self, request, title):
-        yield u'<form action="" method="POST" enctype="multipart/form-data">'
-        yield u'<div><input type="file" name="data">'
-        yield u'<input name="comment" value="%s">' % werkzeug.escape(u'comment')
-        yield u'<input name="author" value="%s">' % werkzeug.escape(request.get_author())
+    def upload_form(self, request, title, preview=None):
+        author = request.get_author()
+        try:
+            f = self.storage.open_page(title)
+            comment = 'changed'
+            rev, old_date, old_author, old_comment = self.storage.page_meta(title)
+            if old_author == author:
+                comment = old_comment
+        except werkzeug.exceptions.NotFound:
+            f = []
+            comment = 'uploaded'
+            rev = -1
+        yield u"<p>This is a binary file, it can't be edited on a wiki. Please upload a new version instead.</p>"
+        yield u'<form action="" method="POST" class="editor" enctype="multipart/form-data">'
+        yield u'<div><div class="upload"><input type="file" name="data"></div>'
+        yield u'<input type="hidden" name="parent" value="%d">' % rev
+        yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape(comment)
+        yield u'<label>Author <input name="author" value="%s"></label>' % werkzeug.escape(author)
         yield u'<div class="buttons">'
         yield u'<input type="submit" name="save" value="Save">'
         yield u'<input type="submit" name="cancel" value="Cancel">'
         yield u'</div></div></form>'
 
+    def atom(self, request):
+        date_format = "%Y-%m-%dT%H:%M:%SZ"
+        first_date = datetime.datetime.now()
+        now = first_date.strftime(date_format)
+        body = []
+        first_title = u''
+        count = 0
+        unique_titles = {}
+        for title, rev, date, author, comment in self.storage.history():
+            if title in unique_titles:
+                continue
+            unique_titles[title] = True
+            count += 1
+            if count > 10:
+                break
+            if not first_title:
+                first_title = title
+                first_rev = rev
+                first_date = date
+            item = u"""<entry>
+    <title>%(title)s</title>
+    <link href="%(page_url)s" />
+    <content>%(comment)s</content>
+    <updated>%(date)s</updated>
+    <author>
+        <name>%(author)s</name>
+        <uri>%(author_url)s</uri>
+    </author>
+    <id>%(url)s</id>
+</entry>""" % {
+                'title': werkzeug.escape(title),
+                'page_url': request.adapter.build(self.view, {'title': title},
+                                                  force_external=True),
+                'comment': werkzeug.escape(comment),
+                'date': date.strftime(date_format),
+                'author': werkzeug.escape(author),
+                'author_url': request.adapter.build(self.view,
+                                                    {'title': author},
+                                                    force_external=True),
+                'url': request.adapter.build(self.revision,
+                                             {'title': title, 'rev': rev},
+                                             force_external=True),
+            }
+            body.append(item)
+        content = u"""<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>%(title)s</title>
+  <link rel="self" href="%(atom)s"/>
+  <link href="%(home)s"/>
+  <id>%(home)s</id>
+  <updated>%(date)s</updated>
+  <logo>%(logo)s</logo>
+%(body)s
+</feed>""" % {
+            'title': self.config.site_name,
+            'home': request.adapter.build(self.view, force_external=True),
+            'atom': request.adapter.build(self.atom, force_external=True),
+            'date': first_date.strftime(date_format),
+            'logo': request.adapter.build(self.download,
+                                          {'title': self.config.logo_page},
+                                          force_external=True),
+            'body': u''.join(body),
+        }
+        response = self.response(request, 'atom', content, '/atom',
+                                 'application/xml', first_rev, first_date)
+        response.set_etag('/atom/%d' % self.storage.repo_revision())
+        response.make_conditional(request)
+        return response
+
+
     def rss(self, request):
-        return werkzeug.Response('edit', mimetype="text/plain")
+        first_date = datetime.datetime.now()
+        now = first_date.strftime("%a, %d %b %Y %H:%M:%S GMT")
+        rss_body = []
+        first_title = u''
+        count = 0
+        unique_titles = {}
+        for title, rev, date, author, comment in self.storage.history():
+            if title in unique_titles:
+                continue
+            unique_titles[title] = True
+            count += 1
+            if count > 10:
+                break
+            if not first_title:
+                first_title = title
+                first_rev = rev
+                first_date = date
+            item = u'<item><title>%s</title><link>%s</link><description>%s</description><pubDate>%s</pubDate><dc:creator>%s</dc:creator><guid>%s</guid></item>' % (
+                werkzeug.escape(title),
+                request.get_page_url(title),
+                werkzeug.escape(comment),
+                date.strftime("%a, %d %b %Y %H:%M:%S GMT"),
+                werkzeug.escape(author),
+                request.adapter.build(self.revision,
+                                      {'title': title, 'rev': rev})
+            )
+            rss_body.append(item)
+        rss_head = u"""<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0"
+xmlns:dc="http://purl.org/dc/elements/1.1/"
+xmlns:atom="http://www.w3.org/2005/Atom"
+>
+<channel>
+    <title>%s</title>
+    <atom:link href="%s" rel="self" type="application/rss+xml" />
+    <link>%s</link>
+    <description>Track the most recent changes to the wiki in this feed.</description>
+    <generator>Hatta Wiki</generator>
+    <language>en</language>
+    <lastBuildDate>%s</lastBuildDate>
+
+""" % (
+            werkzeug.escape(self.config.site_name),
+            request.adapter.build(self.rss),
+            request.adapter.build(self.recent_changes),
+            first_date,
+        )
+        content = [rss_head]+rss_body+[u'</channel></rss>']
+        response = self.response(request, 'rss', content, '/rss',
+                                 'application/xml', first_rev, first_date)
+        response.set_etag('/rss/%d' % self.storage.repo_revision())
+        response.make_conditional(request)
+        return response
+
+    def response(self, request, title, content, etag='', mime='text/html',
+                 rev=None, date=None, set_size=False):
+        response = WikiResponse(content, mimetype=mime)
+        if rev is None:
+            inode, size, mtime = self.storage.page_file_meta(title)
+            response.set_etag(u'%s/%s/%d-%d' % (etag, werkzeug.url_quote(title),
+                                                    inode, mtime))
+            if set_size:
+                response.content_length = size
+        else:
+            response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title), rev))
+        response.make_conditional(request)
+        return response
 
     def download(self, request, title):
-        headers = {
-            'Cache-Control': 'max-age=60, public',
-            'Vary': 'Transfer-Encoding',
-            'Allow': 'GET, HEAD',
-        }
         mime = self.storage.page_mime(title)
         if mime == 'text/x-wiki':
             mime = 'text/plain'
         f = self.storage.open_page(title)
-        response = werkzeug.Response(f, mimetype=mime, headers=headers)
-        date = self.storage.page_date(title)
-        response.add_etag(u'download/%s/%s' % (title, date))
-        response.last_modified = date
-        response.make_conditional(request)
+        inode, size, mtime = self.storage.page_file_meta(title)
+        response = self.response(request, title, f, '/download', mime,
+                                 set_size=True)
         return response
 
     def undo(self, request, title):
@@ -1113,8 +1441,10 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
                 comment = u'Undo of change %d of page %s' % (rev, title)
                 data = self.storage.page_revision(title, rev-1)
                 self.storage.save_text(title, data, author, comment)
-            self.index.add_words(title, data)
-            self.index.add_links(title, data, self.parser)
+            text = unicode(data, self.config.page_charset, 'replace')
+            self.index.add_words(title, text)
+            links_and_labels = self.extract_links(text)
+            self.index.add_links(title, links_and_labels)
             self.index.regenerate_backlinks()
         url = request.adapter.build(self.history, {'title': title},
                                     method='GET')
@@ -1124,7 +1454,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         content = self.html_page(request, title,
                                  self.history_list(request, title),
                                  page_title=u'History of "%s"' % title)
-        response = werkzeug.Response(content, mimetype='text/html')
+        response = self.response(request, title, content, '/history')
         return response
 
     def history_list(self, request, title):
@@ -1151,20 +1481,35 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
                                  self.changes_list(request),
                                  page_title=u'Recent changes')
         response = werkzeug.Response(content, mimetype='text/html')
+        response.set_etag('/recentchanges/%d' % self.storage.repo_revision())
+        response.make_conditional(request)
         return response
 
     def changes_list(self, request):
         yield u'<ul>'
+        last = {}
+        lastrev = {}
+        count = 0
         for title, rev, date, author, comment in self.storage.history():
+            if (author, comment) == last.get(title, (None, None)):
+                continue
+            count += 1
+            if count > 100:
+                break
             if rev > 0:
                 url = request.adapter.build(self.diff, {
-                    'title': title, 'from_rev': rev-1, 'to_rev': rev})
+                    'title': title,
+                    'from_rev': rev-1,
+                    'to_rev': lastrev.get(title, rev)
+                })
             elif rev == 0:
                 url = request.adapter.build(self.revision, {
                     'title': title, 'rev': rev})
             else:
                 url = request.adapter.build(self.history, {
                     'title': title})
+            last[title] = author, comment
+            lastrev[title] = rev
             yield u'<li>'
             yield u'<a href="%s">%s</a> ' % (url, date.strftime('%F %H:%M'))
             yield request.wiki_link(title, title)
@@ -1175,18 +1520,27 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         yield u'</ul>'
 
     def diff(self, request, title, from_rev, to_rev):
-        from_page = self.storage.page_revision(title, from_rev)
-        to_page = self.storage.page_revision(title, to_rev)
+        from_page = unicode(self.storage.page_revision(title, from_rev),
+                            self.config.page_charset, 'replace')
+        to_page = unicode(self.storage.page_revision(title, to_rev),
+                          self.config.page_charset, 'replace')
+        from_url = request.adapter.build(self.revision,
+                                         {'title': title, 'rev': from_rev})
+        to_url = request.adapter.build(self.revision,
+                                       {'title': title, 'rev': to_rev})
         content = self.html_page(request, title, itertools.chain(
-            [u'<p>Differences between revisions %d and %d of page %s.</p>'
-             % (from_rev, to_rev, request.wiki_link(title, title))],
+            [u'<p>Differences between revisions ',
+             u'<a href="%s">%d</a>' % (from_url, from_rev),
+             u' and ',
+             u'<a href="%s">%d</a>' % (to_url, to_rev),
+             u' of page %s.</p>' % request.wiki_link(title, title)],
             self.diff_content(from_page, to_page)),
             page_title=u'Diff for "%s"' % title)
         response = werkzeug.Response(content, mimetype='text/html')
         return response
 
-    def diff_content(self, data, other_data):
-        diff = difflib._mdiff(data.split('\n'), other_data.split('\n'))
+    def diff_content(self, text, other_text):
+        diff = difflib._mdiff(text.split('\n'), other_text.split('\n'))
         stack = []
         def infiniter(iterator):
             for i in iterator:
@@ -1210,28 +1564,23 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
                         if buff:
                             yield werkzeug.escape(buff)
                             buff = u''
-                        yield (u'<del>%s</del>'
-                               % werkzeug.escape(unicode(old.group(1),
-                                                         'utf-8', 'replace')))
+                        yield u'<del>%s</del>' % werkzeug.escape(old.group(1))
                         old = old_iter.next()
                     while new and new.group(1):
                         if buff:
                             yield werkzeug.escape(buff)
                             buff = u''
-                        yield (u'<ins>%s</ins>'
-                               % werkzeug.escape(unicode(new.group(1),
-                                                         'utf-8', 'replace')))
+                        yield u'<ins>%s</ins>' % werkzeug.escape(new.group(1))
                         new = new_iter.next()
                     if new:
-                        buff += unicode(new.group(2), 'utf-8', 'replace')
+                        buff += new.group(2)
                     old = old_iter.next()
                     new = new_iter.next()
                 if buff:
                     yield werkzeug.escape(buff)
                 yield u'</div>'
             else:
-                yield (u'<div class="orig">%s</div>'
-                       % werkzeug.escape(unicode(old_text, 'utf-8', 'replace')))
+                yield u'<div class="orig">%s</div>' % werkzeug.escape(old_text)
         yield u'</pre>'
 
     def search(self, request):
@@ -1244,7 +1593,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
             title = 'Searching for "%s"' % u" ".join(words)
             content = self.page_search(request, words)
         html = self.html_page(request, u'', content, page_title=title)
-        return werkzeug.Response(html, mimetype='text/html')
+        return WikiResponse(html, mimetype='text/html')
 
     def page_index(self, request):
         yield u'<p>Index of all pages.</p>'
@@ -1282,7 +1631,8 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         content = self.page_backlinks(request, title)
         html = self.html_page(request, u'', content,
                               page_title=u'Links to "%s"' % title)
-        return werkzeug.Response(html, mimetype='text/html')
+        response = self.response(request, title, html, '/backlinks')
+        return response
 
     def page_backlinks(self, request, title):
         yield u'<p>Pages that contain a link to %s.</p>' % request.wiki_link(title, title)
@@ -1292,34 +1642,82 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         yield u'</ul>'
 
 
-
     def favicon(self, request):
-        return werkzeug.Response(self.favicon, mimetype='image/x-icon')
+        return werkzeug.Response(self.config.icon, mimetype='image/x-icon')
 
     def robots(self, request):
         robots = ('User-agent: *\r\n'
-                  'Disallow: /edit/\r\n'
+                  'Disallow: /edit\r\n'
                   'Disallow: /rss\r\n'
+                  'Disallow: /history\r\n'
+                  'Disallow: /search\r\n'
                  )
         return werkzeug.Response(robots, mimetype='text/plain')
 
+    def reindex(self):
+        for title in self.storage.all_pages():
+            mime = self.storage.page_mime(title)
+            if mime.startswith('text/'):
+                data = self.storage.open_page(title).read()
+                text = unicode(data, self.config.page_charset, 'replace')
+                self.index.add_words(title, text)
+                if mime == 'text/x-wiki':
+                    links_and_labels = self.extract_links(text)
+                    self.index.add_links(title, links_and_labels)
+            else:
+                self.index.add_words(title, u'')
+        self.index.regenerate_backlinks()
+
+    def wiki_math(self, math):
+        if '%s' in self.config.math_url:
+            url = self.config.math_url % werkzeug.url_quote(math)
+        else:
+            url = ''.join([self.config.math_url, werkzeug.url_quote(math)])
+        return u'<img src="%s" alt="%s" class="math">' % (url,
+                                             werkzeug.escape(math, quote=True))
+
     @werkzeug.responder
     def application(self, environ, start):
+        if self.config.script_name is not None:
+            environ['SCRIPT_NAME'] = self.config.script_name
         adapter = self.url_map.bind_to_environ(environ)
         request = WikiRequest(self, adapter, environ)
         try:
+<<<<<<< /home/sheep/devel/hatta/hatta.py
             try:
                 endpoint, values = adapter.match()
                 response = endpoint(request, **values)
             except werkzeug.exceptions.HTTPException, e:
                 response = e
+=======
+            try:
+                endpoint, values = adapter.match()
+                return endpoint(request, **values)
+            except werkzeug.exceptions.HTTPException, e:
+    #            import traceback
+    #            traceback.print_exc()
+                return e
+>>>>>>> /tmp/hatta.py~other.IZKlry
         finally:
             request.cleanup()
-        return response
+            del request
+            del adapter
 
 if __name__ == "__main__":
-    interface = ''
-    port = 8080
-    application = Wiki().application
-    werkzeug.run_simple(interface, port, application, use_reloader=True,
-                        extra_files=[])
+    config = WikiConfig(
+        # Here you can modify the configuration: uncomment and change the ones
+        # you need. Note that it's better use environment variables or command
+        # line switches.
+
+        # interface=''
+        # port=8080
+        # pages_path = 'docs'
+        # cache_path = 'cache'
+        # front_page = 'Home'
+        # site_name = 'Hatta Wiki'
+        # page_charset = 'UTF-8'
+    )
+    config._parse_args()
+    application = Wiki(config).application
+    host, port = config.interface or 'localhost', int(config.port)
+    werkzeug.run_simple(config.interface, port, application, use_reloader=True)

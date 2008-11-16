@@ -1263,30 +1263,12 @@ class Wiki(object):
         yield u'<input type="submit" name="cancel" value="Cancel">'
         yield u'</div></div></form>'
 
-    def rss(self, request):
-        now = datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")
-        rss_head = u"""<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0"
-xmlns:dc="http://purl.org/dc/elements/1.1/"
-xmlns:atom="http://www.w3.org/2005/Atom"
->
-<channel>
-    <title>%s</title>
-    <atom:link href="%s" rel="self" type="application/rss+xml" />
-    <link>%s</link>
-    <description>Track the most recent changes to the wiki in this feed.</description>
-    <generator>Hatta Wiki</generator>
-    <language>en</language>
-    <lastBuildDate>%s</lastBuildDate>
 
-""" % (
-            werkzeug.escape(self.config.site_name),
-            request.adapter.build(self.rss),
-            request.adapter.build(self.recent_changes),
-            now,
-        )
+
+    def rss(self, request):
+        first_date = datetime.datetime.now()
+        now = first_date.strftime("%a, %d %b %Y %H:%M:%S GMT")
         rss_body = []
-        first_date = now
         first_title = u''
         count = 0
         unique_titles = {}
@@ -1311,6 +1293,26 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                                       {'title': title, 'rev': rev})
             )
             rss_body.append(item)
+        rss_head = u"""<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0"
+xmlns:dc="http://purl.org/dc/elements/1.1/"
+xmlns:atom="http://www.w3.org/2005/Atom"
+>
+<channel>
+    <title>%s</title>
+    <atom:link href="%s" rel="self" type="application/rss+xml" />
+    <link>%s</link>
+    <description>Track the most recent changes to the wiki in this feed.</description>
+    <generator>Hatta Wiki</generator>
+    <language>en</language>
+    <lastBuildDate>%s</lastBuildDate>
+
+""" % (
+            werkzeug.escape(self.config.site_name),
+            request.adapter.build(self.rss),
+            request.adapter.build(self.recent_changes),
+            first_date,
+        )
         content = [rss_head]+rss_body+[u'</channel></rss>']
         response = self.response(request, 'rss', content, '/rss',
                                  'application/xml', first_rev, first_date)

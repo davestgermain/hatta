@@ -935,8 +935,6 @@ class Wiki(object):
                                   methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/<title>', endpoint=self.view,
                                   methods=['GET', 'HEAD']),
-            werkzeug.routing.Rule('/rss', endpoint=self.rss,
-                                  methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/feed/rss', endpoint=self.rss,
                                   methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/feed/atom', endpoint=self.atom,
@@ -953,6 +951,7 @@ class Wiki(object):
 
     def html_page(self, request, title, content, page_title=u''):
         rss = request.adapter.build(self.rss, method='GET')
+        atom = request.adapter.build(self.atom, method='GET')
         icon = request.adapter.build(self.favicon, method='GET')
         yield (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
                '"http://www.w3.org/TR/html4/strict.dtd">')
@@ -969,7 +968,11 @@ class Wiki(object):
             yield u'<link rel="alternate" type="application/wiki" href="%s">' % edit
         yield u'<link rel="shortcut icon" type="image/x-icon" href="%s">' % icon
         yield (u'<link rel="alternate" type="application/rss+xml" '
-               u'title="Recent Changes" href="%s">' % rss)
+               u'title="%s - Recent Changes (RSS)" href="%s">' % (
+                    werkzeug.escape(self.config.site_name, quote=True), rss))
+        yield (u'<link rel="alternate" type="application/rss+xml" '
+               u'title="%s - Recent Changes (ATOM)" href="%s">' % (
+                    werkzeug.escape(self.config.site_name, quote=True), atom))
         yield u'</head><body><div class="header">'
         if self.config.logo_page in self.storage:
             home = request.get_page_url(self.config.front_page)

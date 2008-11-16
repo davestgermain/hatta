@@ -1,0 +1,10 @@
+#!/usr/bin/python
+import flup
+import hatta
+
+config = hatta.WikiConfig(
+    pages_path='/path/to/pages/', # XXX Edit this!
+    cache_path='/path/to/cache/', # XXX Edit this!
+)
+app = hatta.Wiki(config).application
+flup.server.fcgi.WSGIServer(app).run()

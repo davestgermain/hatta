@@ -896,13 +896,6 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
             except OSError:
                 pass
 
-class WikiTitle(werkzeug.routing.BaseConverter):
-    def to_python(self, value):
-        return value.replace('+', ' ')
-
-    def to_url(self, value):
-        return werkzeug.url_quote(value.replace(' ', '+'))
-
 class Wiki(object):
 
     def __init__(self, config):
@@ -923,24 +916,24 @@ class Wiki(object):
             werkzeug.routing.Rule('/',
                                   defaults={'title': self.config.front_page},
                                   endpoint=self.view, methods=['GET', 'HEAD']),
-            werkzeug.routing.Rule('/edit/<title:title>', endpoint=self.edit,
+            werkzeug.routing.Rule('/edit/<title>', endpoint=self.edit,
                                   methods=['GET']),
-            werkzeug.routing.Rule('/edit/<title:title>', endpoint=self.save,
+            werkzeug.routing.Rule('/edit/<title>', endpoint=self.save,
                                   methods=['POST']),
-            werkzeug.routing.Rule('/history/<title:title>', endpoint=self.history,
+            werkzeug.routing.Rule('/history/<title>', endpoint=self.history,
                                   methods=['GET', 'HEAD']),
-            werkzeug.routing.Rule('/history/<title:title>', endpoint=self.undo,
+            werkzeug.routing.Rule('/history/<title>', endpoint=self.undo,
                                   methods=['POST']),
             werkzeug.routing.Rule('/history/', endpoint=self.recent_changes,
                                   methods=['GET', 'HEAD']),
-            werkzeug.routing.Rule('/history/<title:title>/<int:rev>',
+            werkzeug.routing.Rule('/history/<title>/<int:rev>',
                                   endpoint=self.revision, methods=['GET']),
-            werkzeug.routing.Rule('/history/<title:title>/<int:from_rev>:<int:to_rev>',
+            werkzeug.routing.Rule('/history/<title>/<int:from_rev>:<int:to_rev>',
                                   endpoint=self.diff, methods=['GET']),
-            werkzeug.routing.Rule('/download/<title:title>',
+            werkzeug.routing.Rule('/download/<title>',
                                   endpoint=self.download,
                                   methods=['GET', 'HEAD']),
-            werkzeug.routing.Rule('/<title:title>', endpoint=self.view,
+            werkzeug.routing.Rule('/<title>', endpoint=self.view,
                                   methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/rss', endpoint=self.rss,
                                   methods=['GET', 'HEAD']),
@@ -950,9 +943,9 @@ class Wiki(object):
                                   methods=['GET']),
             werkzeug.routing.Rule('/search', endpoint=self.search,
                                   methods=['GET', 'POST']),
-            werkzeug.routing.Rule('/search/<title:title>', endpoint=self.backlinks,
+            werkzeug.routing.Rule('/search/<title>', endpoint=self.backlinks,
                                   methods=['GET', 'POST']),
-        ], converters={'title':WikiTitle})
+        ])
 
     def html_page(self, request, title, content, page_title=u''):
         rss = request.adapter.build(self.rss, method='GET')

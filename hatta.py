@@ -1631,6 +1631,4 @@ if __name__ == "__main__":
     config._parse_args()
     application = Wiki(config).application
     host, port = config.interface or 'localhost', int(config.port)
-    import webbrowser
-    webbrowser.open('http://%s:%d/' % (host, port))
     werkzeug.run_simple(config.interface, port, application, use_reloader=True)

@@ -16,12 +16,12 @@ import datetime
 import difflib
 import itertools
 import mimetypes
-import optparse
 import os
 import re
 import shelve
 import tempfile
 import weakref
+import threading
 
 import werkzeug
 os.environ['HGENCODING'] = 'utf-8'
@@ -1609,12 +1609,13 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         adapter = self.url_map.bind_to_environ(environ)
         request = WikiRequest(self, adapter, environ)
         try:
-            endpoint, values = adapter.match()
-            return endpoint(request, **values)
-        except werkzeug.exceptions.HTTPException, e:
-#            import traceback
-#            traceback.print_exc()
-            return e
+            try:
+                endpoint, values = adapter.match()
+                return endpoint(request, **values)
+            except werkzeug.exceptions.HTTPException, e:
+    #            import traceback
+    #            traceback.print_exc()
+                return e
         finally:
             request.cleanup()
             del request
@@ -1636,5 +1637,7 @@ if __name__ == "__main__":
     )
     config._parse_args()
     application = Wiki(config).application
-    werkzeug.run_simple(config.interface, int(config.port), application,
-                        use_reloader=True)
+    host, port = config.interface or 'localhost', int(config.port)
+    import webbrowser
+    webbrowser.open('http://%s:%d/' % (host, port))
+    werkzeug.run_simple(config.interface, port, application, use_reloader=True)

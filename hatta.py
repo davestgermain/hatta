@@ -31,6 +31,8 @@ import mercurial.ui
 import mercurial.revlog
 import mercurial.util
 
+__version__ = '1.1.1-dev'
+
 class WikiConfig(object):
     # Please see the bottom of the script for modifying these values.
     interface = ''

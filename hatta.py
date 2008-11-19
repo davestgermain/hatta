@@ -559,7 +559,8 @@ class WikiParser(object):
         yield u'<table>'
         for line in block:
             yield '<tr>'
-            for cell in line.strip('| \t\n\v\r').split('|'):
+            table_row = line.strip()
+            for cell in table_row.strip('|').split('|'):
                 yield '<td>%s</td>' % u"".join(self.parse_line(cell))
             yield '</tr>'
         yield u'</table>'

@@ -623,7 +623,7 @@ after afterwards again against all almost alone along already also although
 always am among ain amongst amoungst amount an and another any aren anyhow
 anyone anything anyway anywhere are around as at back be became because become
 becomes becoming been before beforehand behind being below beside besides
-between beyond bill both bottom but by can cannot cant con could couldnt
+between beyond bill both but by can cannot cant con could couldnt
 describe detail do done down due during each eg eight either eleven else etc
 elsewhere empty enough even ever every everyone everything everywhere except
 few fifteen fifty fill find fire first five for former formerly forty found
@@ -662,8 +662,8 @@ więc wszyscy wszystkich wszystkie wszystkim wszystko właśnie z za zapewne
 zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
     digits_pattern = re.compile(ur"""^[=+~-]?[\d,.:-]+\w?\w?%?$""", re.UNICODE)
     split_pattern = re.compile(ur"""
-[A-ZĄÂÃĀÄÅÁÀĂĘÉÊĚËĒÈŚĆÇČŁÓÒÖŌÕÔŃŻŹŽÑÍÏĐÞÐÆŸ]
-[a-ząâãāäåáàăęéêěëēèśćçčłóòöōõôńżźžñíïđþðæÿ]+
+[A-ZĄÂÃĀÄÅÁÀĂĘÉÊĚËĒÈŚĆÇČŁÓÒÖŌÕÔŃŻŹŽÑÍÏĐÞÐÆŸØ]
+[a-ząâãāäåáàăęéêěëēèśćçčłóòöōõôńżźžñíïđþðæÿø]+
 |\w+""", re.X|re.UNICODE)
     word_pattern = re.compile(ur"""[-\w.@~+:$&%#]{2,}""", re.UNICODE)
 

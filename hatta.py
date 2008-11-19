@@ -989,7 +989,7 @@ class Wiki(object):
         yield (u'<link rel="alternate" type="application/rss+xml" '
                u'title="%s (ATOM)" href="%s">' % (
                     werkzeug.escape(self.config.site_name, quote=True), atom))
-        yield u'</head><body><div class="header">'
+        yield u'%s</head><body><div class="header">' % self.config.html_head
         if self.config.logo_page in self.storage:
             home = request.get_page_url(self.config.front_page)
             logo = request.get_download_url(self.config.logo_page)

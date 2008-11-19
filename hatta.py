@@ -39,17 +39,18 @@ class WikiConfig(object):
     port = 8080
     pages_path = 'docs'
     cache_path = 'cache'
-    site_name = 'Hatta Wiki'
-    front_page = 'Home'
-    style_page = 'style.css'
-    logo_page = 'logo.png'
-    menu_page = 'Menu'
-    locked_page = 'Locked'
-    alias_page = 'Alias'
+    site_name = u'Hatta Wiki'
+    front_page = u'Home'
+    style_page = u'style.css'
+    logo_page = u'logo.png'
+    menu_page = u'Menu'
+    locked_page = u'Locked'
+    alias_page = u'Alias'
     math_url = 'http://www.mathtran.org/cgi-bin/mathtran?tex='
     script_name = None
     page_charset = 'utf-8'
     config_file = 'hatta.conf'
+    html_head = u''
     default_style = u"""html { background: #fff; color: #2e3436; 
 font-family: sans-serif; font-size: 96% }
 body { margin: 1em auto; line-height: 1.3; width: 40em }
@@ -557,11 +558,23 @@ class WikiParser(object):
 
     def block_table(self, block):
         yield u'<table>'
+        in_head = False
         for line in block:
-            yield '<tr>'
             table_row = line.strip()
+            is_header = table_row.startswith('|=') and table_row.endswith('=|')
+            if not in_head and is_header:
+                in_head = True
+                yield '<thead>'
+            elif in_head and not is_header:
+                in_head = False
+                yield '</thead>'
+            yield '<tr>'
             for cell in table_row.strip('|').split('|'):
-                yield '<td>%s</td>' % u"".join(self.parse_line(cell))
+                if cell.startswith('='):
+                    head = cell.strip('=')
+                    yield '<th>%s</th>' % u"".join(self.parse_line(head))
+                else:
+                    yield '<td>%s</td>' % u"".join(self.parse_line(cell))
             yield '</tr>'
         yield u'</table>'
 

@@ -938,7 +938,7 @@ class Wiki(object):
                                   methods=['POST']),
             werkzeug.routing.Rule('/history/<title>', endpoint=self.history,
                                   methods=['GET', 'HEAD']),
-            werkzeug.routing.Rule('/history/<title>', endpoint=self.undo,
+            werkzeug.routing.Rule('/undo/<title>', endpoint=self.undo,
                                   methods=['POST']),
             werkzeug.routing.Rule('/history/', endpoint=self.recent_changes,
                                   methods=['GET', 'HEAD']),
@@ -1471,7 +1471,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
     def history_list(self, request, title):
         yield '<p>History of changes for %s.</p>' % request.wiki_link(title, title)
-        yield u'<form action="" method="POST"><ul class="history">'
+        url = request.adapter.build(self.undo, {'title':title}, method='POST')
+        yield u'<form action="%s" method="POST"><ul class="history">' % url
         for rev, date, author, comment in self.storage.page_history(title):
             if rev > 0:
                 url = request.adapter.build(self.diff, {

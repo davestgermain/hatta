@@ -34,7 +34,7 @@ import mercurial.util
 try:
     from SplitJapanese import split_japanese
 except ImportError:
-    split_japanese = Noone
+    split_japanese = None
 
 __version__ = '1.1.1-dev'
 

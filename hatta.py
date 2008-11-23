@@ -855,7 +855,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
     def wiki_link(self, addr, label, class_='wiki', image=None):
         if external_link(addr):
             return u'<a href="%s" class="external">%s</a>' % (
-                werkzeug.url_fix(addr), werkzeug.escape(label))
+                werkzeug.url_fix(addr), image or werkzeug.escape(label))
         if '#' in addr:
             addr, chunk = addr.split('#', 1)
             chunk = '#%s' % chunk

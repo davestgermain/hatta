@@ -493,10 +493,9 @@ class WikiParser(object):
                 text, chunk = text.split('#', 1)
         match = self.image_re.match(text)
         if match:
-            inside = self.line_image(match.groupdict())
-        else:
-            inside = werkzeug.escape(text)
-        return self.wiki_link(target, text, image=inside)
+            image = self.line_image(match.groupdict())
+            return self.wiki_link(target, text, image=image)
+        return self.wiki_link(target, text)
 
     def line_image(self, groups):
         target = groups['image_target']

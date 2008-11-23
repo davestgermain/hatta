@@ -31,6 +31,11 @@ import mercurial.ui
 import mercurial.revlog
 import mercurial.util
 
+try:
+    from SplitJapanese import split_japanese
+except ImportError:
+    split_japanese = Noone
+
 __version__ = '1.1.1-dev'
 
 class WikiConfig(object):
@@ -704,7 +709,16 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
     def split_text(self, text):
         for match in self.word_pattern.finditer(text):
             word = match.group(0).strip(u"-.@~+:$&")
-            yield word.lower()
+            if split_japanese is None:
+                yield word.lower()
+            else:
+                japanese_words = list(split_japanese(word, False))
+                if len(japanese_words) > 1:
+                    print repr(japanese_words)
+                    for word in japanese_words:
+                        yield word.lower()
+                else:
+                    yield word.lower()
             parts = self.split_pattern.findall(word)
             if len(parts) > 1:
                 for part in parts:

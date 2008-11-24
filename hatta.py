@@ -713,7 +713,6 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
             else:
                 japanese_words = list(split_japanese(word, False))
                 if len(japanese_words) > 1:
-                    print repr(japanese_words)
                     for word in japanese_words:
                         yield word.lower()
                 else:
@@ -777,7 +776,6 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
             self.index[encoded] = stored
         self.index.sync()
 
-
     def add_links(self, title, links_and_labels):
         links, labels = links_and_labels
         self.links[title.encode('utf-8', 'backslashreplace')] = links
@@ -787,7 +785,7 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
 
     def regenerate_backlinks(self):
         for key in self.backlinks:
-            del self.backlinks[key]
+            self.backlinks[key] = []
         for title, links in self.links.iteritems():
             ident = self.get_title_id(title)
             for link in links:
@@ -796,6 +794,25 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
                 if ident not in backlinks:
                     backlinks.append(ident)
                 self.backlinks[encoded] = backlinks
+        self.backlinks.sync()
+
+    def update_backlinks(self, title, old_links, new_links):
+        ident = self.get_title_id(title)
+        encoded_title = title.encode('utf-8', 'backslashreplace')
+        for link in old_links:
+            encoded = link.encode('utf-8', 'backslashreplace')
+            backlinks = self.backlinks.get(encoded, [])
+            try:
+                backlinks.remove(ident)
+            except ValueError:
+                pass
+            self.backlinks[encoded] = backlinks
+        for link in new_links:
+            encoded = link.encode('utf-8', 'backslashreplace')
+            backlinks = self.backlinks.get(encoded, [])
+            if ident not in backlinks:
+                backlinks.append(ident)
+            self.backlinks[encoded] = backlinks
         self.backlinks.sync()
 
     def page_backlinks(self, title):
@@ -1146,10 +1163,21 @@ class Wiki(object):
             pass
         return helper.links, helper.link_labels
 
+    def index_text(self, title, text):
+        mime = self.storage.page_mime(title)
+        if mime == 'text/x-wiki':
+            old_links = self.index.page_links(title)
+            new_links, labels = self.extract_links(text)
+            self.index.update_backlinks(title, old_links, new_links)
+            self.index.add_links(title, (new_links, labels))
+        if mime.startswith('text/'):
+            self.index.add_words(title, text)
+        else:
+            self.index.add_words(title, u'')
+
     def save(self, request, title):
         self.check_lock(title)
         url = request.get_page_url(title)
-        mime = self.storage.page_mime(title)
         if request.form.get('cancel'):
             if title not in self.storage:
                 url = request.get_page_url(self.config.front_page)
@@ -1166,9 +1194,8 @@ class Wiki(object):
             text = request.form.get("text")
             if text is not None:
                 if title == self.config.locked_page:
-                    links_and_labels = self.extract_links(text)
-                    self.index.add_links(title, links_and_labels)
-                    if title in self.index.page_links(self.config.locked_page):
+                    links, labels = self.extract_links(text)
+                    if title in links:
                         raise werkzeug.exceptions.Forbidden()
                 if text.strip() == '':
                     self.storage.delete_page(title, author, comment)
@@ -1176,14 +1203,6 @@ class Wiki(object):
                 else:
                     data = text.encode(self.config.page_charset)
                     self.storage.save_text(title, data, author, comment)
-                if mime.startswith('text/'):
-                    self.index.add_words(title, text)
-                    if mime == 'text/x-wiki':
-                        links_and_labels = self.extract_links(text)
-                        self.index.add_links(title, links_and_labels)
-                        self.index.regenerate_backlinks()
-                else:
-                    self.index.add_words(title, u'')
             else:
                 f = request.files['data'].stream
                 if f is not None:
@@ -1193,7 +1212,7 @@ class Wiki(object):
                     except AttributeError:
                         self.storage.save_text(title, f.read(), author,
                                                comment)
-                self.index.add_words(title, u'')
+            self.index_text(title, text)
         response = werkzeug.routing.redirect(url, code=303)
         response.set_cookie('author',
                             werkzeug.url_quote(request.get_author()),
@@ -1467,10 +1486,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 data = self.storage.page_revision(title, rev-1)
                 self.storage.save_text(title, data, author, comment)
             text = unicode(data, self.config.page_charset, 'replace')
-            self.index.add_words(title, text)
-            links_and_labels = self.extract_links(text)
-            self.index.add_links(title, links_and_labels)
-            self.index.regenerate_backlinks()
+            self.index_text(title, text)
         url = request.adapter.build(self.history, {'title': title},
                                     method='GET')
         return werkzeug.redirect(url, 303)
@@ -1686,12 +1702,9 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             if mime.startswith('text/'):
                 data = self.storage.open_page(title).read()
                 text = unicode(data, self.config.page_charset, 'replace')
-                self.index.add_words(title, text)
-                if mime == 'text/x-wiki':
-                    links_and_labels = self.extract_links(text)
-                    self.index.add_links(title, links_and_labels)
             else:
-                self.index.add_words(title, u'')
+                text = u''
+            self.index_text(title, text)
         self.index.regenerate_backlinks()
 
     def wiki_math(self, math):

@@ -59,10 +59,9 @@ ZEN_HIRA = 5    # hiragana (JISX 208)
 ZEN_DEPEND = 6  # context dependent zenkaku character
 
 delm_set = frozenset(u" !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}‾｡｢｣､･　、。，．・：；"
-u"？！゛゜´"
-u"｀¨＾￣＿／\\〜‖｜…‥‘’“”（）〔〕［］｛｝〈〉《》「」『』【】＋−±×÷＝≠＜＞≦≧∞∴"
-u"♂♀°′″℃￥＄¢£％＃＆＊＠§☆★○●◎◇◆□■△▲▽▼※〒→←↑↓〓∈∋⊆⊇⊂⊃∪∩∧∨¬⇒⇔∠∃∠⊥⌒∂∇≡≒≪≫√∽∝∵∫∬Å‰"
-u"♯♭♪†‡¶◾─│┌┐┘└├┬┤┴┼━┃┏┓┛┗┣┫┻╋┠┯┨┷┿┝┰┥┸╂")
+u"？！゛゜´｀¨＾￣＿／\\〜‖｜…‥‘’“”（）〔〕［］｛｝〈〉《》「」『』【】＋−±×÷＝"
+u"≠＜＞≦≧∞∴♂♀°′″℃￥＄¢£％＃＆＊＠§☆★○●◎◇◆□■△▲▽▼※〒→←↑↓〓∈∋⊆⊇⊂⊃∪∩∧∨¬⇒⇔∠∃∠⊥⌒∂∇≡≒"
+u"≪≫√∽∝∵∫∬Å‰♯♭♪†‡¶◾─│┌┐┘└├┬┤┴┼━┃┏┓┛┗┣┫┻╋┠┯┨┷┿┝┰┥┸╂")
 
 def guess_charclass(ch):
     code = ord(ch)
@@ -76,7 +75,7 @@ def guess_charclass(ch):
         return ZEN_ALNUM
     elif (0xFF10 <= code < 0xFF1A or 0xFF21 <= code < 0xFF3B or
           0xFF41 <= code < 0xFF5B or 0x0391 <= code < 0x03AA or
-          0x03B1 <= code < 0X03CA or 0x0410 <= code < 0x0450):
+          0x03B1 <= code < 0x03CA or 0x0410 <= code < 0x0450):
         return ALNUM
     elif ch in delm_set:
         return DELM

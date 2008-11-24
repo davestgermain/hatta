@@ -1241,7 +1241,12 @@ class Wiki(object):
             import pygments.util
             import pygments.lexers
             import pygments.formatters
-            formatter = pygments.formatters.HtmlFormatter()
+            import pygments.styles
+            if 'tango' in pygments.styles.STYLE_MAP:
+                style = 'tango'
+            else:
+                style = 'friendly'
+            formatter = pygments.formatters.HtmlFormatter(style=style)
             try:
                 if mime:
                     lexer = pygments.lexers.get_lexer_for_mimetype(mime)

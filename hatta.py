@@ -21,7 +21,6 @@ import re
 import shelve
 import tempfile
 import weakref
-import threading
 
 import werkzeug
 os.environ['HGENCODING'] = 'utf-8'

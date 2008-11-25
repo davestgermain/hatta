@@ -1196,6 +1196,8 @@ class Wiki(object):
                     links, labels = self.extract_links(text)
                     if title in links:
                         raise werkzeug.exceptions.Forbidden()
+                if u'href="' in comment:
+                    raise werkzeug.exceptions.Forbidden()
                 if text.strip() == '':
                     self.storage.delete_page(title, author, comment)
                     url = request.get_page_url(self.config.front_page)

@@ -37,6 +37,8 @@ except ImportError:
 
 __version__ = '1.1.1-dev'
 
+_ = lambda s: s # Prosthetic for gettext
+
 class WikiConfig(object):
     # Please see the bottom of the script for modifying these values.
     interface = ''

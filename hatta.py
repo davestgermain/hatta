@@ -1461,6 +1461,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         else:
             response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title), rev))
         response.make_conditional(request)
+        if response.status.startswith('304'):
+            response.response = []
         return response
 
     def download(self, request, title):

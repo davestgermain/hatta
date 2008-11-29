@@ -909,6 +909,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
     def get_author(self):
         author = (self.form.get("author")
                   or werkzeug.url_unquote(self.cookies.get("author", ""))
+                  or werkzeug.url_unquote(self.environ..get('REMOTE_USER', ""))
                   or self.remote_addr)
         return author
 

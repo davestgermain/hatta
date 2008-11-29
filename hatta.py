@@ -220,7 +220,7 @@ class WikiStorage(object):
         lock = self._lock()
         try:
             mercurial.util.rename(file_name, file_path)
-            if repo_file not in self.repo.changectx():
+            if repo_file not in self.repo.changectx('tip'):
                 self.repo.add([repo_file])
             self.repo.commit(files=[repo_file], text=text, user=user,
                              force=True, empty_ok=True)
@@ -300,7 +300,7 @@ class WikiStorage(object):
 
     def _find_filectx(self, title):
         repo_file = self._title_to_file(title)
-        changectx = self.repo.changectx()
+        changectx = self.repo.changectx('tip')
         stack = [changectx]
         while repo_file not in changectx:
             if not stack:
@@ -335,7 +335,7 @@ class WikiStorage(object):
             raise werkzeug.exceptions.NotFound()
 
     def history(self):
-        changectx = self.repo.changectx()
+        changectx = self.repo.changectx('tip')
         maxrev = changectx.rev()
         minrev = 0
         for wiki_rev in range(maxrev, minrev-1, -1):
@@ -909,7 +909,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
     def get_author(self):
         author = (self.form.get("author")
                   or werkzeug.url_unquote(self.cookies.get("author", ""))
-                  or werkzeug.url_unquote(self.environ..get('REMOTE_USER', ""))
+                  or werkzeug.url_unquote(self.environ.get('REMOTE_USER', ""))
                   or self.remote_addr)
         return author
 

@@ -688,8 +688,9 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
 |\w+""", re.X|re.UNICODE)
     word_pattern = re.compile(ur"""[-\w.@~+:$&%#]{2,}""", re.UNICODE)
 
-    def __init__(self, filename):
-        self.filename = filename
+    def __init__(self, cache_path):
+        self.path = cache_path
+        self.filename = os.path.join(cache_path, 'index')
         self.index_file = "%s.words" % self.filename
         self.links_file = "%s.links" % self.filename
         self.labels_file = "%s.labels" % self.filename
@@ -755,9 +756,11 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
         else:
             ident = len(self.titles)
             self.titles.append(title)
-            f = open(self.title_file, "w+b")
+            tmpfd, tmpname = tempfile.mkstemp(dir=self.path)
+            f = os.fdopen(tmpfd, "w+b")
             pickle.dump(self.titles, f, 2)
             f.close()
+            mercurial.util.rename(tmpname, self.title_file)
         return ident
 
     def add_words(self, title, text):
@@ -968,7 +971,7 @@ class Wiki(object):
             reindex = True
         else:
             reindex = False
-        self.index = WikiSearch(os.path.join(self.cache, 'index'))
+        self.index = WikiSearch(self.cache)
         if reindex:
             self.reindex()
         self.url_map = werkzeug.routing.Map([

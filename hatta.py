@@ -824,7 +824,7 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
     def page_links(self, title):
         timestamp = os.stat(self.links_file).st_mtime
         if timestamp > self.links_timestamp:
-            self.links_timestamp = os.stat(self.links_file).st_mtime
+            self.links_timestamp = timestamp
             self.links.sync()
             #self.links = shelve.open(self.links_file, protocol=2)
         return self.links.get(title.encode('utf-8', 'backslashreplace'), [])

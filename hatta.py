@@ -1206,7 +1206,7 @@ class Wiki(object):
             if text is not None:
                 lines = text.split('\n')
             else:
-                lines = [_(u'<p>No preview for binaries.</p>')]
+                lines = [u'<p>%s</p>' % _(u'No preview for binaries.')]
             return self.edit(request, title, preview=lines)
         elif request.form.get('save'):
             comment = request.form.get("comment", "")
@@ -1291,14 +1291,14 @@ class Wiki(object):
         author = request.get_author()
         try:
             lines = self.storage.open_page(title)
-            comment = 'modified'
+            comment = _(u'modified')
             (rev, old_date,
              old_author, old_comment) = self.storage.page_meta(title)
             if old_author == author:
                 comment = old_comment
         except werkzeug.exceptions.NotFound:
             lines = []
-            comment = 'created'
+            comment = _('created')
             rev = -1
         if preview:
             lines = preview
@@ -1327,13 +1327,13 @@ class Wiki(object):
         author = request.get_author()
         try:
             f = self.storage.open_page(title)
-            comment = 'changed'
+            comment = _(u'changed')
             rev, old_date, old_author, old_comment = self.storage.page_meta(title)
             if old_author == author:
                 comment = old_comment
         except werkzeug.exceptions.NotFound:
             f = []
-            comment = 'uploaded'
+            comment = _(u'uploaded')
             rev = -1
         yield u"<p>%s</p>" % _(u"This is a binary file, it can't be edited on a wiki. Please upload a new version instead.")
         yield u'<form action="" method="POST" class="editor" enctype="multipart/form-data">'

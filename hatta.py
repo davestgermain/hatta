@@ -213,8 +213,8 @@ class WikiStorage(object):
         return os.path.exists(self._file_path(title))
 
     def save_file(self, title, file_name, author=u'', comment=u''):
-        user = author.encode('utf-8') or 'anon'
-        text = comment.encode('utf-8') or 'comment'
+        user = author.encode('utf-8') or _('anon')
+        text = comment.encode('utf-8') or _('comment')
         repo_file = self._title_to_file(title)
         file_path = self._file_path(title)
         lock = self._lock()
@@ -1036,7 +1036,7 @@ class Wiki(object):
         search = request.adapter.build(self.search, method='GET')
         yield u'<form class="search" action="%s" method="GET"><div>' % search
         yield u'<input name="q" class="search">'
-        yield u'<input class="button" type="submit" value="Search">'
+        yield u'<input class="button" type="submit" value="%s">' % _(u'Search')
         yield u'</div></form>'
         if self.config.menu_page in self.storage:
             menu = self.index.page_links(self.config.menu_page)
@@ -1063,9 +1063,11 @@ class Wiki(object):
             history = request.adapter.build(self.history, {'title': title}, method='GET')
             backlinks = request.adapter.build(self.backlinks, {'title': title}, method='GET')
             yield u'<div class="footer">'
-            yield u'<a href="%s" class="edit">Edit</a> ' % edit
-            yield u'<a href="%s" class="history">History</a> ' % history
-            yield u'<a href="%s" class="history">Backlinks</a> ' % backlinks
+            yield u'<a href="%s" class="edit">%s</a> ' % (edit, _(u'Edit'))
+            yield u'<a href="%s" class="history">%s</a> ' % (history,
+                                                             _(u'History'))
+            yield u'<a href="%s" class="history">%s</a> ' % (backlinks,
+                                                             _(u'Backlinks'))
             yield u'</div>'
         yield u'</div></body></html>'
 
@@ -1120,12 +1122,14 @@ class Wiki(object):
         text = unicode(self.storage.page_revision(title, rev),
                        self.config.page_charset, 'replace')
         content = [
-            u'<p>Content of revision %d of page %s:</p>'
-                % (rev, request.wiki_link(title, title)),
+            u'<p>%s</p>' % (
+                _(u'Content of revision %(rev)d of page %(title)s:')
+                % {'rev': rev, 'title': request.wiki_link(title, title)}
+            ),
             u'<pre>%s</pre>' % werkzeug.escape(text),
         ]
         html = self.html_page(request, title, content,
-                              page_title=u'Revision of "%s"' % title)
+            page_title=_(u'Revision of "%(title)s"') % {'title': title})
         response = self.response(request, title, html, rev=rev, etag='/old')
         return response
 
@@ -1194,7 +1198,7 @@ class Wiki(object):
             if text is not None:
                 lines = text.split('\n')
             else:
-                lines = [u'No preview for binaries.']
+                lines = [_(u'<p>No preview for binaries.</p>')]
             return self.edit(request, title, preview=lines)
         elif request.form.get('save'):
             comment = request.form.get("comment", "")
@@ -1236,7 +1240,7 @@ class Wiki(object):
         else:
             form = self.upload_form
         html = self.html_page(request, title, form(request, title, preview),
-                              page_title=u'Editing "%s"' % title)
+                    page_title=_(u'Editing "%(title)s"') % {'title': title})
         if title not in self.storage:
             return werkzeug.Response(html, mimetype="text/html",
                                      status='404 Not found')
@@ -1297,16 +1301,17 @@ class Wiki(object):
             yield werkzeug.escape(line)
         yield u"""</textarea>"""
         yield u'<input type="hidden" name="parent" value="%d">' % rev
-        yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape(comment)
-        yield u'<label>Author <input name="author" value="%s"></label>' % werkzeug.escape(request.get_author())
+        yield u'<label class="comment">%s <input name="comment" value="%s"></label>' % (_(u'Comment'), werkzeug.escape(comment))
+        yield u'<label>%s <input name="author" value="%s"></label>' % (
+            _(u'Author'), werkzeug.escape(request.get_author()))
         yield u'<div class="buttons">'
-        yield u'<input type="submit" name="save" value="Save">'
-        yield u'<input type="submit" name="preview" value="Preview">'
-        yield u'<input type="submit" name="cancel" value="Cancel">'
+        yield u'<input type="submit" name="save" value="%s">' % _(u'Save')
+        yield u'<input type="submit" name="preview" value="%s">' % _(u'Preview')
+        yield u'<input type="submit" name="cancel" value="%s">' % _(u'Cancel')
         yield u'</div>'
         yield u'</div></form>'
         if preview:
-            yield u'<h1 id="preview">Preview, not saved</h1>'
+            yield u'<h1 id="preview">%s</h1>' % _(u'Preview, not saved')
             for part in self.view_content(request, title, preview):
                 yield part
 
@@ -1322,15 +1327,16 @@ class Wiki(object):
             f = []
             comment = 'uploaded'
             rev = -1
-        yield u"<p>This is a binary file, it can't be edited on a wiki. Please upload a new version instead.</p>"
+        yield u"<p>%s</p>" % _(u"This is a binary file, it can't be edited on a wiki. Please upload a new version instead.")
         yield u'<form action="" method="POST" class="editor" enctype="multipart/form-data">'
         yield u'<div><div class="upload"><input type="file" name="data"></div>'
         yield u'<input type="hidden" name="parent" value="%d">' % rev
-        yield u'<label class="comment">Comment <input name="comment" value="%s"></label>' % werkzeug.escape(comment)
-        yield u'<label>Author <input name="author" value="%s"></label>' % werkzeug.escape(author)
+        yield u'<label class="comment">%s <input name="comment" value="%s"></label>' % (_(u'Comment'), werkzeug.escape(comment))
+        yield u'<label>%s <input name="author" value="%s"></label>' % (
+            _(u'Author'), werkzeug.escape(author))
         yield u'<div class="buttons">'
-        yield u'<input type="submit" name="save" value="Save">'
-        yield u'<input type="submit" name="cancel" value="Cancel">'
+        yield u'<input type="submit" name="save" value="%s">' % _(u'Save')
+        yield u'<input type="submit" name="cancel" value="%s">' % _(u'Cancel')
         yield u'</div></div></form>'
 
     def atom(self, request):
@@ -1440,7 +1446,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
     <title>%s</title>
     <atom:link href="%s" rel="self" type="application/rss+xml" />
     <link>%s</link>
-    <description>Track the most recent changes to the wiki in this feed.</description>
+    <description>%s</description>
     <generator>Hatta Wiki</generator>
     <language>en</language>
     <lastBuildDate>%s</lastBuildDate>
@@ -1449,6 +1455,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             werkzeug.escape(self.config.site_name),
             request.adapter.build(self.rss),
             request.adapter.build(self.recent_changes),
+            _(u'Track the most recent changes to the wiki in this feed.'),
             first_date,
         )
         content = [rss_head]+rss_body+[u'</channel></rss>']
@@ -1495,11 +1502,12 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         author = request.get_author()
         if rev is not None:
             if rev == 0:
-                comment = u'Delete page %s' % title
+                comment = _(u'Delete page %(title)s') % {'title': title}
                 data = ''
                 self.storage.delete_page(title, author, comment)
             else:
-                comment = u'Undo of change %d of page %s' % (rev, title)
+                comment = _(u'Undo of change %(rev)d of page %(title)s') % {
+                    'rev': rev, 'title': title}
                 data = self.storage.page_revision(title, rev-1)
                 self.storage.save_text(title, data, author, comment)
             text = unicode(data, self.config.page_charset, 'replace')
@@ -1511,13 +1519,16 @@ xmlns:atom="http://www.w3.org/2005/Atom"
     def history(self, request, title):
         content = self.html_page(request, title,
                                  self.history_list(request, title),
-                                 page_title=u'History of "%s"' % title)
+                                 page_title=_(u'History of "%(title)s"') % {
+                                    'title': title})
         response = self.response(request, title, content, '/history')
         return response
 
     def history_list(self, request, title):
-        yield '<p>History of changes for %s.</p>' % request.wiki_link(title, title)
-        url = request.adapter.build(self.undo, {'title':title}, method='POST')
+        yield u'<p>%s</p>' % (
+            _(u'History of changes for %(link)s.') % {
+                'link': request.wiki_link(title, title)})
+        url = request.adapter.build(self.undo, {'title': title}, method='POST')
         yield u'<form action="%s" method="POST"><ul class="history">' % url
         for rev, date, author, comment in self.storage.page_history(title):
             if rev > 0:
@@ -1538,7 +1549,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
     def recent_changes(self, request):
         content = self.html_page(request, u'history',
                                  self.changes_list(request),
-                                 page_title=u'Recent changes')
+                                 page_title=_(u'Recent changes'))
         response = werkzeug.Response(content, mimetype='text/html')
         response.set_etag('/recentchanges/%d' % self.storage.repo_revision())
         response.make_conditional(request)
@@ -1588,13 +1599,13 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         to_url = request.adapter.build(self.revision,
                                        {'title': title, 'rev': to_rev})
         content = self.html_page(request, title, itertools.chain(
-            [u'<p>Differences between revisions ',
-             u'<a href="%s">%d</a>' % (from_url, from_rev),
-             u' and ',
-             u'<a href="%s">%d</a>' % (to_url, to_rev),
-             u' of page %s.</p>' % request.wiki_link(title, title)],
+            [u'<p>%s</p>' % _(u'Differences between revisions %(link1)s and %(link2)s of page %(link)s.') % {
+                'link1': u'<a href="%s">%d</a>' % (from_url, from_rev),
+                'link2': u'<a href="%s">%d</a>' % (to_url, to_rev),
+                'link': request.wiki_link(title, title)
+            }],
             self.diff_content(from_page, to_page)),
-            page_title=u'Diff for "%s"' % title)
+            page_title=_(u'Diff for "%(title)s"') % {'title': title})
         response = werkzeug.Response(content, mimetype='text/html')
         return response
 
@@ -1647,15 +1658,15 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         words = tuple(self.index.filter_words(self.index.split_text(query)))
         if not words:
             content = self.page_index(request)
-            title = 'Page index'
+            title = _(u'Page index')
         else:
-            title = 'Searching for "%s"' % u" ".join(words)
+            title = _(u'Searching for "%s"') % u" ".join(words)
             content = self.page_search(request, words)
         html = self.html_page(request, u'', content, page_title=title)
         return WikiResponse(html, mimetype='text/html')
 
     def page_index(self, request):
-        yield u'<p>Index of all pages.</p>'
+        yield u'<p>%s</p>' % _(u'Index of all pages.')
         yield u'<ul>'
         for title in sorted(self.storage.all_pages()):
             yield u'<li>%s</li>' % request.wiki_link(title, title)
@@ -1663,7 +1674,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
     def page_search(self, request, words):
         result = sorted(self.index.find(words), key=lambda x:-x[0])
-        yield u'<p>%d page(s) containing all words:</p>' % len(result)
+        yield u'<p>%s</p>' % (u'%d page(s) containing all words:' % len(result))
         yield u'<ul>'
         for score, title in result:
             yield '<li><b>%s</b> (%d)<div class="snippet">%s</div></li>' % (
@@ -1694,7 +1705,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return response
 
     def page_backlinks(self, request, title):
-        yield u'<p>Pages that contain a link to %s.</p>' % request.wiki_link(title, title)
+        yield u'<p>%s</p>' % (
+            u'Pages that contain a link to %s.' % request.wiki_link(title, title))
         yield u'<ul>'
         for link in self.index.page_backlinks(title):
             yield '<li>%s</li>' % request.wiki_link(link, link)

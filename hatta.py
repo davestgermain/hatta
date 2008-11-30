@@ -699,6 +699,7 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
         self.links_timestamp = os.stat(self.links_file).st_mtime
         self.links = shelve.open(self.links_file, protocol=2)
         self.labels = shelve.open(self.labels_file, protocol=2)
+        self.backlinks_timestamp = os.stat(self.backlinks_file).st_mtime
         self.backlinks = shelve.open(self.backlinks_file, protocol=2)
         try:
             f = open(self.title_file, "rb")
@@ -818,6 +819,10 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
         self.backlinks.sync()
 
     def page_backlinks(self, title):
+        timestamp = os.stat(self.backlinks_file).st_mtime
+        if timestamp > self.backlinks_timestamp:
+            self.backlinks_timestamp = timestamp
+            self.backlinks.sync()
         for ident in self.backlinks.get(title.encode('utf-8', 'backslashreplace'), []):
             yield self.titles[ident]
 

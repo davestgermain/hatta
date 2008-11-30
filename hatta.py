@@ -14,6 +14,7 @@ except ImportError:
 import base64
 import datetime
 import difflib
+import gettext
 import itertools
 import mimetypes
 import os
@@ -37,12 +38,11 @@ except ImportError:
 
 __version__ = '1.1.1-dev'
 
-_ = lambda s: s # Prosthetic for gettext
-
 class WikiConfig(object):
     # Please see the bottom of the script for modifying these values.
     interface = ''
     port = 8080
+    language = None
     pages_path = 'docs'
     cache_path = 'cache'
     site_name = u'Hatta Wiki'
@@ -150,6 +150,8 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
                           metavar='ENC')
         parser.add_option('-c', '--config-file', dest='config_file',
                           help='Read configuration from FILE', metavar='FILE')
+        parser.add_option('-l', '--language', dest='language',
+                          help='Translate interface to LANG', metavar='LANG')
         options, args = parser.parse_args()
         self.pages_path = options.pages_path or self.pages_path
         self.cache_path = options.cache_path or self.cache_path
@@ -160,6 +162,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         self.page_charset = options.page_charset or self.page_charset
         self.front_page = options.front_page or self.front_page
         self.config_file = options.config_file or self.config_file
+        self.language = options.language or self.language
 
     def _parse_files(self, files=()):
         import ConfigParser
@@ -213,8 +216,8 @@ class WikiStorage(object):
         return os.path.exists(self._file_path(title))
 
     def save_file(self, title, file_name, author=u'', comment=u''):
-        user = author.encode('utf-8') or _('anon')
-        text = comment.encode('utf-8') or _('comment')
+        user = author.encode('utf-8') or _(u'anon').encode('utf-8')
+        text = comment.encode('utf-8') or _(u'comment').encode('utf-8')
         repo_file = self._title_to_file(title)
         file_path = self._file_path(title)
         lock = self._lock()
@@ -962,6 +965,16 @@ class Wiki(object):
 
     def __init__(self, config):
         self.config = config
+        global _
+        if config.language:
+            try:
+                _ = gettext.translation('hatta', 'locale',
+                                        languages=[config.language]).ugettext
+            except IOError:
+                _ = gettext.translation('hatta', fallback=True,
+                                        languages=[config.language]).ugettext
+        else:
+            _ = gettext.translation('hatta', fallback=True).ugettext
         self.path = os.path.abspath(config.pages_path)
         self.cache = os.path.abspath(config.cache_path)
         self.storage = WikiStorage(self.path)
@@ -1044,7 +1057,7 @@ class Wiki(object):
         search = request.adapter.build(self.search, method='GET')
         yield u'<form class="search" action="%s" method="GET"><div>' % search
         yield u'<input name="q" class="search">'
-        yield u'<input class="button" type="submit" value="%s">' % _(u'Search')
+        yield u'<input class="button" type="submit" value="%s">' % werkzeug.escape(_(u'Search'), quote=True)
         yield u'</div></form>'
         if self.config.menu_page in self.storage:
             menu = self.index.page_links(self.config.menu_page)
@@ -1071,11 +1084,12 @@ class Wiki(object):
             history = request.adapter.build(self.history, {'title': title}, method='GET')
             backlinks = request.adapter.build(self.backlinks, {'title': title}, method='GET')
             yield u'<div class="footer">'
-            yield u'<a href="%s" class="edit">%s</a> ' % (edit, _(u'Edit'))
+            yield u'<a href="%s" class="edit">%s</a> ' % (edit,
+                werkzeug.escape(_(u'Edit')))
             yield u'<a href="%s" class="history">%s</a> ' % (history,
-                                                             _(u'History'))
+                werkzeug.escape(_(u'History')))
             yield u'<a href="%s" class="history">%s</a> ' % (backlinks,
-                                                             _(u'Backlinks'))
+                werkzeug.escape(_(u'Backlinks')))
             yield u'</div>'
         yield u'</div></body></html>'
 
@@ -1131,7 +1145,7 @@ class Wiki(object):
                        self.config.page_charset, 'replace')
         content = [
             u'<p>%s</p>' % (
-                _(u'Content of revision %(rev)d of page %(title)s:')
+                werkzeug.escape(_(u'Content of revision %(rev)d of page %(title)s:'))
                 % {'rev': rev, 'title': request.wiki_link(title, title)}
             ),
             u'<pre>%s</pre>' % werkzeug.escape(text),
@@ -1206,7 +1220,7 @@ class Wiki(object):
             if text is not None:
                 lines = text.split('\n')
             else:
-                lines = [u'<p>%s</p>' % _(u'No preview for binaries.')]
+                lines = [u'<p>%s</p>' % werkzeug.escape(_(u'No preview for binaries.'))]
             return self.edit(request, title, preview=lines)
         elif request.form.get('save'):
             comment = request.form.get("comment", "")
@@ -1298,7 +1312,7 @@ class Wiki(object):
                 comment = old_comment
         except werkzeug.exceptions.NotFound:
             lines = []
-            comment = _('created')
+            comment = _(u'created')
             rev = -1
         if preview:
             lines = preview
@@ -1309,17 +1323,17 @@ class Wiki(object):
             yield werkzeug.escape(line)
         yield u"""</textarea>"""
         yield u'<input type="hidden" name="parent" value="%d">' % rev
-        yield u'<label class="comment">%s <input name="comment" value="%s"></label>' % (_(u'Comment'), werkzeug.escape(comment))
+        yield u'<label class="comment">%s <input name="comment" value="%s"></label>' % (werkzeug.escape(_(u'Comment')), werkzeug.escape(comment, quote=True))
         yield u'<label>%s <input name="author" value="%s"></label>' % (
-            _(u'Author'), werkzeug.escape(request.get_author()))
+            werkzeug.escape(_(u'Author')), werkzeug.escape(request.get_author(), quote=True))
         yield u'<div class="buttons">'
-        yield u'<input type="submit" name="save" value="%s">' % _(u'Save')
-        yield u'<input type="submit" name="preview" value="%s">' % _(u'Preview')
-        yield u'<input type="submit" name="cancel" value="%s">' % _(u'Cancel')
+        yield u'<input type="submit" name="save" value="%s">' % werkzeug.escape(_(u'Save'), quote=True)
+        yield u'<input type="submit" name="preview" value="%s">' % werkzeug.escape(_(u'Preview'), quote=True)
+        yield u'<input type="submit" name="cancel" value="%s">' % werkzeug.escape(_(u'Cancel'), quote=True)
         yield u'</div>'
         yield u'</div></form>'
         if preview:
-            yield u'<h1 id="preview">%s</h1>' % _(u'Preview, not saved')
+            yield u'<h1 id="preview">%s</h1>' % werkzeug.escape(_(u'Preview, not saved'))
             for part in self.view_content(request, title, preview):
                 yield part
 
@@ -1335,16 +1349,16 @@ class Wiki(object):
             f = []
             comment = _(u'uploaded')
             rev = -1
-        yield u"<p>%s</p>" % _(u"This is a binary file, it can't be edited on a wiki. Please upload a new version instead.")
+        yield u"<p>%s</p>" % werkzeug.escape(_(u"This is a binary file, it can't be edited on a wiki. Please upload a new version instead."))
         yield u'<form action="" method="POST" class="editor" enctype="multipart/form-data">'
         yield u'<div><div class="upload"><input type="file" name="data"></div>'
         yield u'<input type="hidden" name="parent" value="%d">' % rev
-        yield u'<label class="comment">%s <input name="comment" value="%s"></label>' % (_(u'Comment'), werkzeug.escape(comment))
+        yield u'<label class="comment">%s <input name="comment" value="%s"></label>' % (werkzeug.escape(_(u'Comment')), werkzeug.escape(comment, quote=True))
         yield u'<label>%s <input name="author" value="%s"></label>' % (
             _(u'Author'), werkzeug.escape(author))
         yield u'<div class="buttons">'
-        yield u'<input type="submit" name="save" value="%s">' % _(u'Save')
-        yield u'<input type="submit" name="cancel" value="%s">' % _(u'Cancel')
+        yield u'<input type="submit" name="save" value="%s">' % werkzeug.escape(_(u'Save'), quote=True)
+        yield u'<input type="submit" name="cancel" value="%s">' % werkzeug.escape(_(u'Cancel'), quote=True)
         yield u'</div></div></form>'
 
     def atom(self, request):
@@ -1463,7 +1477,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             werkzeug.escape(self.config.site_name),
             request.adapter.build(self.rss),
             request.adapter.build(self.recent_changes),
-            _(u'Track the most recent changes to the wiki in this feed.'),
+            werkzeug.escape(_(u'Track the most recent changes to the wiki in this feed.')),
             first_date,
         )
         content = [rss_head]+rss_body+[u'</channel></rss>']
@@ -1607,7 +1621,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         to_url = request.adapter.build(self.revision,
                                        {'title': title, 'rev': to_rev})
         content = self.html_page(request, title, itertools.chain(
-            [u'<p>%s</p>' % _(u'Differences between revisions %(link1)s and %(link2)s of page %(link)s.') % {
+            [u'<p>%s</p>' % werkzeug.escape(_(u'Differences between revisions %(link1)s and %(link2)s of page %(link)s.')) % {
                 'link1': u'<a href="%s">%d</a>' % (from_url, from_rev),
                 'link2': u'<a href="%s">%d</a>' % (to_url, to_rev),
                 'link': request.wiki_link(title, title)
@@ -1674,7 +1688,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return WikiResponse(html, mimetype='text/html')
 
     def page_index(self, request):
-        yield u'<p>%s</p>' % _(u'Index of all pages.')
+        yield u'<p>%s</p>' % werkzeug.escape(_(u'Index of all pages.'))
         yield u'<ul>'
         for title in sorted(self.storage.all_pages()):
             yield u'<li>%s</li>' % request.wiki_link(title, title)

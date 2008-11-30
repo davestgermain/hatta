@@ -1,0 +1,144 @@
+# Hatta wiki engine
+# Copyright (C) YEAR ORGANIZATION
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Hatta 1.2.0\n"
+"POT-Creation-Date: 2008-11-30 19:59+CET\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Generated-By: pygettext.py 1.5\n"
+
+
+#: hatta.py:216
+msgid "anon"
+msgstr ""
+
+#: hatta.py:217
+msgid "comment"
+msgstr ""
+
+#: hatta.py:1047
+msgid "Search"
+msgstr ""
+
+#: hatta.py:1074
+msgid "Edit"
+msgstr ""
+
+#: hatta.py:1076
+msgid "History"
+msgstr ""
+
+#: hatta.py:1078
+msgid "Backlinks"
+msgstr ""
+
+#: hatta.py:1134
+msgid "Content of revision %(rev)d of page %(title)s:"
+msgstr ""
+
+#: hatta.py:1140
+msgid "Revision of \"%(title)s\""
+msgstr ""
+
+#: hatta.py:1209
+msgid "No preview for binaries."
+msgstr ""
+
+#: hatta.py:1251
+msgid "Editing \"%(title)s\""
+msgstr ""
+
+#: hatta.py:1294
+msgid "modified"
+msgstr ""
+
+#: hatta.py:1301
+msgid "created"
+msgstr ""
+
+#: hatta.py:1312 hatta.py:1342
+msgid "Comment"
+msgstr ""
+
+#: hatta.py:1314 hatta.py:1344
+msgid "Author"
+msgstr ""
+
+#: hatta.py:1316 hatta.py:1346
+msgid "Save"
+msgstr ""
+
+#: hatta.py:1317
+msgid "Preview"
+msgstr ""
+
+#: hatta.py:1318 hatta.py:1347
+msgid "Cancel"
+msgstr ""
+
+#: hatta.py:1322
+msgid "Preview, not saved"
+msgstr ""
+
+#: hatta.py:1330
+msgid "changed"
+msgstr ""
+
+#: hatta.py:1336
+msgid "uploaded"
+msgstr ""
+
+#: hatta.py:1338
+msgid "This is a binary file, it can't be edited on a wiki. Please upload a new version instead."
+msgstr ""
+
+#: hatta.py:1466
+msgid "Track the most recent changes to the wiki in this feed."
+msgstr ""
+
+#: hatta.py:1513
+msgid "Delete page %(title)s"
+msgstr ""
+
+#: hatta.py:1517
+msgid "Undo of change %(rev)d of page %(title)s"
+msgstr ""
+
+#: hatta.py:1530
+msgid "History of \"%(title)s\""
+msgstr ""
+
+#: hatta.py:1537
+msgid "History of changes for %(link)s."
+msgstr ""
+
+#: hatta.py:1560
+msgid "Recent changes"
+msgstr ""
+
+#: hatta.py:1610
+msgid "Differences between revisions %(link1)s and %(link2)s of page %(link)s."
+msgstr ""
+
+#: hatta.py:1616
+msgid "Diff for \"%(title)s\""
+msgstr ""
+
+#: hatta.py:1669
+msgid "Page index"
+msgstr ""
+
+#: hatta.py:1671
+msgid "Searching for \"%s\""
+msgstr ""
+
+#: hatta.py:1677
+msgid "Index of all pages."
+msgstr ""
+

@@ -658,10 +658,16 @@ class WikiSearch(object):
         self.backlinks_file = "%s.back" % self.filename
         self.title_file = "%s.titles" % self.filename
         self.index = shelve.open(self.index_file, protocol=2)
-        self.links_timestamp = os.stat(self.links_file).st_mtime
+        try:
+            self.links_timestamp = os.stat(self.links_file).st_mtime
+        except OSError:
+            self.links_timestamp = 0
         self.links = shelve.open(self.links_file, protocol=2)
         self.labels = shelve.open(self.labels_file, protocol=2)
-        self.backlinks_timestamp = os.stat(self.backlinks_file).st_mtime
+        try:
+            self.backlinks_timestamp = os.stat(self.backlinks_file).st_mtime
+        except OSError:
+            self.backlinks_timestamp = 0
         self.backlinks = shelve.open(self.backlinks_file, protocol=2)
         try:
             f = open(self.title_file, "rb")

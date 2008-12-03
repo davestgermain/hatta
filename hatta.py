@@ -642,48 +642,6 @@ class WikiParser(object):
 
 
 class WikiSearch(object):
-    stop_words_en = frozenset(u""" am ii iii per po re a about above across 
-after afterwards again against all almost alone along already also although
-always am among ain amongst amoungst amount an and another any aren anyhow
-anyone anything anyway anywhere are around as at back be became because become
-becomes becoming been before beforehand behind being below beside besides
-between beyond bill both but by can cannot cant con could couldnt
-describe detail do done down due during each eg eight either eleven else etc
-elsewhere empty enough even ever every everyone everything everywhere except
-few fifteen fifty fill find fire first five for former formerly forty found
-four from front full further get give go had has hasnt have he hence her here
-hereafter hereby herein hereupon hers herself him himself his how however
-hundred i ie if in inc indeed interest into is it its itself keep last latter
-latterly least isn less made many may me meanwhile might mill mine more
-moreover most mostly move much must my myself name namely neither never
-nevertheless next nine no nobody none noone nor not nothing now nowhere of off
-often on once one only onto or other others otherwise our ours ourselves out
-over own per perhaps please pre put rather re same see seem seemed seeming
-seems serious several she should show side since sincere six sixty so some
-somehow someone something sometime sometimes somewhere still such take ten than
-that the their theirs them themselves then thence there thereafter thereby
-therefore therein thereupon these they thick thin third this those though three
-through throughout thru thus to together too toward towards twelve twenty two
-un under ve until up upon us very via was wasn we well were what whatever when
-whence whenever where whereafter whereas whereby wherein whereupon wherever
-whether which while whither who whoever whole whom whose why will with within
-without would yet you your yours yourself yourselves""".split())
-    stop_words_pl = frozenset(u"""a aby acz aczkolwiek albo ale ależ aż
-bardziej bardzo bez bo bowiem by byli bym być był była było były będzie będą
-cali cała cały co cokolwiek coś czasami czasem czemu czwarte czy czyli dla
-dlaczego dlatego do drugie drugiej dwa gdy gdyż gdzie gdziekolwiek gdzieś go i
-ich ile im inna inny innych itd itp iż ja jak jakaś jakichś jakiś jakiż jako
-jakoś jednak jednakże jego jej jemu jest jeszcze jeśli jeżeli już ją kiedy
-kilka kimś kto ktokolwiek ktoś która które którego której który których którym
-którzy lat lecz lub ma mi mimo między mnie mogą moim może możliwe można mu na
-nad nam nas naszego naszych nawet nic nich nie niech nigdy nim niż no o obok od
-około on ona ono oprócz oraz pan pana pani pierwsze piąte po pod podczas pomimo
-ponad ponieważ powinien powinna powinni powinno poza prawie przecież przed
-przede przez przy raz roku również się sobie sobą sposób swoje są ta tak taka
-taki takie także tam te tego tej ten teraz też to tobie toteż trzeba trzecie
-trzy tu twoim twoja twoje twym twój ty tych tylko tym u w we według wiele wielu
-więc wszyscy wszystkich wszystkie wszystkim wszystko właśnie z za zapewne
-zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
     digits_pattern = re.compile(ur"""^[=+~-]?[\d,.:-]+\w?\w?%?$""", re.UNICODE)
     split_pattern = re.compile(ur"""
 [A-ZĄÂÃĀÄÅÁÀĂĘÉÊĚËĒÈŚĆÇČŁÓÒÖŌÕÔŃŻŹŽÑÍÏĐÞÐÆŸØ]
@@ -691,7 +649,7 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
 |\w+""", re.X|re.UNICODE)
     word_pattern = re.compile(ur"""[-\w.@~+:$&%#]{2,}""", re.UNICODE)
 
-    def __init__(self, cache_path):
+    def __init__(self, cache_path, repo):
         self.path = cache_path
         self.filename = os.path.join(cache_path, 'index')
         self.index_file = "%s.words" % self.filename
@@ -711,6 +669,42 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
             f.close()
         except (IOError, EOFError):
             self.titles = []
+        self._lockref = None
+        self.repo = repo
+        self.stop_words = frozenset(_(u"""am ii iii per po re a about above
+across after afterwards again against all almost alone along already also
+although always am among ain amongst amoungst amount an and another any aren
+anyhow anyone anything anyway anywhere are around as at back be became because
+become becomes becoming been before beforehand behind being below beside
+besides between beyond bill both but by can cannot cant con could couldnt
+describe detail do done down due during each eg eight either eleven else etc
+elsewhere empty enough even ever every everyone everything everywhere except
+few fifteen fifty fill find fire first five for former formerly forty found
+four from front full further get give go had has hasnt have he hence her here
+hereafter hereby herein hereupon hers herself him himself his how however
+hundred i ie if in inc indeed interest into is it its itself keep last latter
+latterly least isn less made many may me meanwhile might mill mine more
+moreover most mostly move much must my myself name namely neither never
+nevertheless next nine no nobody none noone nor not nothing now nowhere of off
+often on once one only onto or other others otherwise our ours ourselves out
+over own per perhaps please pre put rather re same see seem seemed seeming
+seems serious several she should show side since sincere six sixty so some
+somehow someone something sometime sometimes somewhere still such take ten than
+that the their theirs them themselves then thence there thereafter thereby
+therefore therein thereupon these they thick thin third this those though three
+through throughout thru thus to together too toward towards twelve twenty two
+un under ve until up upon us very via was wasn we well were what whatever when
+whence whenever where whereafter whereas whereby wherein whereupon wherever
+whether which while whither who whoever whole whom whose why will with within
+without would yet you your yours yourself yourselves""").split())
+
+    def lock(self):
+        if self._lockref and self._lockref():
+            return self._lockref()
+        lock = self.repo._lock(os.path.join(self.path, "wikisearchlock"),
+                               True, None, None, "Search wiki lock")
+        self._lockref = weakref.ref(lock)
+        return lock
 
     def split_text(self, text):
         for match in self.word_pattern.finditer(text):
@@ -733,9 +727,7 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
         for word in words:
             if not 1 < len(word) < 25:
                 continue
-            if word in self.stop_words_en:
-                continue
-            if word in self.stop_words_pl:
+            if word in self.stop_words:
                 continue
             if self.digits_pattern.match(word):
                 continue
@@ -758,12 +750,19 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
                     del counts[ident]
         else:
             ident = len(self.titles)
-            self.titles.append(title)
-            tmpfd, tmpname = tempfile.mkstemp(dir=self.path)
-            f = os.fdopen(tmpfd, "w+b")
-            pickle.dump(self.titles, f, 2)
-            f.close()
-            mercurial.util.rename(tmpname, self.title_file)
+            lock = self.lock()
+            try:
+                f = open(self.title_file, "rb")
+                self.titles = pickle.load(f)
+                f.close()
+                self.titles.append(title)
+                tmpfd, tmpname = tempfile.mkstemp(dir=self.path)
+                f = os.fdopen(tmpfd, "w+b")
+                pickle.dump(self.titles, f, 2)
+                f.close()
+                mercurial.util.rename(tmpname, self.title_file)
+            finally:
+                del lock
         return ident
 
     def add_words(self, title, text):
@@ -775,54 +774,74 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
         title_words = self.count_words(self.filter_words(self.split_text(title)))
         for word, count in title_words.iteritems():
             words[word] = words.get(word, 0) + count
-        for word, count in words.iteritems():
-            encoded = word.encode("utf-8")
-            if encoded not in self.index:
-                stored = {}
-            else:
-                stored = self.index[encoded]
-            stored[ident] = count
-            self.index[encoded] = stored
-        self.index.sync()
+        lock = self.lock()
+        try:
+            self.index.sync()
+            for word, count in words.iteritems():
+                encoded = word.encode("utf-8")
+                if encoded not in self.index:
+                    stored = {}
+                else:
+                    stored = self.index[encoded]
+                stored[ident] = count
+                self.index[encoded] = stored
+            self.index.sync()
+        finally:
+            del lock
 
     def add_links(self, title, links_and_labels):
         links, labels = links_and_labels
-        self.links[title.encode('utf-8', 'backslashreplace')] = links
-        self.links.sync()
-        self.labels[title.encode('utf-8', 'backslashreplace')] = labels
-        self.labels.sync()
+        lock = self.lock()
+        try:
+            self.links.sync()
+            self.links[title.encode('utf-8', 'backslashreplace')] = links
+            self.links.sync()
+            self.labels.sync()
+            self.labels[title.encode('utf-8', 'backslashreplace')] = labels
+            self.labels.sync()
+        finally:
+            del lock
 
     def regenerate_backlinks(self):
-        for key in self.backlinks:
-            self.backlinks[key] = []
-        for title, links in self.links.iteritems():
-            ident = self.get_title_id(title)
-            for link in links:
+        lock = self.lock()
+        try:
+            for key in self.backlinks:
+                self.backlinks[key] = []
+            for title, links in self.links.iteritems():
+                ident = self.get_title_id(title)
+                for link in links:
+                    encoded = link.encode('utf-8', 'backslashreplace')
+                    backlinks = self.backlinks.get(encoded, [])
+                    if ident not in backlinks:
+                        backlinks.append(ident)
+                    self.backlinks[encoded] = backlinks
+            self.backlinks.sync()
+        finally:
+            del lock
+
+    def update_backlinks(self, title, old_links, new_links):
+        ident = self.get_title_id(title)
+        encoded_title = title.encode('utf-8', 'backslashreplace')
+        lock = self.lock()
+        try:
+            self.backlinks.sync()
+            for link in old_links:
+                encoded = link.encode('utf-8', 'backslashreplace')
+                backlinks = self.backlinks.get(encoded, [])
+                try:
+                    backlinks.remove(ident)
+                except ValueError:
+                    pass
+                self.backlinks[encoded] = backlinks
+            for link in new_links:
                 encoded = link.encode('utf-8', 'backslashreplace')
                 backlinks = self.backlinks.get(encoded, [])
                 if ident not in backlinks:
                     backlinks.append(ident)
                 self.backlinks[encoded] = backlinks
-        self.backlinks.sync()
-
-    def update_backlinks(self, title, old_links, new_links):
-        ident = self.get_title_id(title)
-        encoded_title = title.encode('utf-8', 'backslashreplace')
-        for link in old_links:
-            encoded = link.encode('utf-8', 'backslashreplace')
-            backlinks = self.backlinks.get(encoded, [])
-            try:
-                backlinks.remove(ident)
-            except ValueError:
-                pass
-            self.backlinks[encoded] = backlinks
-        for link in new_links:
-            encoded = link.encode('utf-8', 'backslashreplace')
-            backlinks = self.backlinks.get(encoded, [])
-            if ident not in backlinks:
-                backlinks.append(ident)
-            self.backlinks[encoded] = backlinks
-        self.backlinks.sync()
+            self.backlinks.sync()
+        finally:
+            del lock
 
     def page_backlinks(self, title):
         timestamp = os.stat(self.backlinks_file).st_mtime
@@ -850,6 +869,7 @@ zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
             first_counts = self.index[first.encode("utf-8")]
         except KeyError:
             return
+        self.index.sync()
         for ident, count in first_counts.iteritems():
             score = count
             for word in rest:
@@ -984,7 +1004,7 @@ class Wiki(object):
             reindex = True
         else:
             reindex = False
-        self.index = WikiSearch(self.cache)
+        self.index = WikiSearch(self.cache, self.storage.repo)
         if reindex:
             self.reindex()
         self.url_map = werkzeug.routing.Map([
@@ -1560,7 +1580,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 url = request.adapter.build(self.revision, {
                     'title': title, 'rev': rev})
             yield u'<li>'
-            yield u'<a href="%s">%s</a> ' % (url, date.strftime('%F %H:%M'))
+            yield werkzeug.html.a(date.strftime('%F %H:%M'), href=url)
             yield u'<input type="submit" name="%d" value="Undo" class="button">' % rev
             yield u' . . . . '
             yield request.wiki_link(author, author)

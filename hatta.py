@@ -993,7 +993,7 @@ class Wiki(object):
     def __init__(self, config):
         self.config = config
         global _
-        if config.language:
+        if config.language is not None:
             try:
                 _ = gettext.translation('hatta', 'locale',
                                         languages=[config.language]).ugettext

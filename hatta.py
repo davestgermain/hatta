@@ -1799,6 +1799,11 @@ xmlns:atom="http://www.w3.org/2005/Atom"
     def application(self, environ, start):
         if self.config.script_name is not None:
             environ['SCRIPT_NAME'] = self.config.script_name
+        # XXX Workaround the bug in flup 1.0.1/lighttpd,
+        # see http://code.djangoproject.com/ticket/8490
+        if not environ['PATH_INFO']
+            or environ['SCRIPT_NAME'] == environ['PATH_INFO']:
+            environ['PATH_INFO'] = '/'
         adapter = self.url_map.bind_to_environ(environ)
         request = WikiRequest(self, adapter, environ)
         try:

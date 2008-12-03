@@ -669,12 +669,7 @@ class WikiSearch(object):
         except OSError:
             self.backlinks_timestamp = 0
         self.backlinks = shelve.open(self.backlinks_file, protocol=2)
-        try:
-            f = open(self.title_file, "rb")
-            self.titles = pickle.load(f)
-            f.close()
-        except (IOError, EOFError):
-            self.titles = []
+        self.load_titles()
         self._lockref = None
         self.repo = repo
         self.stop_words = frozenset(_(u"""am ii iii per po re a about above
@@ -711,6 +706,14 @@ without would yet you your yours yourself yourselves""").split())
                                True, None, None, "Search wiki lock")
         self._lockref = weakref.ref(lock)
         return lock
+
+    def load_titles(self):
+        try:
+            f = open(self.title_file, "rb")
+            self.titles = pickle.load(f)
+            f.close()
+        except (IOError, EOFError):
+            self.titles = []
 
     def split_text(self, text):
         for match in self.word_pattern.finditer(text):
@@ -758,9 +761,7 @@ without would yet you your yours yourself yourselves""").split())
             ident = len(self.titles)
             lock = self.lock()
             try:
-                f = open(self.title_file, "rb")
-                self.titles = pickle.load(f)
-                f.close()
+                self.load_titles()
                 self.titles.append(title)
                 tmpfd, tmpname = tempfile.mkstemp(dir=self.path)
                 f = os.fdopen(tmpfd, "w+b")

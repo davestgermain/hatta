@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import flup
+import sys
+# XXX Uncomment and edit this if hatta.py is not installed in site-packages
+#sys.path.insert(0, "/path/to/dir/with/hatta/")
 import hatta
 
 config = hatta.WikiConfig(

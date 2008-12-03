@@ -1797,8 +1797,6 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
     @werkzeug.responder
     def application(self, environ, start):
-        if environ['SCRIPT_NAME'] == environ['PATH_INFO']:
-            environ['SCRIPT_NAME'] = ''
         if self.config.script_name is not None:
             environ['SCRIPT_NAME'] = self.config.script_name
         adapter = self.url_map.bind_to_environ(environ)

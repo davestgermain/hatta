@@ -32,7 +32,7 @@ import mercurial.revlog
 import mercurial.util
 
 try:
-    from SplitJapanese import split_japanese
+    from hatta_jp import split_japanese
 except ImportError:
     split_japanese = None
 

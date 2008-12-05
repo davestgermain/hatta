@@ -1021,6 +1021,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
 class Wiki(object):
 
     def __init__(self, config):
+        self.dead = False
         self.config = config
         global _
         if config.language is not None:
@@ -1836,7 +1837,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             raise wekzeug.exceptions.Forbidden()
         def agony():
             yield u'Oh dear!'
-            sys.exit()
+            self.dead = True
         return werkzeug.Response(agony(), mimetype='text/plain')
 
     @werkzeug.responder

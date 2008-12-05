@@ -42,8 +42,8 @@ Options:
 
 """
 
-import hatta
 from distutils.core import setup
+import hatta
 
 setup(
     name='Hatta',
@@ -66,7 +66,11 @@ setup(
     ],
     scripts=['hatta-icon.py'],
     platforms='any',
-    requires=['werkzeug (>=0.3)', 'pygments', 'mercurial (>=1.0)'],
+    requires=['werkzeug (>=0.3)', 'mercurial (>=1.0)'],
+    extras_require={
+        'highlight': ['pygments'],
+        'icon': ['pygtk'],
+    },
     classifiers=[
         'License :: OSI Approved :: GNU General Public License (GPL)',
         'Intended Audience :: Developers',

@@ -8,7 +8,7 @@ setup(
     name='Hatta',
     version=hatta.__version__,
     url='http://hatta.sheep.art.pl/',
-    download_url='http://devel.sheep.art.pl/hatta/zip/tip/',
+    download_url='http://devel.sheep.art.pl/hatta/archive/tip.zip',
     license='GNU General Public License (GPL)',
     author='Radomir Dopieralski',
     author_email='hatta@sheep.art.pl',
@@ -16,7 +16,6 @@ setup(
     long_description=hatta.__doc__,
     keywords='wiki wsgi web mercurial repository',
     py_modules=['hatta', 'hatta_jp'],
-    #package_data={'hatta': ['locale/*']},
     data_files=[
         ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
         ('share/locale/ar/LC_MESSAGES', ['locale/ar/LC_MESSAGES/hatta.mo']),
@@ -29,7 +28,7 @@ setup(
     requires=['werkzeug (>=0.3)', 'mercurial (>=1.0)'],
     extras_require={
         'highlight': ['pygments'],
-        'icon': ['pygtk'],
+        'hatta-icon': ['pygtk'],
     },
     classifiers=[
         'License :: OSI Approved :: GNU General Public License (GPL)',

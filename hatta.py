@@ -1723,7 +1723,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
     def page_search(self, request, words):
         result = sorted(self.index.find(words), key=lambda x:-x[0])
-        yield u'<p>%s</p>' % (u'%d page(s) containing all words:' % len(result))
+        yield u'<p>%s</p>' % (_(u'%d page(s) containing all words:') % len(result))
         yield u'<ul>'
         for score, title in result:
             yield '<li><b>%s</b> (%d)<div class="snippet">%s</div></li>' % (
@@ -1749,15 +1749,15 @@ xmlns:atom="http://www.w3.org/2005/Atom"
     def backlinks(self, request, title):
         content = self.page_backlinks(request, title)
         html = self.html_page(request, u'', content,
-                              page_title=u'Links to "%s"' % title)
+                              page_title=_(u'Links to "%s"') % title)
         response = werkzeug.Response(html, mimetype='text/html')
         response.set_etag('/backlinks/%d' % self.storage.repo_revision())
         response.make_conditional(request)
         return response
 
     def page_backlinks(self, request, title):
-        yield u'<p>%s</p>' % (
-            u'Pages that contain a link to %s.' % request.wiki_link(title, title))
+        yield u'<p>%s</p>' % (_(u'Pages that contain a link to %s.')
+            % request.wiki_link(title, title))
         yield u'<ul>'
         for link in self.index.page_backlinks(title):
             yield '<li>%s</li>' % request.wiki_link(link, link)

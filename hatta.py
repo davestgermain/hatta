@@ -1105,10 +1105,10 @@ class Wiki(object):
                u'title="%s (ATOM)" href="%s">' % (
                     werkzeug.escape(self.config.site_name, quote=True), atom))
         yield u'%s</head>' % self.config.html_head
-        if self.config.language in ('ar', 'he'):
-            yield u'<body dir="rtl">'
-        else:
-            yield u'<body>'
+#        if self.config.language in ('ar', 'he'):
+#            yield u'<body dir="rtl">'
+#        else:
+        yield u'<body>'
         yield u'<div class="header">'
         if self.config.logo_page in self.storage:
             home = request.get_page_url(self.config.front_page)

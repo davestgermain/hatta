@@ -1814,7 +1814,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             del request
             del adapter
 
-if __name__ == "__main__":
+def main():
     config = WikiConfig(
         # Here you can modify the configuration: uncomment and change the ones
         # you need. Note that it's better use environment variables or command
@@ -1832,3 +1832,6 @@ if __name__ == "__main__":
     application = Wiki(config).application
     host, port = config.interface or 'localhost', int(config.port)
     werkzeug.run_simple(config.interface, port, application, use_reloader=True)
+
+if __name__ == "__main__":
+    main()

@@ -4,13 +4,13 @@
 Hatta
 =====
 
-Hatta is a wiki engine – software that lets you run a wiki. It requires no
+Hatta is a wiki engine -- software that lets you run a wiki. It requires no
 configuration and can be easily started in any Mercurial repository.
 
 Hatta's pages are just plain text files (and also images, binaries, etc.) in
 some directory in your repository. For example, you can put it in your
 project's "docs" directory to keep documentation. The files can be edited both
-from the wiki or with a text editor – in either case the changes committed to
+from the wiki or with a text editor -- in either case the changes committed to
 the repository will appear in the recent changes and in page's history.
 
 Usage

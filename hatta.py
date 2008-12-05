@@ -1820,13 +1820,13 @@ def main():
         # you need. Note that it's better use environment variables or command
         # line switches.
 
-        # interface=''
-        # port=8080
-        # pages_path = 'docs'
-        # cache_path = 'cache'
-        # front_page = 'Home'
-        # site_name = 'Hatta Wiki'
-        # page_charset = 'UTF-8'
+        # interface='',
+        # port=8080,
+        # pages_path = 'docs',
+        # cache_path = 'cache',
+        # front_page = 'Home',
+        # site_name = 'Hatta Wiki',
+        # page_charset = 'UTF-8',
     )
     config._parse_args()
     application = Wiki(config).application

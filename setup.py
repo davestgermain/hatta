@@ -61,7 +61,8 @@ setup(
     data_files=[
         ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
         ('share/locale/ar/LC_MESSAGES', ['locale/ar/LC_MESSAGES/hatta.mo']),
-        ('share/icons/icons/hicolor/scalable', ['hatta.svg']),
+        ('share/icons/hicolor/scalable', ['hatta.svg']),
+        ('share/applications', ['hatta.desktop']),
         ('share/doc/hatta/examples', ['hatta.fcg', 'hatta.wsgi']),
     ],
     scripts=['hatta-icon.py'],

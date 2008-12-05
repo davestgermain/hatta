@@ -49,6 +49,7 @@ import mimetypes
 import os
 import re
 import shelve
+import sys
 import tempfile
 import weakref
 
@@ -1078,6 +1079,8 @@ class Wiki(object):
                                   methods=['GET', 'POST']),
             werkzeug.routing.Rule('/search/<title>', endpoint=self.backlinks,
                                   methods=['GET', 'POST']),
+            werkzeug.routing.Rule('/off-with-his-head', endpoint=self.die,
+                                  methods=['GET']),
         ])
 
     def html_page(self, request, title, content, page_title=u''):
@@ -1828,6 +1831,13 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             url = ''.join([self.config.math_url, werkzeug.url_quote(math)])
         return u'<img src="%s" alt="%s" class="math">' % (url,
                                              werkzeug.escape(math, quote=True))
+    def die(self, request):
+        if request.remote_addr != '127.0.0.1':
+            raise wekzeug.exceptions.Forbidden()
+        def agony():
+            yield u'Oh dear!'
+            sys.exit()
+        return werkzeug.Response(agony(), mimetype='text/plain')
 
     @werkzeug.responder
     def application(self, environ, start):

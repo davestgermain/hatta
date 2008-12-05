@@ -171,3 +171,16 @@ msgstr "Szukanie \"%s\""
 msgid "Index of all pages."
 msgstr "Indeks wszystkich stron"
 
+#: hatta.py:1726
+msgid "%d page(s) containing all words:"
+msgstr "%d stron zawierających wszystkie słowa"
+
+#: hatta.py:1752
+msgid "Links to \"%s\""
+msgstr "Odnośniki do \"%s\""
+
+#: hatta.py:1759
+msgid "Pages that contain a link to %s."
+msgstr "Strony zawierające odnośnik do %s."
+
+

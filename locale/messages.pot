@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2008-12-03 13:23+CET\n"
+"POT-Creation-Date: 2008-12-05 10:29+CET\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -23,8 +23,7 @@ msgstr ""
 msgid "comment"
 msgstr ""
 
-# This string should not be translated, put a list of stop words instead here.
-#: hatta.py:674
+#: hatta.py:675
 msgid ""
 "am ii iii per po re a about above\n"
 "across after afterwards again against all almost alone along already also\n"
@@ -54,123 +53,135 @@ msgid ""
 "without would yet you your yours yourself yourselves"
 msgstr ""
 
-#: hatta.py:1080
+#: hatta.py:1087
 msgid "Search"
 msgstr ""
 
-#: hatta.py:1108
+#: hatta.py:1115
 msgid "Edit"
 msgstr ""
 
-#: hatta.py:1110
+#: hatta.py:1117
 msgid "History"
 msgstr ""
 
-#: hatta.py:1112
+#: hatta.py:1119
 msgid "Backlinks"
 msgstr ""
 
-#: hatta.py:1168
+#: hatta.py:1175
 msgid "Content of revision %(rev)d of page %(title)s:"
 msgstr ""
 
-#: hatta.py:1174
+#: hatta.py:1181
 msgid "Revision of \"%(title)s\""
 msgstr ""
 
-#: hatta.py:1243
+#: hatta.py:1250
 msgid "No preview for binaries."
 msgstr ""
 
-#: hatta.py:1285
+#: hatta.py:1292
 msgid "Editing \"%(title)s\""
 msgstr ""
 
-#: hatta.py:1328
+#: hatta.py:1335
 msgid "modified"
 msgstr ""
 
-#: hatta.py:1335
+#: hatta.py:1342
 msgid "created"
 msgstr ""
 
-#: hatta.py:1346 hatta.py:1376
+#: hatta.py:1353 hatta.py:1383
 msgid "Comment"
 msgstr ""
 
-#: hatta.py:1348 hatta.py:1378
+#: hatta.py:1355 hatta.py:1385
 msgid "Author"
 msgstr ""
 
-#: hatta.py:1350 hatta.py:1380
+#: hatta.py:1357 hatta.py:1387
 msgid "Save"
 msgstr ""
 
-#: hatta.py:1351
+#: hatta.py:1358
 msgid "Preview"
 msgstr ""
 
-#: hatta.py:1352 hatta.py:1381
+#: hatta.py:1359 hatta.py:1388
 msgid "Cancel"
 msgstr ""
 
-#: hatta.py:1356
+#: hatta.py:1363
 msgid "Preview, not saved"
 msgstr ""
 
-#: hatta.py:1364
+#: hatta.py:1371
 msgid "changed"
 msgstr ""
 
-#: hatta.py:1370
+#: hatta.py:1377
 msgid "uploaded"
 msgstr ""
 
-#: hatta.py:1372
+#: hatta.py:1379
 msgid "This is a binary file, it can't be edited on a wiki. Please upload a new version instead."
 msgstr ""
 
-#: hatta.py:1500
+#: hatta.py:1507
 msgid "Track the most recent changes to the wiki in this feed."
 msgstr ""
 
-#: hatta.py:1547
+#: hatta.py:1554
 msgid "Delete page %(title)s"
 msgstr ""
 
-#: hatta.py:1551
+#: hatta.py:1558
 msgid "Undo of change %(rev)d of page %(title)s"
 msgstr ""
 
-#: hatta.py:1564
+#: hatta.py:1571
 msgid "History of \"%(title)s\""
 msgstr ""
 
-#: hatta.py:1571
+#: hatta.py:1578
 msgid "History of changes for %(link)s."
 msgstr ""
 
-#: hatta.py:1594
+#: hatta.py:1601
 msgid "Recent changes"
 msgstr ""
 
-#: hatta.py:1644
+#: hatta.py:1651
 msgid "Differences between revisions %(link1)s and %(link2)s of page %(link)s."
 msgstr ""
 
-#: hatta.py:1650
+#: hatta.py:1657
 msgid "Diff for \"%(title)s\""
 msgstr ""
 
-#: hatta.py:1703
+#: hatta.py:1710
 msgid "Page index"
 msgstr ""
 
-#: hatta.py:1705
+#: hatta.py:1712
 msgid "Searching for \"%s\""
 msgstr ""
 
-#: hatta.py:1711
+#: hatta.py:1718
 msgid "Index of all pages."
+msgstr ""
+
+#: hatta.py:1726
+msgid "%d page(s) containing all words:"
+msgstr ""
+
+#: hatta.py:1752
+msgid "Links to \"%s\""
+msgstr ""
+
+#: hatta.py:1759
+msgid "Pages that contain a link to %s."
 msgstr ""
 

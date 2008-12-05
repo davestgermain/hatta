@@ -157,7 +157,7 @@ msgstr "التغييرات الأخيرة"
 
 #: hatta.py:1644
 msgid "Differences between revisions %(link1)s and %(link2)s of page %(link)s."
-msgstr "الإختلافات بين الإصدارات  %(link1) و %(link2) و الصفحة %(link)s."
+msgstr "الإختلافات بين الإصدارات  %(link1)s و %(link2)s و الصفحة %(link)s."
 
 #: hatta.py:1650
 msgid "Diff for \"%(title)s\""

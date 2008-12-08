@@ -625,8 +625,13 @@ class WikiParser(object):
     def block_heading(self, block):
         for line in block:
             level = min(len(self.heading_re.match(line).group(0).strip()), 5)
-            yield u'<h%d>%s</h%d>' % (level,
-                werkzeug.escape(line.strip("= \t\n\r\v")), level)
+            self.headings[level-1] = self.headings.get(level-1, 0)+1
+            label = u"-".join(str(self.headings.get(i, 0)) for i in range(level))
+            yield u'<a name="head-%s"></a><h%d>%s</h%d>' % (
+                label,
+                level,
+                werkzeug.escape(line.strip("= \t\n\r\v")),
+                level)
 
     def block_bullets(self, block):
         level = 0
@@ -665,6 +670,7 @@ class WikiParser(object):
         self.wiki_image = wiki_image
         self.wiki_syntax = wiki_syntax
         self.wiki_math = wiki_math
+        self.headings = {}
         for kind, block in itertools.groupby(self.lines, key):
             func = getattr(self, "block_%s" % kind)
             for part in func(block):

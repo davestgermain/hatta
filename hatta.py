@@ -200,7 +200,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
 
 def external_link(addr):
     return (addr.startswith('http://') or addr.startswith('https://')
-            or addr.startswith('ftp://'))
+            or addr.startswith('ftp://') or addr.startswith('mailto:'))
 
 class WikiStorage(object):
     def __init__(self, path):
@@ -454,6 +454,7 @@ class WikiParser(object):
         "image": image_pat,
         "linebreak": ur"\\\\",
         "macro": ur"[<][<](?P<macro_name>\w+)\s+(?P<macro_text>([^>]|[^>][>])+)[>][>]",
+        "mail": ur"""(mailto:)?\S+@\S+(\.[^\s.,:;!?()'"/=+<>-]+)+""",
         "math": ur"\$\$(?P<math_text>[^$]+)\$\$",
         "newline": ur"\n",
         "punct": ur"|".join(re.escape(k) for k in punct),
@@ -522,6 +523,14 @@ class WikiParser(object):
 
     def line_free_link(self, groups):
         groups['link_target'] = groups['free_link']
+        return self.line_link(groups)
+
+    def line_mail(self, groups):
+        addr = groups['mail']
+        groups['link_text'] = addr
+        if not addr.startswith(u'mailto:'):
+            addr = u'mailto:%s' % addr
+        groups['link_target'] = addr
         return self.line_link(groups)
 
     def line_link(self, groups):
@@ -966,27 +975,31 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
                                   method='GET')
 
     def wiki_link(self, addr, label, class_='wiki', image=None):
+        text = werkzeug.escape(label)
+        _class = ''
         if external_link(addr):
-            return u'<a href="%s" class="external">%s</a>' % (
-                werkzeug.url_fix(addr), image or werkzeug.escape(label))
-        if '#' in addr:
-            addr, chunk = addr.split('#', 1)
-            chunk = '#%s' % chunk
+            if addr.startswith('mailto:'):
+                _class = 'external email'
+                text = text.replace('@', '&#64;').replace('.', '&#46;')
+                href = addr.replace('@', '%40').replace('.', '%2E')
+            else:
+                _class = 'external'
+                href = addr
         else:
-            chunk = ''
-        if addr == u'':
-            return u'<a href="%s" class="%s">%s</a>' % (
-                chunk, class_, image or werkzeug.escape(label))
-        if addr in self.wiki.storage:
-            return u'<a href="%s%s" class="%s">%s</a>' % (
-                self.get_page_url(addr), chunk, class_,
-                image or werkzeug.escape(label))
-        elif addr in ('history', 'search'):
-            return u'<a href="%s%s" class="special">%s</a>' % (
-                self.get_page_url(addr), chunk, werkzeug.escape(label))
-        else:
-            return u'<a href="%s%s" class="nonexistent">%s</a>' % (
-                self.get_page_url(addr), chunk, werkzeug.escape(label))
+            if '#' in addr:
+                addr, chunk = addr.split('#', 1)
+                chunk = '#%s' % chunk
+            else:
+                chunk = ''
+            if addr == u'':
+                href = chunk
+            else:
+                href = self.get_page_url(addr)+chunk
+            if addr in ('history', 'search'):
+                _class = 'special'
+            elif addr not in self.wiki.storage:
+                _class = 'nonexistent'
+        return u'<a href="%s" class="%s">%s</a>' % (href, class_, image or text)
 
     def wiki_image(self, addr, alt, class_='wiki'):
         if external_link(addr):

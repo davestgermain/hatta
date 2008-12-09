@@ -1881,7 +1881,7 @@ def main():
         # page_charset = 'UTF-8',
     )
     config._parse_args()
-    host, port = config.interface or 'localhost', int(config.port)
+    host, port = config.interface, int(config.port)
     config._parse_args()
     wiki = Wiki(config)
     server = wsgiref.simple_server.make_server(host, port, wiki.application)

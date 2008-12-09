@@ -20,4 +20,4 @@ config = WikiConfig(
 config._parse_args()
 application = Wiki(config).application
 host, port = config.interface or 'localhost', int(config.port)
-werkzeug.run_simple(config.interface, port, application, use_reloader=True)
+werkzeug.run_simple(host, port, application, use_reloader=True)

@@ -263,14 +263,19 @@ class WikiStorage(object):
 
     def save_text(self, title, text, author=u'', comment=u''):
         try:
-            tmpfd, file_name = tempfile.mkstemp(dir=self.path)
-            f = os.fdopen(tmpfd, "w+b")
+            temp_path = tempfile.mkdtemp(dir=self.path)
+            file_path = os.path.join(temp_path, 'saved')
+            f = open(file_path, "wb")
             f.write(text)
             f.close()
-            self.save_file(title, file_name, author, comment)
+            self.save_file(title, file_path, author, comment)
         finally:
             try:
-                os.unlink(file_name)
+                os.unlink(file_path)
+            except OSError:
+                pass
+            try:
+                os.rmdir(temp_path)
             except OSError:
                 pass
 
@@ -800,12 +805,21 @@ without would yet you your yours yourself yourselves""").split())
             try:
                 self.load_titles()
                 self.titles.append(title)
-                tmpfd, tmpname = tempfile.mkstemp(dir=self.path)
-                f = os.fdopen(tmpfd, "w+b")
+                temp_path = tempfile.mkdtemp(dir=self.path)
+                file_path = os.path.join(temp_path, 'titles')
+                f = open(file_path, "wb")
                 pickle.dump(self.titles, f, 2)
                 f.close()
-                mercurial.util.rename(tmpname, self.title_file)
+                mercurial.util.rename(file_path, self.title_file)
             finally:
+                try:
+                    os.unlink(file_path)
+                except OSError:
+                    pass
+                try:
+                    os.rmdir(temp_path)
+                except OSError:
+                    pass
                 del lock
         return ident
 
@@ -1011,17 +1025,22 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
             def close(self, *args, **kw):
                 return self.f.close(*args, **kw)
 
-        tmpfd, tmpname = tempfile.mkstemp(dir=self.tmppath)
-        self.tmpfiles.append(tmpname)
+        temp_path = tempfile.mkdtemp(dir=self.tmppath)
+        file_path = os.path.join(temp_path, 'saved')
+        self.tmpfiles.append(temp_path)
         # We need to wrap the file object in order to add an attribute
-        tmpfile = FileWrapper(os.fdopen(tmpfd, "w+b"))
-        tmpfile.tmpname = tmpname
+        tmpfile = FileWrapper(open(file_path, "wb"))
+        tmpfile.tmpname = file_path
         return tmpfile
 
     def cleanup(self):
-        for filename in self.tmpfiles:
+        for temp_path in self.tmpfiles:
             try:
-                os.unlink(filename)
+                os.unlink(os.path.join(temp_path, 'saved'))
+            except OSError:
+                pass
+            try:
+                os.rmdir(temp_path)
             except OSError:
                 pass
 

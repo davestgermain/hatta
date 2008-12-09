@@ -4,7 +4,7 @@
 import hatta
 import werkzeug
 
-config = WikiConfig(
+config = hatta.WikiConfig(
     # Here you can modify the configuration: uncomment and change the ones
     # you need. Note that it's better use environment variables or command
     # line switches.
@@ -18,6 +18,6 @@ config = WikiConfig(
     # page_charset = 'UTF-8',
 )
 config._parse_args()
-application = Wiki(config).application
+application = hatta.Wiki(config).application
 host, port = config.interface or 'localhost', int(config.port)
 werkzeug.run_simple(host, port, application, use_reloader=True)

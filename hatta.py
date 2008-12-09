@@ -1872,7 +1872,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return u'<img src="%s" alt="%s" class="math">' % (url,
                                              werkzeug.escape(math, quote=True))
     def die(self, request):
-        if request.remote_addr.startswith('127.0.0.1'):
+        if not request.remote_addr.startswith('127.'):
             raise werkzeug.exceptions.Forbidden()
         def agony():
             yield u'Oh dear!'

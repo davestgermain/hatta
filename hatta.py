@@ -52,6 +52,7 @@ import shelve
 import sys
 import tempfile
 import weakref
+import wsgiref.simple_server
 
 import werkzeug
 os.environ['HGENCODING'] = 'utf-8'
@@ -1840,7 +1841,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                                              werkzeug.escape(math, quote=True))
     def die(self, request):
         if request.remote_addr != '127.0.0.1':
-            raise wekzeug.exceptions.Forbidden()
+            raise werkzeug.exceptions.Forbidden()
         def agony():
             yield u'Oh dear!'
             self.dead = True
@@ -1880,9 +1881,11 @@ def main():
         # page_charset = 'UTF-8',
     )
     config._parse_args()
-    application = Wiki(config).application
     host, port = config.interface or 'localhost', int(config.port)
-    werkzeug.run_simple(config.interface, port, application, use_reloader=True)
+    config._parse_args()
+    wiki = Wiki(config)
+    server = wsgiref.simple_server.make_server(host, port, wiki.application)
+    server.serve_forever()
 
 if __name__ == "__main__":
     main()

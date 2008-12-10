@@ -976,14 +976,13 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
 
     def wiki_link(self, addr, label, class_='wiki', image=None):
         text = werkzeug.escape(label)
-        _class = ''
         if external_link(addr):
             if addr.startswith('mailto:'):
-                _class = 'external email'
+                class_ = 'external email'
                 text = text.replace('@', '&#64;').replace('.', '&#46;')
                 href = addr.replace('@', '%40').replace('.', '%2E')
             else:
-                _class = 'external'
+                class_ = 'external'
                 href = addr
         else:
             if '#' in addr:
@@ -996,9 +995,9 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
             else:
                 href = self.get_page_url(addr)+chunk
             if addr in ('history', 'search'):
-                _class = 'special'
+                class_ = 'special'
             elif addr not in self.wiki.storage:
-                _class = 'nonexistent'
+                class_ = 'nonexistent'
         return u'<a href="%s" class="%s">%s</a>' % (href, class_, image or text)
 
     def wiki_image(self, addr, alt, class_='wiki'):

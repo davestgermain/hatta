@@ -911,7 +911,7 @@ without would yet you your yours yourself yourselves""").split())
                 else:
                     score = 0
             if score > 0:
-                yield score, self.titles[str(ident)]
+                yield score, self.titles.get(str(ident), u'')
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):

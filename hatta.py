@@ -707,7 +707,8 @@ class WikiSearch(object):
         self.links_file = "%s.links" % self.filename
         self.labels_file = "%s.labels" % self.filename
         self.backlinks_file = "%s.back" % self.filename
-        self.title_file = "%s.titles" % self.filename
+        self.title_file = "%s.title" % self.filename
+        self.ident_file = "%s.ident" % self.filename
         self.index = shelve.open(self.index_file, protocol=2)
         try:
             self.links_timestamp = os.stat(self.links_file).st_mtime
@@ -720,7 +721,8 @@ class WikiSearch(object):
         except OSError:
             self.backlinks_timestamp = 0
         self.backlinks = shelve.open(self.backlinks_file, protocol=2)
-        self.load_titles()
+        self.titles = shelve.open(self.title_file, protocol=2)
+        self.idents = shelve.open(self.ident_file, protocol=2)
         self._lockref = None
         self.repo = repo
         self.stop_words = frozenset(_(u"""am ii iii per po re a about above
@@ -758,14 +760,6 @@ without would yet you your yours yourself yourselves""").split())
         self._lockref = weakref.ref(lock)
         return lock
 
-    def load_titles(self):
-        try:
-            f = open(self.title_file, "rb")
-            self.titles = pickle.load(f)
-            f.close()
-        except (IOError, EOFError):
-            self.titles = []
-
     def split_text(self, text):
         for match in self.word_pattern.finditer(text):
             word = match.group(0).strip(u"-.@~+:$&")
@@ -800,37 +794,18 @@ without would yet you your yours yourself yourselves""").split())
         return count
 
     def get_title_id(self, title):
+        self.idents.sync()
+        encoded_title = title.encode('utf-8', 'backslashreplace')
         try:
-            ident = self.titles.index(title)
-        except ValueError:
-            ident = None
-        if ident is not None:
-            for word, counts in self.index.iteritems():
-                if ident in counts:
-                    del counts[ident]
-        else:
-            ident = len(self.titles)
-            lock = self.lock()
-            try:
-                self.load_titles()
-                self.titles.append(title)
-                temp_path = tempfile.mkdtemp(dir=self.path)
-                file_path = os.path.join(temp_path, 'titles')
-                f = open(file_path, "wb")
-                pickle.dump(self.titles, f, 2)
-                f.close()
-                mercurial.util.rename(file_path, self.title_file)
-            finally:
-                try:
-                    os.unlink(file_path)
-                except OSError:
-                    pass
-                try:
-                    os.rmdir(temp_path)
-                except OSError:
-                    pass
-                del lock
-        return ident
+            return self.idents[encoded_title]
+        except KeyError:
+            ident = self.idents.get('/max/', 0)
+            self.idents['/max/'] = ident+1
+            self.titles[str(ident)] = title
+            self.idents[encoded_title] = ident
+            self.titles.sync()
+            self.idents.sync()
+            return ident
 
     def add_words(self, title, text):
         ident = self.get_title_id(title)
@@ -841,74 +816,60 @@ without would yet you your yours yourself yourselves""").split())
         title_words = self.count_words(self.filter_words(self.split_text(title)))
         for word, count in title_words.iteritems():
             words[word] = words.get(word, 0) + count
-        lock = self.lock()
-        try:
-            self.index.sync()
-            for word, count in words.iteritems():
-                encoded = word.encode("utf-8")
-                if encoded not in self.index:
-                    stored = {}
-                else:
-                    stored = self.index[encoded]
-                stored[ident] = count
-                self.index[encoded] = stored
-            self.index.sync()
-        finally:
-            del lock
+        self.index.sync()
+        for word, count in words.iteritems():
+            encoded = word.encode("utf-8")
+            if encoded not in self.index:
+                stored = {}
+            else:
+                stored = self.index[encoded]
+            stored[ident] = count
+            self.index[encoded] = stored
+        self.index.sync()
 
     def add_links(self, title, links_and_labels):
         links, labels = links_and_labels
-        lock = self.lock()
-        try:
-            self.links.sync()
-            self.links[title.encode('utf-8', 'backslashreplace')] = links
-            self.links.sync()
-            self.labels.sync()
-            self.labels[title.encode('utf-8', 'backslashreplace')] = labels
-            self.labels.sync()
-        finally:
-            del lock
+        self.links.sync()
+        self.links[title.encode('utf-8', 'backslashreplace')] = links
+        self.links.sync()
+        self.labels.sync()
+        self.labels[title.encode('utf-8', 'backslashreplace')] = labels
+        self.labels.sync()
 
     def regenerate_backlinks(self):
-        lock = self.lock()
-        try:
-            for key in self.backlinks:
-                self.backlinks[key] = []
-            for title, links in self.links.iteritems():
-                ident = self.get_title_id(title)
-                for link in links:
-                    encoded = link.encode('utf-8', 'backslashreplace')
-                    backlinks = self.backlinks.get(encoded, [])
-                    if ident not in backlinks:
-                        backlinks.append(ident)
-                    self.backlinks[encoded] = backlinks
-            self.backlinks.sync()
-        finally:
-            del lock
-
-    def update_backlinks(self, title, old_links, new_links):
-        ident = self.get_title_id(title)
-        encoded_title = title.encode('utf-8', 'backslashreplace')
-        lock = self.lock()
-        try:
-            self.backlinks.sync()
-            for link in old_links:
-                encoded = link.encode('utf-8', 'backslashreplace')
-                backlinks = self.backlinks.get(encoded, [])
-                try:
-                    backlinks.remove(ident)
-                except ValueError:
-                    pass
-                self.backlinks[encoded] = backlinks
-            for link in new_links:
+        self.links.sync()
+        for key in self.backlinks:
+            self.backlinks[key] = []
+        for title, links in self.links.iteritems():
+            ident = self.get_title_id(title)
+            for link in links:
                 encoded = link.encode('utf-8', 'backslashreplace')
                 backlinks = self.backlinks.get(encoded, [])
                 if ident not in backlinks:
                     backlinks.append(ident)
                 self.backlinks[encoded] = backlinks
-            self.backlinks.sync()
-        finally:
-            del lock
+        self.backlinks.sync()
+
+    def update_backlinks(self, title, old_links, new_links):
+        self.titles.sync()
+        ident = self.get_title_id(title)
+        encoded_title = title.encode('utf-8', 'backslashreplace')
+        self.backlinks.sync()
+        for link in old_links:
+            encoded = link.encode('utf-8', 'backslashreplace')
+            backlinks = self.backlinks.get(encoded, [])
+            try:
+                backlinks.remove(ident)
+            except ValueError:
+                pass
+            self.backlinks[encoded] = backlinks
+        for link in new_links:
+            encoded = link.encode('utf-8', 'backslashreplace')
+            backlinks = self.backlinks.get(encoded, [])
+            if ident not in backlinks:
+                backlinks.append(ident)
+            self.backlinks[encoded] = backlinks
+        self.backlinks.sync()
 
     def page_backlinks(self, title):
         timestamp = os.stat(self.backlinks_file).st_mtime
@@ -936,6 +897,7 @@ without would yet you your yours yourself yourselves""").split())
             first_counts = self.index[first.encode("utf-8")]
         except KeyError:
             return
+        self.titles.sync()
         self.index.sync()
         for ident, count in first_counts.iteritems():
             score = count
@@ -949,7 +911,7 @@ without would yet you your yours yourself yourselves""").split())
                 else:
                     score = 0
             if score > 0:
-                yield score, self.titles[ident]
+                yield score, self.titles[str(ident)]
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):
@@ -1301,16 +1263,20 @@ class Wiki(object):
         return helper.links, helper.link_labels
 
     def index_text(self, title, text):
-        mime = self.storage.page_mime(title)
-        if mime == 'text/x-wiki':
-            old_links = self.index.page_links(title)
-            new_links, labels = self.extract_links(text)
-            self.index.update_backlinks(title, old_links, new_links)
-            self.index.add_links(title, (new_links, labels))
-        if mime.startswith('text/'):
-            self.index.add_words(title, text)
-        else:
-            self.index.add_words(title, u'')
+        lock = self.index.lock()
+        try:
+            mime = self.storage.page_mime(title)
+            if mime == 'text/x-wiki':
+                old_links = self.index.page_links(title)
+                new_links, labels = self.extract_links(text)
+                self.index.update_backlinks(title, old_links, new_links)
+                self.index.add_links(title, (new_links, labels))
+            if mime.startswith('text/'):
+                self.index.add_words(title, text)
+            else:
+                self.index.add_words(title, u'')
+        finally:
+            del lock
 
     def save(self, request, title):
         self.check_lock(title)
@@ -1334,7 +1300,7 @@ class Wiki(object):
                     links, labels = self.extract_links(text)
                     if title in links:
                         raise werkzeug.exceptions.Forbidden()
-                if u'href="' in comment:
+                if u'href="' in comment or u'http:' in comment:
                     raise werkzeug.exceptions.Forbidden()
                 if text.strip() == '':
                     self.storage.delete_page(title, author, comment)
@@ -1853,15 +1819,20 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return werkzeug.Response(robots, mimetype='text/plain')
 
     def reindex(self):
-        for title in self.storage.all_pages():
-            mime = self.storage.page_mime(title)
-            if mime.startswith('text/'):
-                data = self.storage.open_page(title).read()
-                text = unicode(data, self.config.page_charset, 'replace')
-            else:
-                text = u''
-            self.index_text(title, text)
-        self.index.regenerate_backlinks()
+        lock = self.index.lock()
+        try:
+            for title in self.storage.all_pages():
+                print u'reindexing %s' % werkzeug.escape(title)
+                mime = self.storage.page_mime(title)
+                if mime.startswith('text/'):
+                    data = self.storage.open_page(title).read()
+                    text = unicode(data, self.config.page_charset, 'replace')
+                else:
+                    text = u''
+                self.index_text(title, text)
+            self.index.regenerate_backlinks()
+        finally:
+            del lock
 
     def wiki_math(self, math):
         if '%s' in self.config.math_url:

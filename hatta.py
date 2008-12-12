@@ -877,7 +877,7 @@ without would yet you your yours yourself yourselves""").split())
             self.backlinks_timestamp = timestamp
             self.backlinks.sync()
         for ident in self.backlinks.get(title.encode('utf-8', 'backslashreplace'), []):
-            yield self.titles[ident]
+            yield self.titles.get(str(ident), '')
 
     def page_links(self, title):
         timestamp = os.stat(self.links_file).st_mtime
@@ -1822,7 +1822,6 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         lock = self.index.lock()
         try:
             for title in self.storage.all_pages():
-                print u'reindexing %s' % werkzeug.escape(title)
                 mime = self.storage.page_mime(title)
                 if mime.startswith('text/'):
                     data = self.storage.open_page(title).read()

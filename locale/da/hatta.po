@@ -48,7 +48,7 @@ msgid ""
 "whence whenever where whereafter whereas whereby wherein whereupon wherever\n"
 "whether which while whither who whoever whole whom whose why will with within\n"
 "without would yet you your yours yourself yourselves"
-msgstr ""
+msgstr "og i jeg det at en den til er som pĺ de med han af for ikke der var mig sig men et har om vi min havde ham hun nu over da fra du ud sin dem os op man hans hvor eller hvad skal selv her alle vil blev kunne ind nĺr vćre dog noget ville jo deres efter ned skulle denne end dette mit ogsĺ under have dig anden hende mine alt meget sit sine vor mod disse hvis din nogle hos blive mange ad bliver hendes vćret thi jer sĺdan"
 
 #: hatta.py:1087
 msgid "Search"

@@ -419,7 +419,7 @@ class WikiParser(object):
                           for kv in sorted(block.iteritems())))
     code_close_re = re.compile(ur"^\}\}\}\s*$", re.U)
     macro_close_re = re.compile(ur"^>>\s*$", re.U)
-    image_pat = ur"\{\{(?P<image_target>[^|}]+)(\|(?P<image_text>[^}]+))?}}"
+    image_pat = ur"\{\{(?P<image_target>([^|}]|}[^|}])+)(\|(?P<image_text>([^}]|}[^}])+))?}}"
     image_re = re.compile(image_pat, re.U)
     smilies = {
         r':)': "smile.png",
@@ -450,7 +450,7 @@ class WikiParser(object):
         "code": ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])*[}]*)[}][}][}]",
         "free_link": ur"""(http|https|ftp)://\S+[^\s.,:;!?()'"/=+<>-]""",
         "italic": ur"//",
-        "link": ur"\[\[(?P<link_target>[^|\]]+)(\|(?P<link_text>[^\]]+))?\]\]",
+        "link": ur"\[\[(?P<link_target>([^|\]]|\][^|\]])+)(\|(?P<link_text>([^\]]|\][^\]])+))?\]\]",
         "image": image_pat,
         "linebreak": ur"\\\\",
         "macro": ur"[<][<](?P<macro_name>\w+)\s+(?P<macro_text>([^>]|[^>][>])+)[>][>]",

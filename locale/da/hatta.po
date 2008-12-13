@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: hatta 1.2.0\n"
 "POT-Creation-Date: 2008-12-05 10:29+CET\n"
-"PO-Revision-Date: 2008-12-13 00:35+0100\n"
+"PO-Revision-Date: 2008-12-13 12:45+0100\n"
 "Last-Translator: Adam Sjøgren <asjo@koldfront.dk>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -48,7 +48,7 @@ msgid ""
 "whence whenever where whereafter whereas whereby wherein whereupon wherever\n"
 "whether which while whither who whoever whole whom whose why will with within\n"
 "without would yet you your yours yourself yourselves"
-msgstr "og i jeg det at en den til er som pĺ de med han af for ikke der var mig sig men et har om vi min havde ham hun nu over da fra du ud sin dem os op man hans hvor eller hvad skal selv her alle vil blev kunne ind nĺr vćre dog noget ville jo deres efter ned skulle denne end dette mit ogsĺ under have dig anden hende mine alt meget sit sine vor mod disse hvis din nogle hos blive mange ad bliver hendes vćret thi jer sĺdan"
+msgstr "og i jeg det at en den til er som på de med han af for ikke der var mig sig men et har om vi min havde ham hun nu over da fra du ud sin dem os op man hans hvor eller hvad skal selv her alle vil blev kunne ind når være dog noget ville jo deres efter ned skulle denne end dette mit også under have dig anden hende mine alt meget sit sine vor mod disse hvis din nogle hos blive mange ad bliver hendes været thi jer sådan"
 
 #: hatta.py:1087
 msgid "Search"
@@ -72,7 +72,7 @@ msgstr "Indhold af version %(rev)d af side %(title)s:"
 
 #: hatta.py:1181
 msgid "Revision of \"%(title)s\""
-msgstr "Version af \\\"%(title)s\\\""
+msgstr "Version af \"%(title)s\""
 
 #: hatta.py:1250
 msgid "No preview for binaries."
@@ -80,7 +80,7 @@ msgstr "Ingen forhåndsvisning af binære filer"
 
 #: hatta.py:1292
 msgid "Editing \"%(title)s\""
-msgstr "Redigerer \\\"%(title)s\\\""
+msgstr "Redigerer \"%(title)s\""
 
 #: hatta.py:1335
 msgid "modified"

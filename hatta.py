@@ -707,8 +707,6 @@ class WikiSearch(object):
         self.links_file = "%s.links" % self.filename
         self.labels_file = "%s.labels" % self.filename
         self.backlinks_file = "%s.back" % self.filename
-        self.title_file = "%s.title" % self.filename
-        self.ident_file = "%s.ident" % self.filename
         self.index = shelve.open(self.index_file, protocol=2)
         try:
             self.links_timestamp = os.stat(self.links_file).st_mtime
@@ -721,8 +719,6 @@ class WikiSearch(object):
         except OSError:
             self.backlinks_timestamp = 0
         self.backlinks = shelve.open(self.backlinks_file, protocol=2)
-        self.titles = shelve.open(self.title_file, protocol=2)
-        self.idents = shelve.open(self.ident_file, protocol=2)
         self._lockref = None
         self.repo = repo
         self.stop_words = frozenset(_(u"""am ii iii per po re a about above
@@ -793,22 +789,8 @@ without would yet you your yours yourself yourselves""").split())
             count[word] = count.get(word, 0) + 1
         return count
 
-    def get_title_id(self, title):
-        self.idents.sync()
-        encoded_title = title.encode('utf-8', 'backslashreplace')
-        try:
-            return self.idents[encoded_title]
-        except KeyError:
-            ident = self.idents.get('/max/', 0)
-            self.idents['/max/'] = ident+1
-            self.titles[str(ident)] = title
-            self.idents[encoded_title] = ident
-            self.titles.sync()
-            self.idents.sync()
-            return ident
-
     def add_words(self, title, text):
-        ident = self.get_title_id(title)
+        encoded_title = title.encode('utf-8', 'backslashreplace')
         if text:
             words = self.count_words(self.filter_words(self.split_text(text)))
         else:
@@ -818,13 +800,13 @@ without would yet you your yours yourself yourselves""").split())
             words[word] = words.get(word, 0) + count
         self.index.sync()
         for word, count in words.iteritems():
-            encoded = word.encode("utf-8")
-            if encoded not in self.index:
+            encoded_word = word.encode("utf-8")
+            if encoded_word not in self.index:
                 stored = {}
             else:
-                stored = self.index[encoded]
-            stored[ident] = count
-            self.index[encoded] = stored
+                stored = self.index[encoded_word]
+            stored[encoded_title] = count
+            self.index[encoded_word] = stored
         self.index.sync()
 
     def add_links(self, title, links_and_labels):
@@ -841,34 +823,33 @@ without would yet you your yours yourself yourselves""").split())
         for key in self.backlinks:
             self.backlinks[key] = []
         for title, links in self.links.iteritems():
-            ident = self.get_title_id(title)
+            encoded_title = title.encode('utf-8', 'backslashreplace')
             for link in links:
-                encoded = link.encode('utf-8', 'backslashreplace')
-                backlinks = self.backlinks.get(encoded, [])
-                if ident not in backlinks:
-                    backlinks.append(ident)
-                self.backlinks[encoded] = backlinks
+                encoded_link = link.encode('utf-8', 'backslashreplace')
+                backlinks = self.backlinks.get(encoded_link, [])
+                if encoded_title not in backlinks:
+                    backlinks.append(encoded_title)
+                self.backlinks[encoded_link] = backlinks
         self.backlinks.sync()
 
     def update_backlinks(self, title, old_links, new_links):
-        self.titles.sync()
-        ident = self.get_title_id(title)
         encoded_title = title.encode('utf-8', 'backslashreplace')
         self.backlinks.sync()
+        self.links.sync()
         for link in old_links:
             encoded = link.encode('utf-8', 'backslashreplace')
             backlinks = self.backlinks.get(encoded, [])
             try:
-                backlinks.remove(ident)
+                backlinks.remove(encoded_title)
             except ValueError:
                 pass
             self.backlinks[encoded] = backlinks
         for link in new_links:
-            encoded = link.encode('utf-8', 'backslashreplace')
-            backlinks = self.backlinks.get(encoded, [])
-            if ident not in backlinks:
-                backlinks.append(ident)
-            self.backlinks[encoded] = backlinks
+            encoded_link = link.encode('utf-8', 'backslashreplace')
+            backlinks = self.backlinks.get(encoded_link, [])
+            if encoded_title not in backlinks:
+                backlinks.append(encoded_title)
+                self.backlinks[encoded_link] = backlinks
         self.backlinks.sync()
 
     def page_backlinks(self, title):
@@ -876,19 +857,21 @@ without would yet you your yours yourself yourselves""").split())
         if timestamp > self.backlinks_timestamp:
             self.backlinks_timestamp = timestamp
             self.backlinks.sync()
-        for ident in self.backlinks.get(title.encode('utf-8', 'backslashreplace'), []):
-            yield self.titles.get(str(ident), '')
+        encoded_link = title.encode('utf-8', 'backslashreplace')
+        for encoded_title in self.backlinks.get(encoded_link, []):
+            yield unicode(encoded_title, 'utf-8', 'backslashreplace')
 
     def page_links(self, title):
         timestamp = os.stat(self.links_file).st_mtime
         if timestamp > self.links_timestamp:
             self.links_timestamp = timestamp
             self.links.sync()
-            #self.links = shelve.open(self.links_file, protocol=2)
-        return self.links.get(title.encode('utf-8', 'backslashreplace'), [])
+        encoded_title = title.encode('utf-8', 'backslashreplace')
+        return self.links.get(encoded_title, [])
 
     def page_labels(self, title):
-        return self.labels.get(title.encode('utf-8', 'backslashreplace'), [])
+        encoded_title = title.encode('utf-8', 'backslashreplace')
+        return self.labels.get(encoded_title, [])
 
     def find(self, words):
         first = words[0]
@@ -897,21 +880,20 @@ without would yet you your yours yourself yourselves""").split())
             first_counts = self.index[first.encode("utf-8")]
         except KeyError:
             return
-        self.titles.sync()
         self.index.sync()
-        for ident, count in first_counts.iteritems():
+        for encoded_title, count in first_counts.iteritems():
             score = count
             for word in rest:
                 try:
                     counts = self.index[word.encode("utf-8")]
                 except KeyError:
                     return
-                if ident in counts:
-                    score += counts[ident]
+                if encoded_title in counts:
+                    score += counts[encoded_title]
                 else:
                     score = 0
             if score > 0:
-                yield score, self.titles.get(str(ident), u'')
+                yield score, unicode(encoded_title, 'utf-8', 'backslashreplace')
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):

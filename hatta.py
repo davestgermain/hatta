@@ -419,7 +419,7 @@ class WikiParser(object):
                           for kv in sorted(block.iteritems())))
     code_close_re = re.compile(ur"^\}\}\}\s*$", re.U)
     macro_close_re = re.compile(ur"^>>\s*$", re.U)
-    image_pat = ur"\{\{(?P<image_target>([^|}]|}[^|}])+)(\|(?P<image_text>([^}]|}[^}])+))?}}"
+    image_pat = ur"\{\{(?P<image_target>([^|}]|}[^|}])*)(\|(?P<image_text>([^}]|}[^}])*))?}}"
     image_re = re.compile(image_pat, re.U)
     smilies = {
         r':)': "smile.png",
@@ -548,7 +548,9 @@ class WikiParser(object):
 
     def line_image(self, groups):
         target = groups['image_target']
-        alt = groups.get('image_text') or target
+        alt = groups.get('image_text')
+        if alt is None:
+            alt = target
         return self.wiki_image(target, alt)
 
     def line_macro(self, groups):
@@ -945,16 +947,19 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         return u'<a href="%s" class="%s">%s</a>' % (href, class_, image or text)
 
     def wiki_image(self, addr, alt, class_='wiki'):
+        chunk = ''
         if external_link(addr):
             return u'<img src="%s" class="external" alt="%s">' % (
                 werkzeug.url_fix(addr), werkzeug.escape(alt))
         if '#' in addr:
             addr, chunk = addr.split('#', 1)
+        if addr == '':
+            return u'<a name="%s"></a>' % werkzeug.escape(chunk, quote=True)
         if addr in self.wiki.storage:
             mime = self.wiki.storage.page_mime(addr)
             if mime.startswith('image/'):
                 return u'<img src="%s" class="%s" alt="%s">' % (
-                    self.get_download_url(addr), class_, werkzeug.escape(alt))
+                    self.get_download_url(addr), class_, werkzeug.escape(alt, quote="True"))
             else:
                 return u'<a href="%s" class="download">%s</a>' % (
                     self.get_download_url(addr), werkzeug.escape(alt))

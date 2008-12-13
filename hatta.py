@@ -1880,7 +1880,10 @@ def main():
     config._parse_args()
     wiki = Wiki(config)
     server = wsgiref.simple_server.make_server(host, port, wiki.application)
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
 
 if __name__ == "__main__":
     main()

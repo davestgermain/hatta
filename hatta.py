@@ -1187,6 +1187,8 @@ class Wiki(object):
                 text = ''.join(lines)
             content = self.highlight(text, mime=mime)
         else:
+            if title not in self.storage:
+                raise werkzeug.exceptions.NotFound()
             content = ['<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>'
                    % (request.get_download_url(title), werkzeug.escape(title),
                       mime)]

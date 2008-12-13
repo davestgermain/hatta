@@ -951,8 +951,13 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         if '#' in addr:
             addr, chunk = addr.split('#', 1)
         if addr in self.wiki.storage:
-            return u'<img src="%s" class="%s" alt="%s">' % (
-                self.get_download_url(addr), class_, werkzeug.escape(alt))
+            mime = self.wiki.storage.page_mime(addr)
+            if mime.startswith('image/'):
+                return u'<img src="%s" class="%s" alt="%s">' % (
+                    self.get_download_url(addr), class_, werkzeug.escape(alt))
+            else:
+                return u'<a href="%s" class="download">%s</a>' % (
+                    self.get_download_url(addr), werkzeug.escape(alt))
         else:
             return u'<a href="%s" class="nonexistent">%s</a>' % (
                 self.get_page_url(addr), werkzeug.escape(alt))

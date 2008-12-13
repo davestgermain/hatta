@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import hatta
-import werkzeug
-import gtk
 import webbrowser
 import os
+import urllib
 
 class StatusIcon(object):
     def __init__(self, config):
@@ -42,9 +41,9 @@ class StatusIcon(object):
 
 if __name__ == "__main__":
     config = hatta.WikiConfig(
-        # Here you can modify the configuration: uncomment and change the ones
-        # you need. Note that it's better use environment variables or command
-        # line switches.
+        # Here you can modify the configuration: uncomment and change
+        # the ones you need. Note that it's better use environment
+        # variables or command line switches.
 
         # interface=''
         # port=8080
@@ -54,17 +53,23 @@ if __name__ == "__main__":
         # site_name = 'Hatta Wiki'
         # page_charset = 'UTF-8'
     )
-    config._parse_args()
-    application = hatta.Wiki(config).application
     pid = os.fork()
     try:
         if not pid:
-            werkzeug.run_simple(config.interface, int(config.port), application,
-                                use_reloader=True)
-        elif os.environ.get("WERKZEUG_RUN_MAIN") == 'true':
+            import wsgiref.simple_server
+            config._parse_args()
+            wiki = hatta.Wiki(config)
+            server = wsgiref.simple_server.make_server(config.interface,
+                                                       int(config.port),
+                                                       wiki.application)
+            while not wiki.dead:
+                server.handle_request()
+        else:
+            import gtk
             status_icon = StatusIcon(config)
             gtk.main()
-            os.kill(pid, 2)
+            urllib.urlopen('http://localhost:%s/off-with-his-head'
+                           % config.port).read(1)
             os.waitpid(pid, 0)
     except KeyboardInterrupt:
         pass

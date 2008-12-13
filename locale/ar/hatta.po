@@ -1,0 +1,188 @@
+# Hatta wiki engine
+# Blaze Boy <blazeeboy@gmail.com>, 2008.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 1.2.0\n"
+"POT-Creation-Date: 2008-12-03 13:23+CET\n"
+"PO-Revision-Date: 2008-12-03 17:47+0200\n"
+"Last-Translator: Blaze Boy <blazeeboy@gmail.com>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
+
+#: hatta.py:219
+msgid "anon"
+msgstr "غير معروف"
+
+#: hatta.py:220
+msgid "comment"
+msgstr "ملاحظة"
+
+# This string should not be translated, put a list of stop words instead here.
+#: hatta.py:674
+msgid ""
+"am ii iii per po re a about above\n"
+"across after afterwards again against all almost alone along already also\n"
+"although always am among ain amongst amoungst amount an and another any aren\n"
+"anyhow anyone anything anyway anywhere are around as at back be became because\n"
+"become becomes becoming been before beforehand behind being below beside\n"
+"besides between beyond bill both but by can cannot cant con could couldnt\n"
+"describe detail do done down due during each eg eight either eleven else etc\n"
+"elsewhere empty enough even ever every everyone everything everywhere except\n"
+"few fifteen fifty fill find fire first five for former formerly forty found\n"
+"four from front full further get give go had has hasnt have he hence her here\n"
+"hereafter hereby herein hereupon hers herself him himself his how however\n"
+"hundred i ie if in inc indeed interest into is it its itself keep last latter\n"
+"latterly least isn less made many may me meanwhile might mill mine more\n"
+"moreover most mostly move much must my myself name namely neither never\n"
+"nevertheless next nine no nobody none noone nor not nothing now nowhere of off\n"
+"often on once one only onto or other others otherwise our ours ourselves out\n"
+"over own per perhaps please pre put rather re same see seem seemed seeming\n"
+"seems serious several she should show side since sincere six sixty so some\n"
+"somehow someone something sometime sometimes somewhere still such take ten than\n"
+"that the their theirs them themselves then thence there thereafter thereby\n"
+"therefore therein thereupon these they thick thin third this those though three\n"
+"through throughout thru thus to together too toward towards twelve twenty two\n"
+"un under ve until up upon us very via was wasn we well were what whatever when\n"
+"whence whenever where whereafter whereas whereby wherein whereupon wherever\n"
+"whether which while whither who whoever whole whom whose why will with within\n"
+"without would yet you your yours yourself yourselves"
+msgstr " ب ا أ ، عشر عبد عدد عدة عشرة عدم عام عاما عرفات عن عند عمان عندما على علي عليه عليها عملية زيارة سبتمبر ساراييفو سنة سوريا سنوات تشرين تم تموز ضد بعد بعض اعادة اعلن اعلنت حزب حزيران بسبب اسرائيل حسين حتى اتفاق صرب اذا احد اثر غزة برس باسم اجتماع غدا شخصا صباح اطار اربعة بغداد اخرى باريس رابين شرق بان ابو اجل غير حركة رئيس جديدة اطلاق بشكل بطولة صحيفة حاليا بن به ثم اف ان او اي بها جهة صفر حيث اكد الا اما العسكرية العراق العاصمة العربية العراقي العراقية العام العالم العلاقات العمل امس السعودية الساعة السبت السابق روسيا السلطة السلطات السلام التعاون التحرير التى التي اكتوبر دورة اكثر ايار ايضا الجزائر حماس الاسرائيلي الاسرائيلية الاسبوع الاسلحة الاسلامية ذكرت الاتحاد الاتفاق ثلاثة الحرب الاحد الذاتي الشرطة الاربعاء الغربية الخارجية الاردن الشرق ايران الحدود الرئيس الاخيرة الثاني الثانية الاثنين شمال بيان دمشق الذى الذي الان امام ايام خلال الشيخ الجيش الدور الضفة الجمعة بيريز الاوسط الروسي البوسنة الروسية بيروت الانتخابات البلاد الدفاع الثلثاء الانباء الثلاثاء الاوروبي حوالى الذين الدول الحكم الامم الامن الاول الدولة الخليج الخميس الاميركي الاميركية الدولي الاولى الدولية الحكومة بين ذلك دول دون حول حين الف الى انه اول ضمن جنوب دولة انها جميع الوزراء المتحدث المتحدة دولار النار الوضع القدس المحتلة المصدر المباراة المصري الماضي المصرية المرحلة القدم اللجنة المجلس الفرنسي الفرنسية القاهرة المدينة المانيا الوطنية المجموعة الله الفلسطيني الفلسطينية الفلسطينيين الوقت المقرر القوات النهائي المقبل المنطقة الولايات المفاوضات الملك اليمن اليوم ايلول الكويت ـ ف و و6 قد لا ما مع وزارة وزير مساء قتل كرة مصر هذا فاز كأس ياسر قرار مصدر واحد قطاع مصادر مباراة مبارك واضاف واضافت فرانس واشنطن فان قبل قال كان لدى نحو هذه وان محمد واكد يذكر مجلس فرنسا كريستوفر كانت واوضح لبنان مايو مدينة مجموعة كانون فى في كل لم لن له من هو هي قوة كما لها منذ وقد ولا نفسه موسكو مقتل لقاء لكرة نقطة قوات مقابل لندن هناك وقال وكان منطقة منظمة نهاية وكالة وقالت وكانت للامم فيه كلم لكن وفي وقف ولم ومن وهو وهي يوم فيها منها مليار لوكالة يكون يمكن كلينتون مليون يوليو يونيو نيويورك"
+
+#: hatta.py:1080
+msgid "Search"
+msgstr "بحث"
+
+#: hatta.py:1108
+msgid "Edit"
+msgstr "تحرير"
+
+#: hatta.py:1110
+msgid "History"
+msgstr "التاريخ"
+
+#: hatta.py:1112
+msgid "Backlinks"
+msgstr "الروابط العكسية"
+
+#: hatta.py:1168
+msgid "Content of revision %(rev)d of page %(title)s:"
+msgstr "محتويات المراجعة %(rev)d للصفحة %(title)s:"
+
+#: hatta.py:1174
+msgid "Revision of \"%(title)s\""
+msgstr "مراجعة الصفحة \"%(title)s\""
+
+#: hatta.py:1243
+msgid "No preview for binaries."
+msgstr "لا توجد عرض للملفات الثنائية"
+
+#: hatta.py:1285
+msgid "Editing \"%(title)s\""
+msgstr "تحرير \"%(title)s\""
+
+#: hatta.py:1328
+msgid "modified"
+msgstr "عدل"
+
+#: hatta.py:1335
+msgid "created"
+msgstr "أنشئ"
+
+#: hatta.py:1346
+#: hatta.py:1376
+msgid "Comment"
+msgstr "ملاحظة"
+
+#: hatta.py:1348
+#: hatta.py:1378
+msgid "Author"
+msgstr "المؤلف"
+
+#: hatta.py:1350
+#: hatta.py:1380
+msgid "Save"
+msgstr "حفظ"
+
+#: hatta.py:1351
+msgid "Preview"
+msgstr "عرض"
+
+#: hatta.py:1352
+#: hatta.py:1381
+msgid "Cancel"
+msgstr "إلغاء الأمر"
+
+#: hatta.py:1356
+msgid "Preview, not saved"
+msgstr "عرض , غير محفوظ"
+
+#: hatta.py:1364
+msgid "changed"
+msgstr "تغير"
+
+#: hatta.py:1370
+msgid "uploaded"
+msgstr "رفع"
+
+#: hatta.py:1372
+msgid "This is a binary file, it can't be edited on a wiki. Please upload a new version instead."
+msgstr "هذا ملف ثنائى , لا يمكن تحريره على الويكى. من فضلك قم برفع نسخة جديدة بدلآ منها"
+
+#: hatta.py:1500
+msgid "Track the most recent changes to the wiki in this feed."
+msgstr "قم بتتبع التغييرات الأخيرة للويكى على هذة التغذية"
+
+#: hatta.py:1547
+msgid "Delete page %(title)s"
+msgstr "إلغاء الصفحة %(title)s"
+
+#: hatta.py:1551
+msgid "Undo of change %(rev)d of page %(title)s"
+msgstr "التراجع عن التغييرات %(rev)d للصفحة %(title)s"
+
+#: hatta.py:1564
+msgid "History of \"%(title)s\""
+msgstr "تاريخ الصفحة \"%(title)s\""
+
+#: hatta.py:1571
+msgid "History of changes for %(link)s."
+msgstr "تاريخ التغييرات لـ %(link)s."
+
+#: hatta.py:1594
+msgid "Recent changes"
+msgstr "التغييرات الأخيرة"
+
+#: hatta.py:1644
+msgid "Differences between revisions %(link1)s and %(link2)s of page %(link)s."
+msgstr "الإختلافات بين الإصدارات  %(link1)s و %(link2)s و الصفحة %(link)s."
+
+#: hatta.py:1650
+msgid "Diff for \"%(title)s\""
+msgstr "الإختلافات فى \"%(title)s\""
+
+#: hatta.py:1703
+msgid "Page index"
+msgstr "فهرس الصفحة"
+
+#: hatta.py:1705
+msgid "Searching for \"%s\""
+msgstr "البحث عن \"%s\""
+
+#: hatta.py:1711
+msgid "Index of all pages."
+msgstr "فهرس كل الصفحات"
+
+#: hatta.py:1726
+msgid "%d page(s) containing all words:"
+msgstr ""
+
+#: hatta.py:1752
+msgid "Links to \"%s\""
+msgstr ""
+
+#: hatta.py:1759
+msgid "Pages that contain a link to %s."
+msgstr ""

@@ -824,8 +824,7 @@ without would yet you your yours yourself yourselves""").split())
         self.links.sync()
         for key in self.backlinks:
             self.backlinks[key] = []
-        for title, links in self.links.iteritems():
-            encoded_title = title.encode('utf-8', 'backslashreplace')
+        for encoded_title, links in self.links.iteritems():
             for link in links:
                 encoded_link = link.encode('utf-8', 'backslashreplace')
                 backlinks = self.backlinks.get(encoded_link, [])

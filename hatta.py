@@ -1298,14 +1298,19 @@ class Wiki(object):
                     data = text.encode(self.config.page_charset)
                     self.storage.save_text(title, data, author, comment)
             else:
-                f = request.files['data'].stream
-                if f is not None:
+                text = u''
+                upload = request.files['data']
+                f = upload.stream
+                if f is not None and len(upload) > 0:
                     try:
                         self.storage.save_file(title, f.tmpname, author,
                                                comment)
                     except AttributeError:
                         self.storage.save_text(title, f.read(), author,
                                                comment)
+                else:
+                    self.storage.delete_page(title, author, comment)
+                    url = request.get_page_url(self.config.front_page)
             self.index_text(title, text)
         response = werkzeug.routing.redirect(url, code=303)
         response.set_cookie('author',

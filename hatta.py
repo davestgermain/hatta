@@ -695,14 +695,6 @@ class WikiParser(object):
 
 
 class WikiSearch(object):
-<<<<<<< /home/sheep/devel/hatta/hatta.py
-    stop_words_en = frozenset(u""" am ii iii per po re a about above across 
-after afterwards again against all almost alone along already also although
-always am among ain amongst amoungst amount an and another any aren anyhow
-anyone anything anyway anywhere are around as at back be became because become
-becomes becoming been before beforehand behind being below beside besides
-between beyond bill both but by can cannot cant con could couldnt
-=======
     digits_pattern = re.compile(ur"""^[=+~-]?[\d,.:-]+\w?\w?%?$""", re.UNICODE)
     split_pattern = re.compile(ur"""
 [A-ZĄÂÃĀÄÅÁÀĂĘÉÊĚËĒÈŚĆÇČŁÓÒÖŌÕÔŃŻŹŽÑÍÏĐÞÐÆŸØ]
@@ -737,7 +729,6 @@ although always am among ain amongst amoungst amount an and another any aren
 anyhow anyone anything anyway anywhere are around as at back be became because
 become becomes becoming been before beforehand behind being below beside
 besides between beyond bill both but by can cannot cant con could couldnt
->>>>>>> /tmp/hatta.py~other.xh6gNJ
 describe detail do done down due during each eg eight either eleven else etc
 elsewhere empty enough even ever every everyone everything everywhere except
 few fifteen fifty fill find fire first five for former formerly forty found
@@ -757,33 +748,7 @@ through throughout thru thus to together too toward towards twelve twenty two
 un under ve until up upon us very via was wasn we well were what whatever when
 whence whenever where whereafter whereas whereby wherein whereupon wherever
 whether which while whither who whoever whole whom whose why will with within
-<<<<<<< /home/sheep/devel/hatta/hatta.py
-without would yet you your yours yourself yourselves""".split())
-    stop_words_pl = frozenset(u"""a aby acz aczkolwiek albo ale ależ aż
-bardziej bardzo bez bo bowiem by byli bym być był była było były będzie będą
-cali cała cały co cokolwiek coś czasami czasem czemu czwarte czy czyli dla
-dlaczego dlatego do drugie drugiej dwa gdy gdyż gdzie gdziekolwiek gdzieś go i
-ich ile im inna inny innych itd itp iż ja jak jakaś jakichś jakiś jakiż jako
-jakoś jednak jednakże jego jej jemu jest jeszcze jeśli jeżeli już ją kiedy
-kilka kimś kto ktokolwiek ktoś która które którego której który których którym
-którzy lat lecz lub ma mi mimo między mnie mogą moim może możliwe można mu na
-nad nam nas naszego naszych nawet nic nich nie niech nigdy nim niż no o obok od
-około on ona ono oprócz oraz pan pana pani pierwsze piąte po pod podczas pomimo
-ponad ponieważ powinien powinna powinni powinno poza prawie przecież przed
-przede przez przy raz roku również się sobie sobą sposób swoje są ta tak taka
-taki takie także tam te tego tej ten teraz też to tobie toteż trzeba trzecie
-trzy tu twoim twoja twoje twym twój ty tych tylko tym u w we według wiele wielu
-więc wszyscy wszystkich wszystkie wszystkim wszystko właśnie z za zapewne
-zatem zawsze ze znowu znów żadna żadne żadnych że żeby""".split())
-    digits_pattern = re.compile(ur"""^[=+~-]?[\d,.:-]+\w?\w?%?$""", re.UNICODE)
-    split_pattern = re.compile(ur"""
-[A-ZĄÂÃĀÄÅÁÀĂĘÉÊĚËĒÈŚĆÇČŁÓÒÖŌÕÔŃŻŹŽÑÍÏĐÞÐÆŸØ]
-[a-ząâãāäåáàăęéêěëēèśćçčłóòöōõôńżźžñíïđþðæÿø]+
-|\w+""", re.X|re.UNICODE)
-    word_pattern = re.compile(ur"""[-\w.@~+:$&%#]{2,}""", re.UNICODE)
-=======
 without would yet you your yours yourself yourselves""").split())
->>>>>>> /tmp/hatta.py~other.xh6gNJ
 
     def lock(self):
         if self._lockref and self._lockref():

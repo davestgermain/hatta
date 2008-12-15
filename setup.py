@@ -8,7 +8,7 @@ setup(
     name='Hatta',
     version=hatta.__version__,
     url='http://hatta.sheep.art.pl/',
-    download_url='http://devel.sheep.art.pl/hatta/archive/tip.zip',
+    download_url='http://sheep.art.pl/misc/hatta/Hatta-%s.zip' % hatta.__version__,
     license='GNU General Public License (GPL)',
     author='Radomir Dopieralski',
     author_email='hatta@sheep.art.pl',

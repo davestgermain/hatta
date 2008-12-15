@@ -1,12 +1,12 @@
 # Hatta wiki engine
-# Adam Sjøgren <asjo@koldfront.dk>, 2008.
+# Azda <azda@koldfront.dk>, 2008.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: hatta 1.2.0\n"
 "POT-Creation-Date: 2008-12-05 10:29+CET\n"
-"PO-Revision-Date: 2008-12-13 12:45+0100\n"
-"Last-Translator: Adam Sjøgren <asjo@koldfront.dk>\n"
+"PO-Revision-Date: 2008-12-13 22:21+0100\n"
+"Last-Translator: Azda <azda@koldfront.dk>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Generated-By: pygettext.py 1.5\n"
@@ -48,15 +48,15 @@ msgid ""
 "whence whenever where whereafter whereas whereby wherein whereupon wherever\n"
 "whether which while whither who whoever whole whom whose why will with within\n"
 "without would yet you your yours yourself yourselves"
-msgstr "og i jeg det at en den til er som på de med han af for ikke der var mig sig men et har om vi min havde ham hun nu over da fra du ud sin dem os op man hans hvor eller hvad skal selv her alle vil blev kunne ind når være dog noget ville jo deres efter ned skulle denne end dette mit også under have dig anden hende mine alt meget sit sine vor mod disse hvis din nogle hos blive mange ad bliver hendes været thi jer sådan"
+msgstr ""
 
 #: hatta.py:1087
 msgid "Search"
-msgstr "Søg"
+msgstr "Sök"
 
 #: hatta.py:1115
 msgid "Edit"
-msgstr "Redigér"
+msgstr "Redigera"
 
 #: hatta.py:1117
 msgid "History"
@@ -64,31 +64,31 @@ msgstr "Historik"
 
 #: hatta.py:1119
 msgid "Backlinks"
-msgstr "Henvisninger hertil"
+msgstr "Hänvisningar hit"
 
 #: hatta.py:1175
 msgid "Content of revision %(rev)d of page %(title)s:"
-msgstr "Indhold af version %(rev)d af side %(title)s:"
+msgstr "Innehåll av version %(rev)d av sida %(title)s:"
 
 #: hatta.py:1181
 msgid "Revision of \"%(title)s\""
-msgstr "Version af \"%(title)s\""
+msgstr "Version av \"%(title)s\""
 
 #: hatta.py:1250
 msgid "No preview for binaries."
-msgstr "Ingen forhåndsvisning af binære filer"
+msgstr "Ingen förhandsvisning av binära filer"
 
 #: hatta.py:1292
 msgid "Editing \"%(title)s\""
-msgstr "Redigerer \"%(title)s\""
+msgstr "Redigerar \"%(title)s\""
 
 #: hatta.py:1335
 msgid "modified"
-msgstr "ændret"
+msgstr "ändrat"
 
 #: hatta.py:1342
 msgid "created"
-msgstr "oprettet"
+msgstr "skapat"
 
 #: hatta.py:1353 hatta.py:1383
 msgid "Comment"
@@ -96,89 +96,88 @@ msgstr "Kommentar"
 
 #: hatta.py:1355 hatta.py:1385
 msgid "Author"
-msgstr "Forfatter"
+msgstr "Författare"
 
 #: hatta.py:1357 hatta.py:1387
 msgid "Save"
-msgstr "Gem"
+msgstr "Spara"
 
 #: hatta.py:1358
 msgid "Preview"
-msgstr "Forhåndsvisning"
+msgstr "Förhandsvisning"
 
 #: hatta.py:1359 hatta.py:1388
 msgid "Cancel"
-msgstr "Afbryd"
+msgstr "Avbryt"
 
 #: hatta.py:1363
 msgid "Preview, not saved"
-msgstr "Forhåndsvisning, ikke gemt"
+msgstr "Förhandsvisning, ej sparad"
 
 #: hatta.py:1371
 msgid "changed"
-msgstr "ændret"
+msgstr "ändrat"
 
 #: hatta.py:1377
 msgid "uploaded"
-msgstr "uploadet"
+msgstr "uppladdat"
 
 #: hatta.py:1379
 msgid "This is a binary file, it can't be edited on a wiki. Please upload a new version instead."
-msgstr "Dette er en binær fil; den kan ikke redigeres på en wiki. Upload venligst en ny version i stedet."
+msgstr "Detta är en binär fil; den kan inte redigeras på en wiki. Ladda upp en ny version i stället."
 
 #: hatta.py:1507
 msgid "Track the most recent changes to the wiki in this feed."
-msgstr "Følg de seneste ændringer i wikien i dette feed."
+msgstr "Följ de senaste ändringarna i wikin i denna feed."
 
 #: hatta.py:1554
 msgid "Delete page %(title)s"
-msgstr "Slet side %(title)s"
+msgstr "Radera sida %(title)s"
 
 #: hatta.py:1558
 msgid "Undo of change %(rev)d of page %(title)s"
-msgstr "Fjern ændring %(rev)d af side %(title)s"
+msgstr "Ta bort ändring %(rev)d av sida %(title)s"
 
 #: hatta.py:1571
 msgid "History of \"%(title)s\""
-msgstr "Historik for \"%(title)s\""
+msgstr "Historik för \"%(title)s\""
 
 #: hatta.py:1578
 msgid "History of changes for %(link)s."
-msgstr "Versionshistorik for %(link)s."
+msgstr "Versionshistorik för %(link)s."
 
 #: hatta.py:1601
 msgid "Recent changes"
-msgstr "Seneste ændringer"
+msgstr "De senaste ändringarna"
 
 #: hatta.py:1651
 msgid "Differences between revisions %(link1)s and %(link2)s of page %(link)s."
-msgstr "Forskelle mellem version %(link1)s og %(link2)s af siden %(link)s."
+msgstr "Skillnader mellan version %(link1)s och %(link2)s av sidan %(link)s."
 
 #: hatta.py:1657
 msgid "Diff for \"%(title)s\""
-msgstr "Forskelle for \"%(title)s\""
+msgstr "Skillnader för \"%(title)s\""
 
 #: hatta.py:1710
 msgid "Page index"
-msgstr "Alle sider"
+msgstr "Alla sidor"
 
 #: hatta.py:1712
 msgid "Searching for \"%s\""
-msgstr "Søgning efter \"%s\""
+msgstr "Sökning efter \"%s\""
 
 #: hatta.py:1718
 msgid "Index of all pages."
-msgstr "Alle sider."
+msgstr "Alla sidor."
 
 #: hatta.py:1726
 msgid "%d page(s) containing all words:"
-msgstr "%d side(r) der indeholder alle ordene:"
+msgstr "%d sido(r) som innehåller alla orden:"
 
 #: hatta.py:1752
 msgid "Links to \"%s\""
-msgstr "Henvisninger til \"%s\""
+msgstr "Hänvisningar till \"%s\""
 
 #: hatta.py:1759
 msgid "Pages that contain a link to %s."
-msgstr "Sider der indeholder en henvisning til %s."
-
+msgstr "Sidor som innehåller en hänvisning till %s."

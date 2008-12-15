@@ -1305,7 +1305,7 @@ class Wiki(object):
                 text = u''
                 upload = request.files['data']
                 f = upload.stream
-                if f is not None and len(upload) > 0:
+                if f is not None and upload.filename is not None:
                     try:
                         self.storage.save_file(title, f.tmpname, author,
                                                comment)

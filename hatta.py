@@ -700,7 +700,7 @@ class WikiSearch(object):
 [A-ZĄÂÃĀÄÅÁÀĂĘÉÊĚËĒÈŚĆÇČŁÓÒÖŌÕÔŃŻŹŽÑÍÏĐÞÐÆŸØ]
 [a-ząâãāäåáàăęéêěëēèśćçčłóòöōõôńżźžñíïđþðæÿø]+
 |\w+""", re.X|re.UNICODE)
-    word_pattern = re.compile(ur"""[-\w.@~+:$&%#]{2,}""", re.UNICODE)
+    word_pattern = re.compile(ur"""\w[-~&\w]\w""", re.UNICODE)
 
     def __init__(self, cache_path, repo):
         self.path = cache_path
@@ -760,7 +760,7 @@ without would yet you your yours yourself yourselves""").split())
 
     def split_text(self, text):
         for match in self.word_pattern.finditer(text):
-            word = match.group(0).strip(u"-.@~+:$&")
+            word = match.group(0)
             if split_japanese is None:
                 yield word.lower()
             else:

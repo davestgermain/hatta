@@ -723,7 +723,8 @@ class WikiSearch(object):
         self.backlinks = shelve.open(self.backlinks_file, protocol=2)
         self._lockref = None
         self.repo = repo
-        self.stop_words = frozenset(_(u"""am ii iii per po re a about above
+        self.stop_words_re = re.compile(u'('+u'|'.join(_(
+u"""am ii iii per po re a about above
 across after afterwards again against all almost alone along already also
 although always am among ain amongst amoungst amount an and another any aren
 anyhow anyone anything anyway anywhere are around as at back be became because
@@ -748,7 +749,8 @@ through throughout thru thus to together too toward towards twelve twenty two
 un under ve until up upon us very via was wasn we well were what whatever when
 whence whenever where whereafter whereas whereby wherein whereupon wherever
 whether which while whither who whoever whole whom whose why will with within
-without would yet you your yours yourself yourselves""").split())
+without would yet you your yours yourself yourselves"""
+).split())+ur'|[0-9]+)$', re.X|re.I|re.U)
 
     def lock(self):
         if self._lockref and self._lockref():
@@ -777,11 +779,11 @@ without would yet you your yours yourself yourselves""").split())
 
     def filter_words(self, words):
         for word in words:
-            if not 1 < len(word) < 25:
+            if len(word) >= 25:
                 continue
-            if word in self.stop_words:
-                continue
-            if self.digits_pattern.match(word):
+            m = self.stop_words_re.match(word)
+            if m:
+                print u'skipping "%s" (%s)' % (word, m.group(0))
                 continue
             yield word
 

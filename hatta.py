@@ -783,7 +783,6 @@ without would yet you your yours yourself yourselves"""
                 continue
             m = self.stop_words_re.match(word)
             if m:
-                print u'skipping "%s" (%s)' % (word, m.group(0))
                 continue
             yield word
 

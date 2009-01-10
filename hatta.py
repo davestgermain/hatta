@@ -1519,7 +1519,8 @@ class Wiki(object):
                 first_date = date
             item = u'<item><title>%s</title><link>%s</link><description>%s</description><pubDate>%s</pubDate><dc:creator>%s</dc:creator><guid>%s</guid></item>' % (
                 werkzeug.escape(title),
-                request.get_page_url(title),
+                request.adapter.build(self.view, {'title': title},
+                                                  force_external=True),
                 werkzeug.escape(comment),
                 date.strftime("%a, %d %b %Y %H:%M:%S GMT"),
                 werkzeug.escape(author),

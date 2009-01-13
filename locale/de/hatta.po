@@ -61,11 +61,11 @@ msgstr ""
 
 #: hatta.py:1087
 msgid "Search"
-msgstr "Suche"
+msgstr "Suchen"
 
 #: hatta.py:1115
 msgid "Edit"
-msgstr "Ändern"
+msgstr "Bearbeiten"
 
 #: hatta.py:1117
 msgid "History"
@@ -89,7 +89,7 @@ msgstr "Für Programme gibts keine Vorschau."
 
 #: hatta.py:1292
 msgid "Editing \"%(title)s\""
-msgstr "Ändern von \"%(title)s\""
+msgstr "\"%(title)s\" bearbeiten"
 
 #: hatta.py:1335
 msgid "modified"
@@ -190,4 +190,3 @@ msgstr "Links zu \"%s\""
 #: hatta.py:1759
 msgid "Pages that contain a link to %s."
 msgstr "Seiten, die einen Link zu %s enthalten."
-

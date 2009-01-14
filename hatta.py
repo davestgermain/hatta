@@ -1182,6 +1182,8 @@ class Wiki(object):
                                         request.wiki_image, self.highlight,
                                         self.wiki_math)
         elif mime.startswith('image/'):
+            if title not in self.storage:
+                raise werkzeug.exceptions.NotFound()
             content = ['<img src="%s" alt="%s">'
                        % (request.get_download_url(title),
                           werkzeug.escape(title))]

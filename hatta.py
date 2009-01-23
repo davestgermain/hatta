@@ -253,11 +253,26 @@ class WikiStorage(object):
         file_path = self._file_path(title)
         lock = self._lock()
         try:
-            mercurial.util.rename(file_name, file_path)
-            if repo_file not in self.repo.changectx('tip'):
+            changectx = self.repo.changectx('tip')
+            tip_node = changectx.node()
+            try:
+                filectx_tip = changectx[repo_file]
+                current_page_rev = filectx_tip.filerev()
+            except mercurial.revlog.LookupError:
                 self.repo.add([repo_file])
+                current_page_rev = -1
+            if current_page_rev != parent:
+                filectx = changectx[repo_file].filectx(parent)
+                parent_node = filectx.changectx().node()
+                mercurial.hg.update(self.repo, parent_node)
+            mercurial.util.rename(file_name, file_path)
             self.repo.commit(files=[repo_file], text=text, user=user,
                              force=True, empty_ok=True)
+            if current_page_rev != parent:
+                mercurial.hg.merge(self.repo, tip_node, force=False, remind=False)
+                text = _(u'merge edit conflict').encode('utf-8')
+                user = '<wiki>'
+                self.repo.commit(text=text, user=user, force=True)
         finally:
             del lock
 

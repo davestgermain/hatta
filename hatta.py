@@ -246,7 +246,7 @@ class WikiStorage(object):
     def __contains__(self, title):
         return os.path.exists(self._file_path(title))
 
-    def save_file(self, title, file_name, author=u'', comment=u''):
+    def save_file(self, title, file_name, author=u'', comment=u'', parent=None):
         user = author.encode('utf-8') or _(u'anon').encode('utf-8')
         text = comment.encode('utf-8') or _(u'comment').encode('utf-8')
         repo_file = self._title_to_file(title)
@@ -261,14 +261,14 @@ class WikiStorage(object):
         finally:
             del lock
 
-    def save_text(self, title, text, author=u'', comment=u''):
+    def save_text(self, title, text, author=u'', comment=u'', parent=None):
         try:
             temp_path = tempfile.mkdtemp(dir=self.path)
             file_path = os.path.join(temp_path, 'saved')
             f = open(file_path, "wb")
             f.write(text)
             f.close()
-            self.save_file(title, file_path, author, comment)
+            self.save_file(title, file_path, author, comment, parent)
         finally:
             try:
                 os.unlink(file_path)
@@ -1293,6 +1293,10 @@ class Wiki(object):
             comment = request.form.get("comment", "")
             author = request.get_author()
             text = request.form.get("text")
+            try:
+                parent = int(request.form.get("parent"))
+            except ValueError:
+                parent = None
             if text is not None:
                 if title == self.config.locked_page:
                     links, labels = self.extract_links(text)
@@ -1305,7 +1309,7 @@ class Wiki(object):
                     url = request.get_page_url(self.config.front_page)
                 else:
                     data = text.encode(self.config.page_charset)
-                    self.storage.save_text(title, data, author, comment)
+                    self.storage.save_text(title, data, author, comment, parent)
             else:
                 text = u''
                 upload = request.files['data']
@@ -1313,10 +1317,10 @@ class Wiki(object):
                 if f is not None and upload.filename is not None:
                     try:
                         self.storage.save_file(title, f.tmpname, author,
-                                               comment)
+                                               comment, parent)
                     except AttributeError:
                         self.storage.save_text(title, f.read(), author,
-                                               comment)
+                                               comment, parent)
                 else:
                     self.storage.delete_page(title, author, comment)
                     url = request.get_page_url(self.config.front_page)

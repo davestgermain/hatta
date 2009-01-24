@@ -274,7 +274,10 @@ class WikiStorage(object):
                                  force=True, empty_ok=True)
                 def partial(filename):
                     return repo_file == filename
-                unresolved = mercurial.merge.update(self.repo, tip_node, True, False, partial)
+                try:
+                    unresolved = mercurial.merge.update(self.repo, tip_node, True, False, partial)
+                except mercurial.util.Abort:
+                    unresolved = 1, 1, 1, 1
                 text = _(u'merge of edit conflict').encode('utf-8')
                 if unresolved[3]:
                     mercurial.merge.update(self.repo, tip_node, True, True, partial)

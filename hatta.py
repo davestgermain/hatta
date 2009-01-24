@@ -280,8 +280,11 @@ class WikiStorage(object):
                     unresolved = 1, 1, 1, 1
                 text = _(u'merge of edit conflict').encode('utf-8')
                 if unresolved[3]:
-                    mercurial.merge.update(self.repo, tip_node, True, True, partial)
                     text = _(u'forced merge of edit conflict').encode('utf-8')
+                    try:
+                        mercurial.merge.update(self.repo, tip_node, True, True, partial)
+                    except mercurial.util.Abort:
+                        text = _(u'failed merge of edit conflict').encode('utf-8')
                 user = '<wiki>'
                 wlock = self.repo.wlock()
                 try:

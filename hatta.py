@@ -67,7 +67,7 @@ try:
 except ImportError:
     split_japanese = None
 
-__version__ = '1.2.1'
+__version__ = '1.2.1-dev'
 
 class WikiConfig(object):
     # Please see the bottom of the script for modifying these values.

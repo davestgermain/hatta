@@ -253,6 +253,7 @@ class WikiStorage(object):
         file_path = self._file_path(title)
         lock = self._lock()
         try:
+            mercurial.util.rename(file_name, file_path)
             changectx = self.repo.changectx('tip')
             tip_node = changectx.node()
             try:
@@ -264,15 +265,28 @@ class WikiStorage(object):
             if current_page_rev != parent:
                 filectx = changectx[repo_file].filectx(parent)
                 parent_node = filectx.changectx().node()
-                mercurial.hg.update(self.repo, parent_node)
-            mercurial.util.rename(file_name, file_path)
+                wlock = self.repo.wlock()
+                try:
+                    self.repo.dirstate.setparents(parent_node)
+                finally:
+                    del wlock
+                node = self.repo.commit(files=[repo_file], text=text, user=user,
+                                 force=True, empty_ok=True)
+                def partial(filename):
+                    return repo_file == filename
+                unresolved = mercurial.merge.update(self.repo, tip_node, True, False, partial)
+                text = _(u'merge of edit conflict').encode('utf-8')
+                if unresolved[3]:
+                    mercurial.merge.update(self.repo, tip_node, True, True, partial)
+                    text = _(u'forced merge of edit conflict').encode('utf-8')
+                user = '<wiki>'
+                wlock = self.repo.wlock()
+                try:
+                    self.repo.dirstate.setparents(tip_node, node)
+                finally:
+                    del wlock
             self.repo.commit(files=[repo_file], text=text, user=user,
                              force=True, empty_ok=True)
-            if current_page_rev != parent:
-                mercurial.hg.merge(self.repo, tip_node, force=False, remind=False)
-                text = _(u'merge edit conflict').encode('utf-8')
-                user = '<wiki>'
-                self.repo.commit(text=text, user=user, force=True)
         finally:
             del lock
 

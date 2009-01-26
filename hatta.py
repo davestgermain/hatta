@@ -72,6 +72,24 @@ except ImportError:
 
 __version__ = '1.2.2-dev'
 
+def external_link(addr):
+    """Decide whether a link is absolute or internal."""
+
+    return (addr.startswith('http://') or addr.startswith('https://')
+            or addr.startswith('ftp://') or addr.startswith('mailto:'))
+
+def page_mime(addr):
+    """Guess the mime type based on the page name."""
+
+    file_path = self._file_path(title)
+    mime, encoding = mimetypes.guess_type(file_path, strict=False)
+    if encoding:
+        mime = 'archive/%s' % encoding
+    if mime is None:
+        mime = 'text/x-wiki'
+    return mime
+
+
 class WikiConfig(object):
     """
     Responsible for reading and storing site configuration. Contains the
@@ -205,12 +223,6 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
 
     def _parse_files(self, files=()):
         import ConfigParser
-
-def external_link(addr):
-    """Decide whether a link is absolute or internal."""
-
-    return (addr.startswith('http://') or addr.startswith('https://')
-            or addr.startswith('ftp://') or addr.startswith('mailto:'))
 
 class WikiStorage(object):
     """
@@ -386,13 +398,7 @@ class WikiStorage(object):
         return self.repo.changectx('tip').rev()
 
     def page_mime(self, title):
-        file_path = self._file_path(title)
-        mime, encoding = mimetypes.guess_type(file_path, strict=False)
-        if encoding:
-            mime = 'archive/%s' % encoding
-        if mime is None:
-            mime = 'text/x-wiki'
-        return mime
+        return page_mime(title)
 
     def _find_filectx(self, title):
         repo_file = self._title_to_file(title)
@@ -448,7 +454,6 @@ class WikiStorage(object):
                     except mercurial.revlog.LookupError:
                         rev = -1
                     yield title, rev, date, author, comment
-
 
     def all_pages(self):
         for filename in os.listdir(self.path):

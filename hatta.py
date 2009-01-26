@@ -81,7 +81,6 @@ def external_link(addr):
 def page_mime(addr):
     """Guess the mime type based on the page name."""
 
-    file_path = self._file_path(title)
     mime, encoding = mimetypes.guess_type(file_path, strict=False)
     if encoding:
         mime = 'archive/%s' % encoding
@@ -398,7 +397,8 @@ class WikiStorage(object):
         return self.repo.changectx('tip').rev()
 
     def page_mime(self, title):
-        return page_mime(title)
+        file_path = self._file_path(title)
+        return page_mime(file_path)
 
     def _find_filectx(self, title):
         repo_file = self._title_to_file(title)

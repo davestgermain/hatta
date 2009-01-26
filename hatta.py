@@ -55,6 +55,8 @@ import weakref
 import wsgiref.simple_server
 
 import werkzeug
+
+# Note: we have to set these before importing mercurial
 os.environ['HGENCODING'] = 'utf-8'
 os.environ["HGMERGE"] = "internal:merge"
 import mercurial.hg
@@ -62,6 +64,7 @@ import mercurial.ui
 import mercurial.revlog
 import mercurial.util
 
+# Use word splitter for Japanese if it's available
 try:
     from hatta_jp import split_japanese
 except ImportError:
@@ -70,6 +73,11 @@ except ImportError:
 __version__ = '1.2.2-dev'
 
 class WikiConfig(object):
+    """
+    Responsible for reading and storing site configuration. Contains the
+    default settings.
+    """
+
     # Please see the bottom of the script for modifying these values.
     interface = ''
     port = 8080
@@ -199,11 +207,25 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         import ConfigParser
 
 def external_link(addr):
+    """Decide whether a link is absolute or internal."""
+
     return (addr.startswith('http://') or addr.startswith('https://')
             or addr.startswith('ftp://') or addr.startswith('mailto:'))
 
 class WikiStorage(object):
+    """
+    Provides means of storing wiki pages and keeping track of their
+    change history, using Mercurial repository as the storage method.
+    """
+
     def __init__(self, path):
+        """
+        Takes the path to the directory where the pages are to be kept.
+        If the directory doen't exist, it will be created. If it's inside
+        a Mercurial repository, that repository will be used, otherwise
+        a new repository will be created in it.
+        """
+
         self.path = path
         self._lockref = None
         if not os.path.exists(self.path):
@@ -435,6 +457,21 @@ class WikiStorage(object):
                 yield werkzeug.url_unquote(filename)
 
 class WikiParser(object):
+    """
+    Responsible for generating HTML markup from the wiki markup.
+
+    The parser works on two levels. On the block level, it analyzes lines
+    of text and decides what kind of block element they belong to (block
+    elements include paragraphs, lists, headings, preformatted blocks).
+    Lines belonging to the same block are joined together, and a second
+    pass is made using regular expressions to parse line-level elements,
+    such as links, bold and italic text and smileys.
+
+    Some block-level elements, such as preformatted blocks, consume additional
+    lines from the input until they encounter the end-of-block marker. Most
+    block-level elements are just runs of marked up lines though.
+    """
+
     bullets_pat = ur"^\s*[*]+\s+"
     bullets_re = re.compile(bullets_pat, re.U)
     heading_pat = ur"^\s*=+"
@@ -730,6 +767,11 @@ class WikiParser(object):
 
 
 class WikiSearch(object):
+    """
+    Responsible for indexing words and links, for fast searching and
+    backlinks. Uses a cache directory to store the index files.
+    """
+
     digits_pattern = re.compile(ur"""^[=+~-]?[\d,.:-]+\w?\w?%?$""", re.UNICODE)
     split_pattern = re.compile(ur"""
 [A-ZĄÂÃĀÄÅÁÀĂĘÉÊĚËĒÈŚĆÇČŁÓÒÖŌÕÔŃŻŹŽÑÍÏĐÞÐÆŸØ]
@@ -934,9 +976,13 @@ without would yet you your yours yourself yourselves"""
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):
-       pass
+    """A typical HTTP response class made out of Werkzeug's mixins."""
 
 class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
+    """
+    A Werkzeug's request with additional functions for handling file
+    uploads and wiki-specific link generation.
+    """
     charset = 'utf-8'
     encoding_errors = 'ignore'
     def __init__(self, wiki, adapter, environ, populate_request=True,
@@ -1047,6 +1093,10 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
                 pass
 
 class Wiki(object):
+    """
+    The main class of the wiki, handling initialization of the whole
+    application and most of the logic.
+    """
 
     def __init__(self, config):
         self.dead = False
@@ -1893,6 +1943,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
     @werkzeug.responder
     def application(self, environ, start):
+        """The main application loop."""
+
         if self.config.script_name is not None:
             environ['SCRIPT_NAME'] = self.config.script_name
         adapter = self.url_map.bind_to_environ(environ)
@@ -1911,6 +1963,10 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             del adapter
 
 def main():
+    """
+    Starts a standalone WSGI server.
+    """
+
     config = WikiConfig(
         # Here you can modify the configuration: uncomment and change the ones
         # you need. Note that it's better use environment variables or command

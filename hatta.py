@@ -81,7 +81,7 @@ def external_link(addr):
 def page_mime(addr):
     """Guess the mime type based on the page name."""
 
-    mime, encoding = mimetypes.guess_type(file_path, strict=False)
+    mime, encoding = mimetypes.guess_type(addr, strict=False)
     if encoding:
         mime = 'archive/%s' % encoding
     if mime is None:

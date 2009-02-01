@@ -1,6 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+# @copyright: 2008-2009 Radomir Dopieralski <hatta@sheep.art.pl>
+# @license: GNU GPL, see COPYING for details.
+
 """
 Hatta Wiki is a wiki engine designed to be used with Mercurial repositories.
 It requires Mercurial and Werkzeug python modules.
@@ -175,6 +178,8 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         self.__dict__.update(kw)
 
     def _parse_environ(self):
+        """Check the environment variables for options."""
+
         prefix = 'HATTA_'
         settings = {}
         for key, value in os.environ.iteritems():
@@ -184,6 +189,8 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         self.__dict__.update(settings)
 
     def _parse_args(self):
+        """Check the commandline arguments for options."""
+
         import optparse
         parser = optparse.OptionParser()
         parser.add_option('-d', '--pages-dir', dest='pages_path',
@@ -221,7 +228,10 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         self.language = options.language or self.language
 
     def _parse_files(self, files=()):
+        """Check the config files for options."""
+
         import ConfigParser
+        # XXX TODO
 
 class WikiStorage(object):
     """
@@ -261,6 +271,8 @@ class WikiStorage(object):
         return lock
 
     def _find_repo_path(self, path):
+        """Go up the directory tree looking for a repository."""
+
         while not os.path.isdir(os.path.join(path, ".hg")):
             old_path, path = path, os.path.dirname(path)
             if path == old_path:
@@ -280,6 +292,8 @@ class WikiStorage(object):
         return os.path.exists(self._file_path(title))
 
     def save_file(self, title, file_name, author=u'', comment=u'', parent=None):
+        """Save an existing file as specified page."""
+
         user = author.encode('utf-8') or _(u'anon').encode('utf-8')
         text = comment.encode('utf-8') or _(u'comment').encode('utf-8')
         repo_file = self._title_to_file(title)
@@ -330,6 +344,8 @@ class WikiStorage(object):
             del lock
 
     def save_text(self, title, text, author=u'', comment=u'', parent=None):
+        """Save text or data as specified page."""
+
         try:
             temp_path = tempfile.mkdtemp(dir=self.path)
             file_path = os.path.join(temp_path, 'saved')
@@ -371,6 +387,8 @@ class WikiStorage(object):
             raise werkzeug.exceptions.NotFound()
 
     def page_file_meta(self, title):
+        """Get page's inode number, size and last modification time."""
+
         try:
             (st_mode, st_ino, st_dev, st_nlink, st_uid, st_gid, st_size,
              st_atime, st_mtime, st_ctime) = os.stat(self._file_path(title))
@@ -379,6 +397,8 @@ class WikiStorage(object):
         return st_ino, st_size, st_mtime
 
     def page_meta(self, title):
+        """Get page's revision, date, last editor and his edit comment."""
+
         filectx_tip = self._find_filectx(title)
         if filectx_tip is None:
             raise werkzeug.exceptions.NotFound()
@@ -397,10 +417,14 @@ class WikiStorage(object):
         return self.repo.changectx('tip').rev()
 
     def page_mime(self, title):
+        """Guess page's mime type ased on corresponding file name."""
+
         file_path = self._file_path(title)
         return page_mime(file_path)
 
     def _find_filectx(self, title):
+        """Find the last revision in which the file existed."""
+
         repo_file = self._title_to_file(title)
         changectx = self.repo.changectx('tip')
         stack = [changectx]
@@ -414,6 +438,8 @@ class WikiStorage(object):
         return changectx[repo_file]
 
     def page_history(self, title):
+        """Iterate over the page's history."""
+
         filectx_tip = self._find_filectx(title)
         if filectx_tip is None:
             return
@@ -428,6 +454,8 @@ class WikiStorage(object):
             yield rev, date, author, comment
 
     def page_revision(self, title, rev):
+        """Get the contents of specified revision of the page."""
+
         filectx_tip = self._find_filectx(title)
         if filectx_tip is None:
             raise werkzeug.exceptions.NotFound()
@@ -437,6 +465,8 @@ class WikiStorage(object):
             raise werkzeug.exceptions.NotFound()
 
     def history(self):
+        """Iterate over the history of entire wiki."""
+
         changectx = self.repo.changectx('tip')
         maxrev = changectx.rev()
         minrev = 0
@@ -456,6 +486,8 @@ class WikiStorage(object):
                     yield title, rev, date, author, comment
 
     def all_pages(self):
+        """Iterate over the titles of all pages in the wiki."""
+
         for filename in os.listdir(self.path):
             if (os.path.isfile(os.path.join(self.path, filename))
                 and not filename.startswith('.')):
@@ -747,12 +779,16 @@ class WikiParser(object):
             yield '</li></ul>'
 
     def parse_line(self, line):
+        """Find all the line-level markup and return HTML for it."""
+
         for m in self.markup_re.finditer(line):
             func = getattr(self, "line_%s" % m.lastgroup)
             yield func(m.groupdict())
 
     def parse(self, lines, wiki_link, wiki_image, wiki_syntax=None,
               wiki_math=None):
+        """Parse a list of lines of wiki markup, yielding HTML for it."""
+
         def key(line):
             match = self.block_re.match(line)
             if match:
@@ -843,6 +879,8 @@ without would yet you your yours yourself yourselves"""
         return lock
 
     def split_text(self, text):
+        """Split text into words. Uses Japanese splitter if available."""
+
         for match in self.word_pattern.finditer(text):
             word = match.group(0)
             if split_japanese is None:
@@ -860,6 +898,7 @@ without would yet you your yours yourself yourselves"""
                     yield part.lower()
 
     def filter_words(self, words):
+        """Filter out stop words, numbers, too long words, etc."""
         for word in words:
             if len(word) >= 25:
                 continue
@@ -869,12 +908,16 @@ without would yet you your yours yourself yourselves"""
             yield word
 
     def count_words(self, words):
+        """Check how many times each word appears in the list."""
+
         count = {}
         for word in words:
             count[word] = count.get(word, 0) + 1
         return count
 
     def add_words(self, title, text):
+        """Add words to the word index for specified page."""
+
         encoded_title = title.encode('utf-8', 'backslashreplace')
         if text:
             words = self.count_words(self.filter_words(self.split_text(text)))
@@ -895,6 +938,8 @@ without would yet you your yours yourself yourselves"""
         self.index.sync()
 
     def add_links(self, title, links_and_labels):
+        """Add links to the link index for specified page."""
+
         links, labels = links_and_labels
         self.links.sync()
         self.links[title.encode('utf-8', 'backslashreplace')] = links
@@ -904,6 +949,8 @@ without would yet you your yours yourself yourselves"""
         self.labels.sync()
 
     def regenerate_backlinks(self):
+        """Create backlinks indices based on the links indices."""
+
         self.links.sync()
         for key in self.backlinks:
             self.backlinks[key] = []
@@ -917,6 +964,8 @@ without would yet you your yours yourself yourselves"""
         self.backlinks.sync()
 
     def update_backlinks(self, title, old_links, new_links):
+        """Updates backlinks index for specified page."""
+
         encoded_title = title.encode('utf-8', 'backslashreplace')
         self.backlinks.sync()
         self.links.sync()
@@ -937,6 +986,8 @@ without would yet you your yours yourself yourselves"""
         self.backlinks.sync()
 
     def page_backlinks(self, title):
+        """Get the backlinks to specified page."""
+
         timestamp = os.stat(self.backlinks_file).st_mtime
         if timestamp > self.backlinks_timestamp:
             self.backlinks_timestamp = timestamp
@@ -946,6 +997,8 @@ without would yet you your yours yourself yourselves"""
             yield unicode(encoded_title, 'utf-8', 'backslashreplace')
 
     def page_links(self, title):
+        """Get link targets from specified page."""
+
         timestamp = os.stat(self.links_file).st_mtime
         if timestamp > self.links_timestamp:
             self.links_timestamp = timestamp
@@ -954,10 +1007,14 @@ without would yet you your yours yourself yourselves"""
         return self.links.get(encoded_title, [])
 
     def page_labels(self, title):
+        """Get link labels from specified page."""
+
         encoded_title = title.encode('utf-8', 'backslashreplace')
         return self.labels.get(encoded_title, [])
 
     def find(self, words):
+        """Find words in the pages."""
+
         first = words[0]
         rest = words[1:]
         try:
@@ -1007,6 +1064,8 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
                                   method='GET')
 
     def wiki_link(self, addr, label, class_='wiki', image=None):
+        """Create HTML for a wiki link."""
+
         text = werkzeug.escape(label)
         if external_link(addr):
             if addr.startswith('mailto:'):
@@ -1034,6 +1093,8 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         return u'<a href="%s" class="%s">%s</a>' % (href, class_, image or text)
 
     def wiki_image(self, addr, alt, class_='wiki'):
+        """Create HTML for a wiki image."""
+
         chunk = ''
         if external_link(addr):
             return u'<img src="%s" class="external" alt="%s">' % (
@@ -1055,6 +1116,8 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
                 self.get_page_url(addr), werkzeug.escape(alt))
 
     def get_author(self):
+        """Try to guess the author name. Use IP address as last resort."""
+
         author = (self.form.get("author")
                   or werkzeug.url_unquote(self.cookies.get("author", ""))
                   or werkzeug.url_unquote(self.environ.get('REMOTE_USER', ""))
@@ -1062,6 +1125,8 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         return author
 
     def _get_file_stream(self):
+        """Save all the POSTs to temporary files."""
+
         class FileWrapper(file):
             def __init__(self, f):
                 self.f = f
@@ -1087,6 +1152,8 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         return tmpfile
 
     def cleanup(self):
+        """Clean up the temporary files created by POSTs."""
+
         for temp_path in self.tmpfiles:
             try:
                 os.unlink(os.path.join(temp_path, 'saved'))
@@ -1168,6 +1235,8 @@ class Wiki(object):
         ])
 
     def html_page(self, request, title, content, page_title=u''):
+        """The main page template."""
+
         rss = request.adapter.build(self.rss, method='GET')
         atom = request.adapter.build(self.atom, method='GET')
         icon = request.adapter.build(self.favicon, method='GET')

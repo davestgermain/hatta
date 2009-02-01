@@ -17,7 +17,7 @@ config = hatta.WikiConfig(
     # site_name = 'Hatta Wiki',
     # page_charset = 'UTF-8',
 )
-config._parse_args()
+config.parse_args()
 application = hatta.Wiki(config).application
 host, port = config.interface or 'localhost', int(config.port)
 werkzeug.run_simple(host, port, application, use_reloader=True)

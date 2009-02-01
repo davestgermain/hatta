@@ -113,7 +113,7 @@ class WikiConfig(object):
     config_file = 'hatta.conf'
     html_head = u''
     default_style = u"""html { background: #fff; color: #2e3436; 
-font-family: sans-serif; font-size: 96% }
+    font-family: sans-serif; font-size: 96% }
 body { margin: 1em auto; line-height: 1.3; width: 40em }
 a { color: #3465a4; text-decoration: none }
 a:hover { text-decoration: underline }
@@ -124,25 +124,25 @@ a.external:visited { color: #75507b }
 a img { border: none }
 img.math, img.smiley { vertical-align: middle }
 pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word; 
-white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap;
-line-height: 1.2; color: #555753 }
+    white-space: -moz-pre-wrap; white-space: -pre-wrap;
+    white-space: -o-pre-wrap; line-height: 1.2; color: #555753 }
 pre.diff div.orig { font-size: 75%; color: #babdb6 }
-b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e; color: #ce5c00; 
-text-decoration: none }
+b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e;
+color: #ce5c00; text-decoration: none }
 pre.diff del { background: #eeeeec; color: #888a85; text-decoration: none }
 pre.diff div.change { border-left: 2px solid #fcaf3e }
 div.footer { border-top: solid 1px #babdb6; text-align: right }
 h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
 div.buttons { text-align: center }
 input.button, div.buttons input { font-weight: bold; font-size: 100%;
-background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
+    background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
 .history input.button { font-size: 75% }
 .editor textarea { width: 100%; display: block; font-size: 100%; 
-border: solid 1px #babdb6; }
+    border: solid 1px #babdb6; }
 .editor label { display:block; text-align: right }
 .editor .upload { margin: 2em auto; text-align: center }
 form.search input.search, .editor label input { font-size: 100%; 
-border: solid 1px #babdb6; margin: 0.125em 0 }
+    border: solid 1px #babdb6; margin: 0.125em 0 }
 .editor label.comment input  { width: 32em }
 a.logo { float: left; display: block; margin: 0.25em }
 div.header h1 { margin: 0; }

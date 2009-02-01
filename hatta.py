@@ -39,10 +39,6 @@ Options:
                         Translate interface to LANG
 """
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 import base64
 import datetime
 import difflib
@@ -52,7 +48,6 @@ import mimetypes
 import os
 import re
 import shelve
-import sys
 import tempfile
 import weakref
 import wsgiref.simple_server
@@ -78,8 +73,10 @@ __version__ = '1.2.2-dev'
 def external_link(addr):
     """Decide whether a link is absolute or internal."""
 
-    return (addr.startswith('http://') or addr.startswith('https://')
-            or addr.startswith('ftp://') or addr.startswith('mailto:'))
+    return (addr.startswith('http://')
+            or addr.startswith('https://')
+            or addr.startswith('ftp://')
+            or addr.startswith('mailto:'))
 
 def page_mime(addr):
     """Guess the mime type based on the page name."""
@@ -155,7 +152,8 @@ form.search { margin:0; text-align: right; font-size: 80% }
 div.snippet { font-size: 80%; color: #888a85 }
 div.header div.menu { float: right; margin-top: 1.25em }
 div.header div.menu a.current { color: #000 }
-hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #babdb6; clear: both }"""
+hr { background: transparent; border:none; height: 0;
+     border-bottom: 1px solid #babdb6; clear: both }"""
     icon = base64.b64decode(
 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhki'
 'AAAAAlwSFlzAAAEnQAABJ0BfDRroQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBo'
@@ -173,11 +171,11 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
 'WI6QcC95UUqM9PBzdqN99fbzc9EJNwBKKUoFw+8NDY8/sFQ/8CE57l5pZRdX6kHqxurW43mv98urM9'
 'fjJPouohE8NQ1dkEayAJ5wAe2gRawJSKmO/c/aERMn5m9/ksAAAAASUVORK5CYII=')
 
-    def __init__(self, **kw):
-        self._parse_environ()
-        self.__dict__.update(kw)
+    def __init__(self, **keywords):
+        self.parse_environ()
+        self.__dict__.update(keywords)
 
-    def _parse_environ(self):
+    def parse_environ(self):
         """Check the environment variables for options."""
 
         prefix = 'HATTA_'
@@ -188,7 +186,7 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
                 settings[name] = value
         self.__dict__.update(settings)
 
-    def _parse_args(self):
+    def parse_args(self):
         """Check the commandline arguments for options."""
 
         import optparse
@@ -227,11 +225,11 @@ hr { background: transparent; border:none; height: 0; border-bottom: 1px solid #
         self.config_file = options.config_file or self.config_file
         self.language = options.language or self.language
 
-    def _parse_files(self, files=()):
+    def parse_files(self, files=()):
         """Check the config files for options."""
 
-        import ConfigParser
         # XXX TODO
+        raise NotImplemented
 
 class WikiStorage(object):
     """
@@ -283,7 +281,9 @@ class WikiStorage(object):
         return os.path.join(self.path, werkzeug.url_quote(title, safe=''))
 
     def _title_to_file(self, title):
-        return os.path.join(self.repo_prefix, werkzeug.url_quote(title, safe=''))
+        return os.path.join(self.repo_prefix,
+                            werkzeug.url_quote(title, safe=''))
+
     def _file_to_title(self, filename):
         name = filename[len(self.repo_prefix):].strip('/')
         return werkzeug.url_unquote(name)
@@ -322,17 +322,20 @@ class WikiStorage(object):
                 def partial(filename):
                     return repo_file == filename
                 try:
-                    unresolved = mercurial.merge.update(self.repo, tip_node, True, False, partial)
+                    unresolved = mercurial.merge.update(self.repo, tip_node,
+                                                        True, False, partial)
                 except mercurial.util.Abort:
                     unresolved = 1, 1, 1, 1
-                text = _(u'merge of edit conflict').encode('utf-8')
+                msg = _(u'merge of edit conflict')
                 if unresolved[3]:
-                    text = _(u'forced merge of edit conflict').encode('utf-8')
+                    msg = _(u'forced merge of edit conflict')
                     try:
-                        mercurial.merge.update(self.repo, tip_node, True, True, partial)
+                        mercurial.merge.update(self.repo, tip_node, True, True,
+                                               partial)
                     except mercurial.util.Abort:
-                        text = _(u'failed merge of edit conflict').encode('utf-8')
+                        msg = _(u'failed merge of edit conflict')
                 user = '<wiki>'
+                text = msg.encode('utf-8')
                 wlock = self.repo.wlock()
                 try:
                     self.repo.dirstate.setparents(tip_node, node)
@@ -528,7 +531,8 @@ class WikiParser(object):
                           for kv in sorted(block.iteritems())))
     code_close_re = re.compile(ur"^\}\}\}\s*$", re.U)
     macro_close_re = re.compile(ur"^>>\s*$", re.U)
-    image_pat = ur"\{\{(?P<image_target>([^|}]|}[^|}])*)(\|(?P<image_text>([^}]|}[^}])*))?}}"
+    image_pat = (ur"\{\{(?P<image_target>([^|}]|}[^|}])*)"
+                 ur"(\|(?P<image_text>([^}]|}[^}])*))?}}")
     image_re = re.compile(image_pat, re.U)
     smilies = {
         r':)': "smile.png",
@@ -556,13 +560,16 @@ class WikiParser(object):
     }
     markup = {
         "bold": ur"[*][*]",
-        "code": ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])*[}]*)[}][}][}]",
+        "code": ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
+                ur"*[}]*)[}][}][}]",
         "free_link": ur"""(http|https|ftp)://\S+[^\s.,:;!?()'"/=+<>-]""",
         "italic": ur"//",
-        "link": ur"\[\[(?P<link_target>([^|\]]|\][^|\]])+)(\|(?P<link_text>([^\]]|\][^\]])+))?\]\]",
+        "link": ur"\[\[(?P<link_target>([^|\]]|\][^|\]])+)"
+                ur"(\|(?P<link_text>([^\]]|\][^\]])+))?\]\]",
         "image": image_pat,
         "linebreak": ur"\\\\",
-        "macro": ur"[<][<](?P<macro_name>\w+)\s+(?P<macro_text>([^>]|[^>][>])+)[>][>]",
+        "macro": ur"[<][<](?P<macro_name>\w+)\s+"
+                 ur"(?P<macro_text>([^>]|[^>][>])+)[>][>]",
         "mail": ur"""(mailto:)?\S+@\S+(\.[^\s.,:;!?()'"/=+<>-]+)+""",
         "math": ur"\$\$(?P<math_text>[^$]+)\$\$",
         "newline": ur"\n",
@@ -589,60 +596,60 @@ class WikiParser(object):
             pass
         return u"".join(u"</%s>" % tag for tag in tags)
 
-    def line_linebreak(self, groups):
+    def _line_linebreak(self, groups):
         return u'<br>'
 
-    def line_smiley(self, groups):
+    def _line_smiley(self, groups):
         smiley = groups["smiley_face"]
         return self.wiki_image(self.smilies[smiley], alt=smiley,
                                class_="smiley")
 
-    def line_bold(self, groups):
+    def _line_bold(self, groups):
         if 'b' in self.stack:
             return self.pop_to('b')
         else:
             self.stack.append('b')
             return u"<b>"
 
-    def line_italic(self, groups):
+    def _line_italic(self, groups):
         if 'i' in self.stack:
             return self.pop_to('i')
         else:
             self.stack.append('i')
             return u"<i>"
 
-    def line_punct(self, groups):
+    def _line_punct(self, groups):
         text = groups["punct"]
         return self.punct.get(text, text)
 
-    def line_newline(self, groups):
+    def _line_newline(self, groups):
         return "\n"
 
-    def line_text(self, groups):
+    def _line_text(self, groups):
         return werkzeug.escape(groups["text"])
 
-    def line_math(self, groups):
+    def _line_math(self, groups):
         if self.wiki_math:
             return self.wiki_math(groups["math_text"])
         else:
             return "<var>%s</var>" % werkzeug.escape(groups["math_text"])
 
-    def line_code(self, groups):
+    def _line_code(self, groups):
         return u'<code>%s</code>' % werkzeug.escape(groups["code_text"])
 
-    def line_free_link(self, groups):
+    def _line_free_link(self, groups):
         groups['link_target'] = groups['free_link']
-        return self.line_link(groups)
+        return self._line_link(groups)
 
-    def line_mail(self, groups):
+    def _line_mail(self, groups):
         addr = groups['mail']
         groups['link_text'] = addr
         if not addr.startswith(u'mailto:'):
             addr = u'mailto:%s' % addr
         groups['link_target'] = addr
-        return self.line_link(groups)
+        return self._line_link(groups)
 
-    def line_link(self, groups):
+    def _line_link(self, groups):
         target = groups['link_target']
         text = groups.get('link_text')
         if not text:
@@ -651,24 +658,25 @@ class WikiParser(object):
                 text, chunk = text.split('#', 1)
         match = self.image_re.match(text)
         if match:
-            image = self.line_image(match.groupdict())
+            image = self._line_image(match.groupdict())
             return self.wiki_link(target, text, image=image)
         return self.wiki_link(target, text)
 
-    def line_image(self, groups):
+    def _line_image(self, groups):
         target = groups['image_target']
         alt = groups.get('image_text')
         if alt is None:
             alt = target
         return self.wiki_image(target, alt)
 
-    def line_macro(self, groups):
+    def _line_macro(self, groups):
         name = groups['macro_name']
         text = groups['macro_text'].strip()
-        return u'<span class="%s">%s</span>' % (werkzeug.escape(name, quote=True),
+        return u'<span class="%s">%s</span>' % (
+            werkzeug.escape(name, quote=True),
             werkzeug.escape(text))
 
-    def block_code(self, block):
+    def _block_code(self, block):
         # XXX A hack to handle {{{...}}} code blocks, this method reads lines
         # directly from input.
         for part in block:
@@ -680,7 +688,7 @@ class WikiParser(object):
             inside = u"\n".join(line.rstrip() for line in lines)
             yield u'<pre class="code">%s</pre>' % werkzeug.escape(inside)
 
-    def block_syntax(self, block):
+    def _block_syntax(self, block):
         # XXX A hack to handle {{{#!foo...}}} syntax blocks, 
         # this method reads lines
         # directly from input.
@@ -695,9 +703,10 @@ class WikiParser(object):
             if self.wiki_syntax:
                 return self.wiki_syntax(inside, syntax=syntax)
             else:
-                return [u'<div class="highlight"><pre>%s</pre></div>' % werkzeug.escape(inside)]
+                return [u'<div class="highlight"><pre>%s</pre></div>'
+                        % werkzeug.escape(inside)]
 
-    def block_macro(self, block):
+    def _block_macro(self, block):
         # XXX A hack to handle <<...>> macro blocks, this method reads lines
         # directly from input.
         for part in block:
@@ -708,19 +717,20 @@ class WikiParser(object):
                 lines.append(line)
                 line = self.lines.next()
             inside = u"\n".join(line.rstrip() for line in lines)
-            yield u'<div class="%s">%s</div>' % (werkzeug.escape(name, quote=True),
+            yield u'<div class="%s">%s</div>' % (
+                werkzeug.escape(name, quote=True),
                 werkzeug.escape(inside))
 
-    def block_paragraph(self, block):
+    def _block_paragraph(self, block):
         text = u"".join(block)
         yield u'<p>%s%s</p>' % (u"".join(self.parse_line(text)),
                                 self.pop_to(""))
 
-    def block_indent(self, block):
+    def _block_indent(self, block):
         yield u'<pre>%s</pre>' % werkzeug.escape(u"\n".join(line.rstrip()
                                         for line in block))
 
-    def block_table(self, block):
+    def _block_table(self, block):
         yield u'<table>'
         in_head = False
         for line in block:
@@ -742,24 +752,25 @@ class WikiParser(object):
             yield '</tr>'
         yield u'</table>'
 
-    def block_empty(self, block):
+    def _block_empty(self, block):
         yield u''
 
-    def block_rule(self, block):
+    def _block_rule(self, block):
         yield u'<hr>'
 
-    def block_heading(self, block):
+    def _block_heading(self, block):
         for line in block:
             level = min(len(self.heading_re.match(line).group(0).strip()), 5)
             self.headings[level-1] = self.headings.get(level-1, 0)+1
-            label = u"-".join(str(self.headings.get(i, 0)) for i in range(level))
+            label = u"-".join(str(self.headings.get(i, 0))
+                              for i in range(level))
             yield u'<a name="head-%s"></a><h%d>%s</h%d>' % (
                 label,
                 level,
                 werkzeug.escape(line.strip("= \t\n\r\v")),
                 level)
 
-    def block_bullets(self, block):
+    def _block_bullets(self, block):
         level = 0
         for line in block:
             nest = len(self.bullets_re.match(line).group(0).strip())
@@ -782,7 +793,7 @@ class WikiParser(object):
         """Find all the line-level markup and return HTML for it."""
 
         for m in self.markup_re.finditer(line):
-            func = getattr(self, "line_%s" % m.lastgroup)
+            func = getattr(self, "_line_%s" % m.lastgroup)
             yield func(m.groupdict())
 
     def parse(self, lines, wiki_link, wiki_image, wiki_syntax=None,
@@ -802,7 +813,7 @@ class WikiParser(object):
         self.wiki_math = wiki_math
         self.headings = {}
         for kind, block in itertools.groupby(self.lines, key):
-            func = getattr(self, "block_%s" % kind)
+            func = getattr(self, "_block_%s" % kind)
             for part in func(block):
                 yield part
 
@@ -902,8 +913,8 @@ without would yet you your yours yourself yourselves"""
         for word in words:
             if len(word) >= 25:
                 continue
-            m = self.stop_words_re.match(word)
-            if m:
+            match = self.stop_words_re.match(word)
+            if match:
                 continue
             yield word
 
@@ -923,7 +934,8 @@ without would yet you your yours yourself yourselves"""
             words = self.count_words(self.filter_words(self.split_text(text)))
         else:
             words = {}
-        title_words = self.count_words(self.filter_words(self.split_text(title)))
+        filtered = self.filter_words(self.split_text(title))
+        title_words = self.count_words(filtered)
         for word, count in title_words.iteritems():
             words[word] = words.get(word, 0) + count
         self.index.sync()
@@ -1107,7 +1119,8 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
             mime = self.wiki.storage.page_mime(addr)
             if mime.startswith('image/'):
                 return u'<img src="%s" class="%s" alt="%s">' % (
-                    self.get_download_url(addr), class_, werkzeug.escape(alt, quote="True"))
+                    self.get_download_url(addr), class_,
+                    werkzeug.escape(alt, quote="True"))
             else:
                 return u'<a href="%s" class="download">%s</a>' % (
                     self.get_download_url(addr), werkzeug.escape(alt))
@@ -1211,7 +1224,8 @@ class Wiki(object):
                                   methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/history/<title>/<int:rev>',
                                   endpoint=self.revision, methods=['GET']),
-            werkzeug.routing.Rule('/history/<title>/<int:from_rev>:<int:to_rev>',
+            werkzeug.routing.Rule(
+                            '/history/<title>/<int:from_rev>:<int:to_rev>',
                                   endpoint=self.diff, methods=['GET']),
             werkzeug.routing.Rule('/download/<title>',
                                   endpoint=self.download,
@@ -1242,18 +1256,23 @@ class Wiki(object):
         icon = request.adapter.build(self.favicon, method='GET')
         yield (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
                '"http://www.w3.org/TR/html4/strict.dtd">')
-        yield u'<html><head><title>%s - %s</title>' % (werkzeug.escape(page_title or title), werkzeug.escape(self.config.site_name))
+        yield u'<html><head><title>%s - %s</title>' % (
+            werkzeug.escape(page_title or title),
+            werkzeug.escape(self.config.site_name))
         if self.config.style_page in self.storage:
             css = request.get_download_url(self.config.style_page)
             yield u'<link rel="stylesheet" type="text/css" href="%s">' % css
         else:
-            yield u'<style type="text/css">%s</style>' % self.config.default_style
+            yield (u'<style type="text/css">%s</style>'
+                   % self.config.default_style)
         if page_title:
             yield u'<meta name="robots" content="NOINDEX,NOFOLLOW">'
         else:
             edit = request.adapter.build(self.edit, {'title': title})
-            yield u'<link rel="alternate" type="application/wiki" href="%s">' % edit
-        yield u'<link rel="shortcut icon" type="image/x-icon" href="%s">' % icon
+            yield (u'<link rel="alternate" type="application/wiki" href="%s">'
+                   % edit)
+        yield (u'<link rel="shortcut icon" type="image/x-icon" href="%s">'
+               % icon)
         yield (u'<link rel="alternate" type="application/rss+xml" '
                u'title="%s (RSS)" href="%s">' % (
                     werkzeug.escape(self.config.site_name, quote=True), rss))
@@ -1274,7 +1293,8 @@ class Wiki(object):
         search = request.adapter.build(self.search, method='GET')
         yield u'<form class="search" action="%s" method="GET"><div>' % search
         yield u'<input name="q" class="search">'
-        yield u'<input class="button" type="submit" value="%s">' % werkzeug.escape(_(u'Search'), quote=True)
+        yield (u'<input class="button" type="submit" value="%s">'
+               % werkzeug.escape(_(u'Search'), quote=True))
         yield u'</div></form>'
         if self.config.menu_page in self.storage:
             menu = self.index.page_links(self.config.menu_page)
@@ -1298,8 +1318,10 @@ class Wiki(object):
         for part in content:
             yield part
         if not page_title:
-            history = request.adapter.build(self.history, {'title': title}, method='GET')
-            backlinks = request.adapter.build(self.backlinks, {'title': title}, method='GET')
+            history = request.adapter.build(self.history, {'title': title},
+                                            method='GET')
+            backlinks = request.adapter.build(self.backlinks, {'title': title},
+                                              method='GET')
             yield u'<div class="footer">'
             yield u'<a href="%s" class="edit">%s</a> ' % (edit,
                 werkzeug.escape(_(u'Edit')))
@@ -1366,7 +1388,8 @@ class Wiki(object):
                        self.config.page_charset, 'replace')
         content = [
             u'<p>%s</p>' % (
-                werkzeug.escape(_(u'Content of revision %(rev)d of page %(title)s:'))
+                werkzeug.escape(
+                    _(u'Content of revision %(rev)d of page %(title)s:'))
                 % {'rev': rev, 'title': request.wiki_link(title, title)}
             ),
             u'<pre>%s</pre>' % werkzeug.escape(text),
@@ -1383,6 +1406,8 @@ class Wiki(object):
 
     def extract_links(self, text):
         class LinkExtractor(object):
+            """Collect links when parsing a wiki page."""
+
             def __init__(self):
                 self.links = []
                 self.link_labels = []
@@ -1446,7 +1471,8 @@ class Wiki(object):
             if text is not None:
                 lines = text.split('\n')
             else:
-                lines = [u'<p>%s</p>' % werkzeug.escape(_(u'No preview for binaries.'))]
+                lines = [u'<p>%s</p>'
+                         % werkzeug.escape(_(u'No preview for binaries.'))]
             return self.edit(request, title, preview=lines)
         elif request.form.get('save'):
             comment = request.form.get("comment", "")
@@ -1541,8 +1567,8 @@ class Wiki(object):
         try:
             lines = self.storage.open_page(title)
             comment = _(u'modified')
-            (rev, old_date,
-             old_author, old_comment) = self.storage.page_meta(title)
+            (rev, old_date, old_author,
+                old_comment) = self.storage.page_meta(title)
             if old_author == author:
                 comment = old_comment
         except werkzeug.exceptions.NotFound:
@@ -1558,17 +1584,25 @@ class Wiki(object):
             yield werkzeug.escape(line)
         yield u"""</textarea>"""
         yield u'<input type="hidden" name="parent" value="%d">' % rev
-        yield u'<label class="comment">%s <input name="comment" value="%s"></label>' % (werkzeug.escape(_(u'Comment')), werkzeug.escape(comment, quote=True))
+        yield (u'<label class="comment">%s <input name="comment" value="%s">'
+               u'</label>' % (
+                    werkzeug.escape(_(u'Comment')),
+                    werkzeug.escape(comment, quote=True)))
         yield u'<label>%s <input name="author" value="%s"></label>' % (
-            werkzeug.escape(_(u'Author')), werkzeug.escape(request.get_author(), quote=True))
+            werkzeug.escape(_(u'Author')),
+            werkzeug.escape(request.get_author(), quote=True))
         yield u'<div class="buttons">'
-        yield u'<input type="submit" name="save" value="%s">' % werkzeug.escape(_(u'Save'), quote=True)
-        yield u'<input type="submit" name="preview" value="%s">' % werkzeug.escape(_(u'Preview'), quote=True)
-        yield u'<input type="submit" name="cancel" value="%s">' % werkzeug.escape(_(u'Cancel'), quote=True)
+        yield (u'<input type="submit" name="save" value="%s">'
+               % werkzeug.escape(_(u'Save'), quote=True))
+        yield (u'<input type="submit" name="preview" value="%s">'
+               % werkzeug.escape(_(u'Preview'), quote=True))
+        yield (u'<input type="submit" name="cancel" value="%s">'
+               % werkzeug.escape(_(u'Cancel'), quote=True))
         yield u'</div>'
         yield u'</div></form>'
         if preview:
-            yield u'<h1 id="preview">%s</h1>' % werkzeug.escape(_(u'Preview, not saved'))
+            yield u'<h1 id="preview">%s</h1>' % werkzeug.escape(
+                _(u'Preview, not saved'))
             for part in self.view_content(request, title, preview):
                 yield part
 
@@ -1577,23 +1611,32 @@ class Wiki(object):
         try:
             f = self.storage.open_page(title)
             comment = _(u'changed')
-            rev, old_date, old_author, old_comment = self.storage.page_meta(title)
+            (rev, old_date, old_author,
+                old_comment) = self.storage.page_meta(title)
             if old_author == author:
                 comment = old_comment
         except werkzeug.exceptions.NotFound:
             f = []
             comment = _(u'uploaded')
             rev = -1
-        yield u"<p>%s</p>" % werkzeug.escape(_(u"This is a binary file, it can't be edited on a wiki. Please upload a new version instead."))
-        yield u'<form action="" method="POST" class="editor" enctype="multipart/form-data">'
+        yield u"<p>%s</p>" % werkzeug.escape(
+                _(u"This is a binary file, it can't be edited on a wiki. "
+                  u"Please upload a new version instead."))
+        yield (u'<form action="" method="POST" class="editor" '
+               u'enctype="multipart/form-data">')
         yield u'<div><div class="upload"><input type="file" name="data"></div>'
         yield u'<input type="hidden" name="parent" value="%d">' % rev
-        yield u'<label class="comment">%s <input name="comment" value="%s"></label>' % (werkzeug.escape(_(u'Comment')), werkzeug.escape(comment, quote=True))
+        yield (u'<label class="comment">%s <input name="comment" value="%s">'
+               u'</label>' % (
+                werkzeug.escape(_(u'Comment')),
+                werkzeug.escape(comment, quote=True)))
         yield u'<label>%s <input name="author" value="%s"></label>' % (
             _(u'Author'), werkzeug.escape(author))
         yield u'<div class="buttons">'
-        yield u'<input type="submit" name="save" value="%s">' % werkzeug.escape(_(u'Save'), quote=True)
-        yield u'<input type="submit" name="cancel" value="%s">' % werkzeug.escape(_(u'Cancel'), quote=True)
+        yield (u'<input type="submit" name="save" value="%s">'
+               % werkzeug.escape(_(u'Save'), quote=True))
+        yield (u'<input type="submit" name="cancel" value="%s">'
+               % werkzeug.escape(_(u'Cancel'), quote=True))
         yield u'</div></div></form>'
 
     def atom(self, request):
@@ -1684,7 +1727,9 @@ class Wiki(object):
                 first_title = title
                 first_rev = rev
                 first_date = date
-            item = u'<item><title>%s</title><link>%s</link><description>%s</description><pubDate>%s</pubDate><dc:creator>%s</dc:creator><guid>%s</guid></item>' % (
+            item = (u'<item><title>%s</title><link>%s</link>'
+                    u'<description>%s</description><pubDate>%s</pubDate>'
+                    u'<dc:creator>%s</dc:creator><guid>%s</guid></item>' % (
                 werkzeug.escape(title),
                 request.adapter.build(self.view, {'title': title},
                                                   force_external=True),
@@ -1693,7 +1738,7 @@ class Wiki(object):
                 werkzeug.escape(author),
                 request.adapter.build(self.revision,
                                       {'title': title, 'rev': rev})
-            )
+            ))
             rss_body.append(item)
         rss_head = u"""<?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0"
@@ -1713,7 +1758,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             werkzeug.escape(self.config.site_name),
             request.adapter.build(self.rss),
             request.adapter.build(self.recent_changes),
-            werkzeug.escape(_(u'Track the most recent changes to the wiki in this feed.')),
+            werkzeug.escape(_(u'Track the most recent changes to the wiki '
+                              u'in this feed.')),
             first_date,
         )
         content = [rss_head]+rss_body+[u'</channel></rss>']
@@ -1729,11 +1775,12 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         if rev is None:
             inode, size, mtime = self.storage.page_file_meta(title)
             response.set_etag(u'%s/%s/%d-%d' % (etag, werkzeug.url_quote(title),
-                                                    inode, mtime))
+                                                inode, mtime))
             if set_size:
                 response.content_length = size
         else:
-            response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title), rev))
+            response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title),
+                                             rev))
         response.make_conditional(request)
         if response.status.startswith('304'):
             response.response = []
@@ -1797,7 +1844,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                     'title': title, 'rev': rev})
             yield u'<li>'
             yield werkzeug.html.a(date.strftime('%F %H:%M'), href=url)
-            yield u'<input type="submit" name="%d" value="Undo" class="button">' % rev
+            yield (u'<input type="submit" name="%d" value="Undo" '
+                   u'class="button">' % rev)
             yield u' . . . . '
             yield request.wiki_link(author, author)
             yield u'<div class="comment">%s</div>' % werkzeug.escape(comment)
@@ -1857,7 +1905,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         to_url = request.adapter.build(self.revision,
                                        {'title': title, 'rev': to_rev})
         content = self.html_page(request, title, itertools.chain(
-            [u'<p>%s</p>' % werkzeug.escape(_(u'Differences between revisions %(link1)s and %(link2)s of page %(link)s.')) % {
+            [u'<p>%s</p>' % werkzeug.escape(_(u'Differences between revisions '
+                u'%(link1)s and %(link2)s of page %(link)s.')) % {
                 'link1': u'<a href="%s">%d</a>' % (from_url, from_rev),
                 'link2': u'<a href="%s">%d</a>' % (to_url, to_rev),
                 'link': request.wiki_link(title, title)
@@ -1932,7 +1981,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
     def page_search(self, request, words):
         result = sorted(self.index.find(words), key=lambda x:-x[0])
-        yield u'<p>%s</p>' % (_(u'%d page(s) containing all words:') % len(result))
+        yield u'<p>%s</p>' % (
+            _(u'%d page(s) containing all words:') % len(result))
         yield u'<ul>'
         for score, title in result:
             yield '<li><b>%s</b> (%d)<div class="snippet">%s</div></li>' % (
@@ -2027,10 +2077,10 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             try:
                 endpoint, values = adapter.match()
                 return endpoint(request, **values)
-            except werkzeug.exceptions.HTTPException, e:
+            except werkzeug.exceptions.HTTPException, err:
     #            import traceback
     #            traceback.print_exc()
-                return e
+                return err
         finally:
             request.cleanup()
             del request
@@ -2054,9 +2104,8 @@ def main():
         # site_name = 'Hatta Wiki',
         # page_charset = 'UTF-8',
     )
-    config._parse_args()
+    config.parse_args()
     host, port = config.interface, int(config.port)
-    config._parse_args()
     wiki = Wiki(config)
     server = wsgiref.simple_server.make_server(host, port, wiki.application)
     try:

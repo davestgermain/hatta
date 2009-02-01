@@ -57,7 +57,7 @@ if __name__ == "__main__":
     try:
         if not pid:
             import wsgiref.simple_server
-            config._parse_args()
+            config.parse_args()
             wiki = hatta.Wiki(config)
             server = wsgiref.simple_server.make_server(config.interface,
                                                        int(config.port),

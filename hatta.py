@@ -78,7 +78,7 @@ def external_link(addr):
     return (addr.startswith('http://') or addr.startswith('https://')
             or addr.startswith('ftp://') or addr.startswith('mailto:'))
 
-def page_mime(addr):
+def page_mime(self):
     """Guess the mime type based on the page name."""
 
     file_path = self._file_path(title)
@@ -88,7 +88,6 @@ def page_mime(addr):
     if mime is None:
         mime = 'text/x-wiki'
     return mime
-
 
 class WikiConfig(object):
     """

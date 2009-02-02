@@ -78,7 +78,7 @@ def external_link(addr):
             or addr.startswith('ftp://')
             or addr.startswith('mailto:'))
 
-def page_mime(self):
+def page_mime(addr):
     """Guess the mime type based on the page name."""
 
     mime, encoding = mimetypes.guess_type(addr, strict=False)

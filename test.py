@@ -52,7 +52,8 @@ class HattaStandalone(unittest.TestCase):
         """Check the page's docstring."""
 
         data = 'text=test&parent=-1&comment=created&author=test&save=Save'
-        response = self.client.post('/edit/Home', data=data, content_type='application/x-www-form-urlencoded')
+        response = self.client.post('/edit/Home', data=data,
+                            content_type='application/x-www-form-urlencoded')
         self.assertEqual(response.status_code, 303)
         response = self.client.get('')
         self.assertEqual(response.status_code, 200)
@@ -65,6 +66,18 @@ class HattaStandalone(unittest.TestCase):
         response = self.client.get('/edit/Home')
         data = ''.join(response.data)
         self.assert_(data.startswith(self.docstring))
+
+    def test_create_slash_page(self):
+        """Create a page with slash in name."""
+
+        data = 'text=test&parent=-1&comment=created&author=test&save=Save'
+        response = self.client.post('/edit/1/2', data=data,
+                            content_type='application/x-www-form-urlencoded')
+        self.assertEqual(response.status_code, 303)
+        response = self.client.get('/1/2')
+        self.assertEqual(response.status_code, 200)
+        response = self.client.get('/history/1/2/0')
+        self.assertEqual(response.status_code, 200)
 
 if __name__ == '__main__':
     unittest.main()

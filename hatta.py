@@ -1087,7 +1087,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
                 class_ = 'external'
                 href = addr
         else:
-            addr = addr.replace('/', '%2F')
+            #addr = addr.replace('/', '%2F')
             if '#' in addr:
                 addr, chunk = addr.split('#', 1)
                 chunk = '#%s' % chunk
@@ -1211,25 +1211,25 @@ class Wiki(object):
             werkzeug.routing.Rule('/',
                                   defaults={'title': self.config.front_page},
                                   endpoint=self.view, methods=['GET', 'HEAD']),
-            werkzeug.routing.Rule('/edit/<title>', endpoint=self.edit,
+            werkzeug.routing.Rule('/edit/<path:title>', endpoint=self.edit,
                                   methods=['GET']),
-            werkzeug.routing.Rule('/edit/<title>', endpoint=self.save,
+            werkzeug.routing.Rule('/edit/<path:title>', endpoint=self.save,
                                   methods=['POST']),
-            werkzeug.routing.Rule('/history/<title>', endpoint=self.history,
+            werkzeug.routing.Rule('/history/<path:title>', endpoint=self.history,
                                   methods=['GET', 'HEAD']),
-            werkzeug.routing.Rule('/undo/<title>', endpoint=self.undo,
+            werkzeug.routing.Rule('/undo/<path:title>', endpoint=self.undo,
                                   methods=['POST']),
             werkzeug.routing.Rule('/history/', endpoint=self.recent_changes,
                                   methods=['GET', 'HEAD']),
-            werkzeug.routing.Rule('/history/<title>/<int:rev>',
+            werkzeug.routing.Rule('/history/<path:title>/<int:rev>',
                                   endpoint=self.revision, methods=['GET']),
             werkzeug.routing.Rule(
                             '/history/<title>/<int:from_rev>:<int:to_rev>',
                                   endpoint=self.diff, methods=['GET']),
-            werkzeug.routing.Rule('/download/<title>',
+            werkzeug.routing.Rule('/download/<path:title>',
                                   endpoint=self.download,
                                   methods=['GET', 'HEAD']),
-            werkzeug.routing.Rule('/<title>', endpoint=self.view,
+            werkzeug.routing.Rule('/<path:title>', endpoint=self.view,
                                   methods=['GET', 'HEAD']),
             werkzeug.routing.Rule('/feed/rss', endpoint=self.rss,
                                   methods=['GET', 'HEAD']),
@@ -1241,7 +1241,7 @@ class Wiki(object):
                                   methods=['GET']),
             werkzeug.routing.Rule('/search', endpoint=self.search,
                                   methods=['GET', 'POST']),
-            werkzeug.routing.Rule('/search/<title>', endpoint=self.backlinks,
+            werkzeug.routing.Rule('/search/<path:title>', endpoint=self.backlinks,
                                   methods=['GET', 'POST']),
             werkzeug.routing.Rule('/off-with-his-head', endpoint=self.die,
                                   methods=['GET']),
@@ -1416,7 +1416,7 @@ class Wiki(object):
             def wiki_link(self, addr, label=None, class_=None, image=None):
                 if external_link(addr):
                     return u''
-                addr = addr.replace('/', '%2F')
+                #addr = addr.replace('/', '%2F')
                 if '#' in addr:
                     addr, chunk = addr.split('#', 1)
                 if addr == u'':

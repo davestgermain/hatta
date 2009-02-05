@@ -19,6 +19,11 @@ setup(
     data_files=[
         ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
         ('share/locale/ar/LC_MESSAGES', ['locale/ar/LC_MESSAGES/hatta.mo']),
+        ('share/locale/de/LC_MESSAGES', ['locale/de/LC_MESSAGES/hatta.mo']),
+        ('share/locale/da/LC_MESSAGES', ['locale/da/LC_MESSAGES/hatta.mo']),
+        ('share/locale/jp/LC_MESSAGES', ['locale/jp/LC_MESSAGES/hatta.mo']),
+        ('share/locale/fr/LC_MESSAGES', ['locale/fr/LC_MESSAGES/hatta.mo']),
+        ('share/locale/sv/LC_MESSAGES', ['locale/sv/LC_MESSAGES/hatta.mo']),
         ('share/icons/hicolor/scalable', ['hatta.svg']),
         ('share/applications', ['hatta.desktop']),
         ('share/doc/hatta/examples', ['hatta.fcg', 'hatta.wsgi']),

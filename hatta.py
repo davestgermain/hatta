@@ -47,10 +47,10 @@ import itertools
 import mimetypes
 import os
 import re
-import shelve
 import tempfile
 import weakref
 import wsgiref.simple_server
+import sqlite3
 
 import werkzeug
 
@@ -112,7 +112,7 @@ class WikiConfig(object):
     page_charset = 'utf-8'
     config_file = 'hatta.conf'
     html_head = u''
-    default_style = u"""html { background: #fff; color: #2e3436; 
+    default_style = u"""html { background: #fff; color: #2e3436;
     font-family: sans-serif; font-size: 96% }
 body { margin: 1em auto; line-height: 1.3; width: 40em }
 a { color: #3465a4; text-decoration: none }
@@ -123,7 +123,7 @@ a.external { color: #3465a4; text-decoration: underline }
 a.external:visited { color: #75507b }
 a img { border: none }
 img.math, img.smiley { vertical-align: middle }
-pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word; 
+pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word;
     white-space: -moz-pre-wrap; white-space: -pre-wrap;
     white-space: -o-pre-wrap; line-height: 1.2; color: #555753 }
 pre.diff div.orig { font-size: 75%; color: #babdb6 }
@@ -137,11 +137,11 @@ div.buttons { text-align: center }
 input.button, div.buttons input { font-weight: bold; font-size: 100%;
     background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
 .history input.button { font-size: 75% }
-.editor textarea { width: 100%; display: block; font-size: 100%; 
+.editor textarea { width: 100%; display: block; font-size: 100%;
     border: solid 1px #babdb6; }
 .editor label { display:block; text-align: right }
 .editor .upload { margin: 2em auto; text-align: center }
-form.search input.search, .editor label input { font-size: 100%; 
+form.search input.search, .editor label input { font-size: 100%;
     border: solid 1px #babdb6; margin: 0.125em 0 }
 .editor label.comment input  { width: 32em }
 a.logo { float: left; display: block; margin: 0.25em }
@@ -830,28 +830,28 @@ class WikiSearch(object):
 |\w+""", re.X|re.UNICODE)
     word_pattern = re.compile(ur"""\w[-~&\w]+\w""", re.UNICODE)
 
-    def __init__(self, cache_path, repo):
+    def __init__(self, cache_path, lang):
         self.path = cache_path
-        self.filename = os.path.join(cache_path, 'index')
-        self.index_file = "%s.words" % self.filename
-        self.links_file = "%s.links" % self.filename
-        self.labels_file = "%s.labels" % self.filename
-        self.backlinks_file = "%s.back" % self.filename
-        self.index = shelve.open(self.index_file, protocol=2)
-        try:
-            self.links_timestamp = os.stat(self.links_file).st_mtime
-        except OSError:
-            self.links_timestamp = 0
-        self.links = shelve.open(self.links_file, protocol=2)
-        self.labels = shelve.open(self.labels_file, protocol=2)
-        try:
-            self.backlinks_timestamp = os.stat(self.backlinks_file).st_mtime
-        except OSError:
-            self.backlinks_timestamp = 0
-        self.backlinks = shelve.open(self.backlinks_file, protocol=2)
-        self._lockref = None
-        self.repo = repo
-        self.stop_words_re = re.compile(u'('+u'|'.join(_(
+        self.lang = lang
+        self.filename = os.path.join(cache_path, 'index.sqlite3')
+        if not os.path.isdir(self.path):
+            self.empty = True
+            os.makedirs(self.path)
+        else:
+            self.empty = False
+        self.con = sqlite3.connect(self.filename)
+        self.con.execute('create table if not exists titles '
+                         '(id integer primary key, title text);')
+        self.con.execute('create table if not exists words '
+                         '(word text, page integer, count integer);')
+        self.con.execute('create table if not exists links '
+                         '(src integer, target integer, label text, number integer);')
+#        self.con.execute('create unique index if not exists idents on titles (title);')
+#        self.con.execute('create index if not exists iwords on words (word);')
+#        self.con.execute('create index if not exists ititles on words (page);')
+        self.con.commit()
+
+        self.stop_words_re = re.compile(u'|'.join(_(
 u"""am ii iii per po re a about above
 across after afterwards again against all almost alone along already also
 although always am among ain amongst amoungst amount an and another any aren
@@ -877,175 +877,127 @@ through throughout thru thus to together too toward towards twelve twenty two
 un under ve until up upon us very via was wasn we well were what whatever when
 whence whenever where whereafter whereas whereby wherein whereupon wherever
 whether which while whither who whoever whole whom whose why will with within
-without would yet you your yours yourself yourselves"""
-).split())+ur'|[0-9]+)$', re.X|re.I|re.U)
-
-    def lock(self):
-        if self._lockref and self._lockref():
-            return self._lockref()
-        lock = self.repo._lock(os.path.join(self.path, "wikisearchlock"),
-                               True, None, None, "Search wiki lock")
-        self._lockref = weakref.ref(lock)
-        return lock
+without would yet you your yours yourself yourselves""").split())+ur'|.*\d.*',
+re.U|re.I|re.X)
 
     def split_text(self, text):
-        """Split text into words. Uses Japanese splitter if available."""
-
         for match in self.word_pattern.finditer(text):
             word = match.group(0)
-            if split_japanese is None:
+            if not self.stop_words_re.match(word):
                 yield word.lower()
-            else:
-                japanese_words = list(split_japanese(word, False))
-                if len(japanese_words) > 1:
-                    for word in japanese_words:
-                        yield word.lower()
-                else:
-                    yield word.lower()
-            parts = self.split_pattern.findall(word)
-            if len(parts) > 1:
-                for part in parts:
-                    yield part.lower()
 
-    def filter_words(self, words):
-        """Filter out stop words, numbers, too long words, etc."""
-        for word in words:
-            if len(word) >= 25:
-                continue
-            match = self.stop_words_re.match(word)
-            if match:
-                continue
-            yield word
+    def split_japanese_text(self, text):
+        for match in self.word_pattern.finditer(text):
+            word = match.group(0)
+            got_japanese = False
+            for w in split_japanese(word, False):
+                got_japanese = True
+                yield w.lower()
+            if not got_japanese:
+                yield word.lower()
 
     def count_words(self, words):
-        """Check how many times each word appears in the list."""
-
         count = {}
         for word in words:
             count[word] = count.get(word, 0) + 1
         return count
 
-    def add_words(self, title, text):
-        """Add words to the word index for specified page."""
-
-        encoded_title = title.encode('utf-8', 'backslashreplace')
-        if text:
-            words = self.count_words(self.filter_words(self.split_text(text)))
+    def get_id(self, title):
+        c = self.con.execute('select id from titles where title=?;', (title,))
+        idents = c.fetchone()
+        if idents is not None:
+            return idents[0]
         else:
-            words = {}
-        filtered = self.filter_words(self.split_text(title))
-        title_words = self.count_words(filtered)
+            return None
+
+    def add_id(self, title):
+        self.con.execute('insert into titles (title) values (?);', (title,))
+
+    def title_id(self, title):
+        ident = self.get_id(title)
+        if ident is None:
+            self.add_id(title)
+            ident = self.get_id(title)
+        return ident
+
+    def id_title(self, ident):
+        c = self.con.execute('select title from titles where id=?;', (ident,))
+        return c.fetchone()[0]
+
+    def add_words(self, title, text):
+        self.add_id(title)
+        title_id = self.get_id(title)
+        if self.lang == 'jp' and split_japanese:
+            words = self.count_words(self.split_japanese_text(text))
+        else:
+            words = self.count_words(self.split_text(text))
+        title_words = self.count_words(self.split_text(title))
         for word, count in title_words.iteritems():
             words[word] = words.get(word, 0) + count
-        self.index.sync()
         for word, count in words.iteritems():
-            encoded_word = word.encode("utf-8")
-            if encoded_word not in self.index:
-                stored = {}
-            else:
-                stored = self.index[encoded_word]
-            stored[encoded_title] = count
-            self.index[encoded_word] = stored
-        self.index.sync()
+            self.con.execute('insert into words values (?, ?, ?);',
+                             (word, title_id, count))
+            pass
+
+    def update_words(self, title, text):
+        title_id = self.title_id(title)
+        if self.lang == 'jp' and split_japanese:
+            words = self.count_words(self.split_japanese_text(text))
+        else:
+            words = self.count_words(self.split_text(text))
+        title_words = self.count_words(self.split_text(title))
+        for word, count in title_words.iteritems():
+            words[word] = words.get(word, 0) + count
+        self.con.execute('delete from words where page=?;', (title_id,))
+        for word, count in words.iteritems():
+            self.con.execute('insert into words values (?, ?, ?);',
+                             (word, title_id, count))
+            pass
+        self.con.commit()
 
     def add_links(self, title, links_and_labels):
-        """Add links to the link index for specified page."""
-
-        links, labels = links_and_labels
-        self.links.sync()
-        self.links[title.encode('utf-8', 'backslashreplace')] = links
-        self.links.sync()
-        self.labels.sync()
-        self.labels[title.encode('utf-8', 'backslashreplace')] = labels
-        self.labels.sync()
-
-    def regenerate_backlinks(self):
-        """Create backlinks indices based on the links indices."""
-
-        self.links.sync()
-        for key in self.backlinks:
-            self.backlinks[key] = []
-        for encoded_title, links in self.links.iteritems():
-            for link in links:
-                encoded_link = link.encode('utf-8', 'backslashreplace')
-                backlinks = self.backlinks.get(encoded_link, [])
-                if encoded_title not in backlinks:
-                    backlinks.append(encoded_title)
-                self.backlinks[encoded_link] = backlinks
-        self.backlinks.sync()
-
-    def update_backlinks(self, title, old_links, new_links):
-        """Updates backlinks index for specified page."""
-
-        encoded_title = title.encode('utf-8', 'backslashreplace')
-        self.backlinks.sync()
-        self.links.sync()
-        for link in old_links:
-            encoded = link.encode('utf-8', 'backslashreplace')
-            backlinks = self.backlinks.get(encoded, [])
-            try:
-                backlinks.remove(encoded_title)
-            except ValueError:
-                pass
-            self.backlinks[encoded] = backlinks
-        for link in new_links:
-            encoded_link = link.encode('utf-8', 'backslashreplace')
-            backlinks = self.backlinks.get(encoded_link, [])
-            if encoded_title not in backlinks:
-                backlinks.append(encoded_title)
-                self.backlinks[encoded_link] = backlinks
-        self.backlinks.sync()
+        title_id = self.title_id(title)
+        self.con.execute('delete from links where src=?;', (title_id,))
+        for number, (link, label) in enumerate(links_and_labels):
+            self.con.execute('insert into links values (?, ?, ?, ?);',
+                             (title_id, link, label, number))
+        self.con.commit()
 
     def page_backlinks(self, title):
-        """Get the backlinks to specified page."""
-
-        timestamp = os.stat(self.backlinks_file).st_mtime
-        if timestamp > self.backlinks_timestamp:
-            self.backlinks_timestamp = timestamp
-            self.backlinks.sync()
-        encoded_link = title.encode('utf-8', 'backslashreplace')
-        for encoded_title in self.backlinks.get(encoded_link, []):
-            yield unicode(encoded_title, 'utf-8', 'backslashreplace')
+        sql = 'select src from links where target=? order by number;'
+        for (ident,) in self.con.execute(sql, (title,)):
+            yield self.id_title(ident)
 
     def page_links(self, title):
-        """Get link targets from specified page."""
+        title_id = self.title_id(title)
+        sql = 'select target from links where src=? order by number;'
+        for (link,) in self.con.execute(sql, (title_id,)):
+            yield link
 
-        timestamp = os.stat(self.links_file).st_mtime
-        if timestamp > self.links_timestamp:
-            self.links_timestamp = timestamp
-            self.links.sync()
-        encoded_title = title.encode('utf-8', 'backslashreplace')
-        return self.links.get(encoded_title, [])
-
-    def page_labels(self, title):
-        """Get link labels from specified page."""
-
-        encoded_title = title.encode('utf-8', 'backslashreplace')
-        return self.labels.get(encoded_title, [])
+    def page_links_and_labels (self, title):
+        title_id = self.title_id(title)
+        sql = 'select target, label from links where src=? order by number;'
+        return self.con.execute(sql, (title_id,))
 
     def find(self, words):
-        """Find words in the pages."""
-
         first = words[0]
         rest = words[1:]
-        try:
-            first_counts = self.index[first.encode("utf-8")]
-        except KeyError:
-            return
-        self.index.sync()
-        for encoded_title, count in first_counts.iteritems():
+        first_counts = self.con.execute('select page, count from words '
+                                        'where word=?;', (first,))
+        for title_id, count in first_counts:
             score = count
+            got = True
             for word in rest:
-                try:
-                    counts = self.index[word.encode("utf-8")]
-                except KeyError:
-                    return
-                if encoded_title in counts:
-                    score += counts[encoded_title]
-                else:
-                    score = 0
-            if score > 0:
-                yield score, unicode(encoded_title, 'utf-8', 'backslashreplace')
+                counts = self.con.execute('select count from words '
+                                          'where word=? and page=?;',
+                                          (word, title_id))
+                got = False
+                for c in counts:
+                    score += c
+                    got = True
+            if got and score > 0:
+                yield score, self.id_title(title_id)
+
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):
@@ -1204,9 +1156,9 @@ class Wiki(object):
             reindex = True
         else:
             reindex = False
-        self.index = WikiSearch(self.cache, self.storage.repo)
+        self.index = WikiSearch(self.cache, self.config.language)
         if reindex:
-            self.reindex()
+            self.reindex(self.storage.all_pages())
         self.url_map = werkzeug.routing.Map([
             werkzeug.routing.Rule('/',
                                   defaults={'title': self.config.front_page},
@@ -1296,15 +1248,10 @@ class Wiki(object):
                % werkzeug.escape(_(u'Search'), quote=True))
         yield u'</div></form>'
         if self.config.menu_page in self.storage:
-            menu = self.index.page_links(self.config.menu_page)
-            labels = self.index.page_labels(self.config.menu_page)
+            menu = self.index.page_links_and_labels(self.config.menu_page)
             if menu:
                 yield u'<div class="menu">'
-                for i, link in enumerate(menu):
-                    try:
-                        label = labels[i] or link
-                    except IndexError:
-                        pass
+                for link, label in menu:
                     if link == title:
                         css = u' class="current"'
                     else:
@@ -1404,60 +1351,31 @@ class Wiki(object):
                 raise werkzeug.exceptions.Forbidden()
 
     def extract_links(self, text):
-        class LinkExtractor(object):
-            """Collect links when parsing a wiki page."""
-
-            def __init__(self):
-                self.links = []
-                self.link_labels = []
-                self.images = []
-                self.image_labels = []
-
-            def wiki_link(self, addr, label=None, class_=None, image=None):
-                if external_link(addr):
-                    return u''
-                #addr = addr.replace('/', '%2F')
-                if '#' in addr:
-                    addr, chunk = addr.split('#', 1)
-                if addr == u'':
-                    return u''
-                self.links.append(addr)
-                self.link_labels.append(label)
+        links = []
+        def link(self, addr, label=None, class_=None, image=None):
+            if external_link(addr):
                 return u''
-
-            def wiki_image(self, addr, alt=None, class_=None):
-                if external_link(addr):
-                    return u''
-                if '#' in addr:
-                    addr, chunk = addr.split('#', 1)
-                if addr == u'':
-                    return u''
-                self.links.append(addr)
-                self.link_labels.append(alt)
+            if '#' in addr:
+                addr, chunk = addr.split('#', 1)
+            if addr == u'':
                 return u''
-
-        helper = LinkExtractor()
+            links.append((addr, label))
+            return u''
         lines = text.split('\n')
-        for part in self.parser.parse(lines, helper.wiki_link,
-                                      helper.wiki_image):
+        for part in self.parser.parse(lines, link, link):
             pass
-        return helper.links, helper.link_labels
+        return links
 
     def index_text(self, title, text):
-        lock = self.index.lock()
-        try:
-            mime = self.storage.page_mime(title)
-            if mime == 'text/x-wiki':
-                old_links = self.index.page_links(title)
-                new_links, labels = self.extract_links(text)
-                self.index.update_backlinks(title, old_links, new_links)
-                self.index.add_links(title, (new_links, labels))
-            if mime.startswith('text/'):
-                self.index.add_words(title, text)
-            else:
-                self.index.add_words(title, u'')
-        finally:
-            del lock
+        mime = self.storage.page_mime(title)
+        if mime == 'text/x-wiki':
+            links = self.extract_links(text)
+            self.index.add_links(title, links)
+        if mime.startswith('text/'):
+            self.index.update_words(title, text)
+        else:
+            self.index.update_words(title, u'')
+        self.index.con.commit()
 
     def save(self, request, title):
         self.check_lock(title)
@@ -1961,7 +1879,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
     def search(self, request):
         query = request.values.get('q', u'')
-        words = tuple(self.index.filter_words(self.index.split_text(query)))
+        words = tuple(self.index.split_text(query))
         if not words:
             content = self.page_index(request)
             title = _(u'Page index')
@@ -2034,20 +1952,17 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                  )
         return werkzeug.Response(robots, mimetype='text/plain')
 
-    def reindex(self):
-        lock = self.index.lock()
-        try:
-            for title in self.storage.all_pages():
-                mime = self.storage.page_mime(title)
-                if mime.startswith('text/'):
-                    data = self.storage.open_page(title).read()
-                    text = unicode(data, self.config.page_charset, 'replace')
-                else:
-                    text = u''
-                self.index_text(title, text)
-            self.index.regenerate_backlinks()
-        finally:
-            del lock
+    def reindex(self, pages):
+        for title in pages:
+            mime = self.storage.page_mime(title)
+            if mime.startswith('text/'):
+                text = self.page_text(title)
+                self.index.add_words(title, text)
+                if mime == 'text/x-wiki':
+                    links = self.extract_links(text)
+                    self.index.add_links(title, links)
+        self.index.con.commit()
+        self.index.empty = False
 
     def wiki_math(self, math):
         if '%s' in self.config.math_url:

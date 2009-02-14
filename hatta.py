@@ -1283,11 +1283,12 @@ class Wiki(object):
             backlinks = request.adapter.build(self.backlinks, {'title': title},
                                               method='GET')
             yield u'<div class="footer">'
-            yield u'<a href="%s" class="edit">%s</a> ' % (edit,
-                werkzeug.escape(_(u'Edit')))
+            if not self.config.read_only:
+                yield u'<a href="%s" class="edit">%s</a> ' % (edit,
+                    werkzeug.escape(_(u'Edit')))
             yield u'<a href="%s" class="history">%s</a> ' % (history,
                 werkzeug.escape(_(u'History')))
-            yield u'<a href="%s" class="history">%s</a> ' % (backlinks,
+            yield u'<a href="%s" class="backlinks">%s</a> ' % (backlinks,
                 werkzeug.escape(_(u'Backlinks')))
             yield u'</div>'
         yield u'</div></body></html>'
@@ -1776,8 +1777,9 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                     'title': title, 'rev': rev})
             yield u'<li>'
             yield werkzeug.html.a(date.strftime('%F %H:%M'), href=url)
-            yield (u'<input type="submit" name="%d" value="Undo" '
-                   u'class="button">' % rev)
+            if not self.config.read_only:
+                yield (u'<input type="submit" name="%d" value="Undo" '
+                       u'class="button">' % rev)
             yield u' . . . . '
             yield request.wiki_link(author, author)
             yield u'<div class="comment">%s</div>' % werkzeug.escape(comment)

@@ -932,7 +932,7 @@ re.U|re.I|re.X)
     def add_words(self, title, text):
         self.add_id(title)
         title_id = self.get_id(title)
-        if self.lang == 'jp' and split_japanese:
+        if self.lang == 'ja' and split_japanese:
             words = self.count_words(self.split_japanese_text(text))
         else:
             words = self.count_words(self.split_text(text))

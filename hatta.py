@@ -823,19 +823,7 @@ class WikiSearch(object):
     backlinks. Uses a cache directory to store the index files.
     """
 
-    digits_pattern = re.compile(ur"""^[=+~-]?[\d,.:-]+\w?\w?%?$""", re.UNICODE)
-    split_pattern = re.compile(ur"""
-[A-ZĄÂÃĀÄÅÁÀĂĘÉÊĚËĒÈŚĆÇČŁÓÒÖŌÕÔŃŻŹŽÑÍÏĐÞÐÆŸØ]
-[a-ząâãāäåáàăęéêěëēèśćçčłóòöōõôńżźžñíïđþðæÿø]+
-|\w+""", re.X|re.UNICODE)
     word_pattern = re.compile(ur"""\w[-~&\w]+\w""", re.UNICODE)
-
-    @property
-    def con(self):
-        """Lazily create a connection."""
-        if not self._con:
-            self._con = sqlite3.connect(self.filename)
-        return self._con
 
     def __init__(self, cache_path, lang):
         self.path = cache_path
@@ -855,7 +843,6 @@ class WikiSearch(object):
                          '(src integer, target integer, label text, number integer);')
         con.commit()
         self._con = None
-
         self.stop_words_re = re.compile(u'|'.join(_(
 u"""am ii iii per po re a about above
 across after afterwards again against all almost alone along already also
@@ -884,6 +871,13 @@ whence whenever where whereafter whereas whereby wherein whereupon wherever
 whether which while whither who whoever whole whom whose why will with within
 without would yet you your yours yourself yourselves""").split())+ur'|.*\d.*',
 re.U|re.I|re.X)
+
+    @property
+    def con(self):
+        """Lazily create a connection."""
+        if not self._con:
+            self._con = sqlite3.connect(self.filename)
+        return self._con
 
     def split_text(self, text):
         for match in self.word_pattern.finditer(text):

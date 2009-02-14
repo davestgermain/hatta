@@ -79,6 +79,18 @@ class HattaStandalone(unittest.TestCase):
         response = self.client.get('/history/1/2/0')
         self.assertEqual(response.status_code, 200)
 
+    def test_search(self):
+        """Test simple searching."""
+
+        data = 'text=test&parent=-1&comment=created&author=test&save=Save'
+        response = self.client.post('/edit/searching', data=data,
+                            content_type='application/x-www-form-urlencoded')
+        self.assertEqual(response.status_code, 303)
+        response = self.client.get('/search?q=test')
+        self.assertEqual(response.status_code, 200)
+        data = ''.join(response.data)
+        self.assert_('>searching</a>' in data)
+
 if __name__ == '__main__':
     unittest.main()
 

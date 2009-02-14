@@ -37,6 +37,8 @@ Options:
                         Read configuration from FILE
   -l LANG, --language=LANG
                         Translate interface to LANG
+  -r, --read-only       Whether the wiki should be read-only
+
 """
 
 import base64
@@ -98,6 +100,7 @@ class WikiConfig(object):
     interface = ''
     port = 8080
     language = None
+    read_only = False
     pages_path = 'docs'
     cache_path = 'cache'
     site_name = u'Hatta Wiki'
@@ -173,6 +176,15 @@ hr { background: transparent; border:none; height: 0;
     def __init__(self, **keywords):
         self.parse_environ()
         self.__dict__.update(keywords)
+        self.sanitize()
+
+    def sanitize(self):
+        if self.read_only in (True, 'True', 'true', 'TRUE',
+                              '1', 'on', 'On', 'ON'):
+            self.read_only = True
+        else:
+            self.read_only = False
+        self.port = int(self.port)
 
     def parse_environ(self):
         """Check the environment variables for options."""
@@ -212,6 +224,9 @@ hr { background: transparent; border:none; height: 0;
                           help='Read configuration from FILE', metavar='FILE')
         parser.add_option('-l', '--language', dest='language',
                           help='Translate interface to LANG', metavar='LANG')
+        parser.add_option('-r', '--read-only', dest='read_only', default=False,
+                          help='Whether the wiki should be read-only',
+                          action="store_true")
         options, args = parser.parse_args()
         self.pages_path = options.pages_path or self.pages_path
         self.cache_path = options.cache_path or self.cache_path
@@ -223,6 +238,7 @@ hr { background: transparent; border:none; height: 0;
         self.front_page = options.front_page or self.front_page
         self.config_file = options.config_file or self.config_file
         self.language = options.language or self.language
+        self.read_only = options.read_only or self.read_only
 
     def parse_files(self, files=()):
         """Check the config files for options."""
@@ -1344,6 +1360,8 @@ class Wiki(object):
         return response
 
     def check_lock(self, title):
+        if self.config.read_only:
+            raise werkzeug.exceptions.Forbidden()
         if self.config.locked_page in self.storage:
             if title in self.index.page_links(self.config.locked_page):
                 raise werkzeug.exceptions.Forbidden()

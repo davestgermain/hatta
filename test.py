@@ -91,6 +91,20 @@ class HattaStandalone(unittest.TestCase):
         data = ''.join(response.data)
         self.assert_('>searching</a>' in data)
 
+    def test_read_only_edit(self):
+        self.config.read_only = True
+        data = 'text=test&parent=-1&comment=created&author=test&save=Save'
+        response = self.client.post('/edit/readonly', data=data,
+                            content_type='application/x-www-form-urlencoded')
+        self.assertEqual(response.status_code, 403)
+
+    def test_read_only_undo(self):
+        self.config.read_only = True
+        data = '52=Undo'
+        response = self.client.post('/undo/readonly', data=data,
+                            content_type='application/x-www-form-urlencoded')
+        self.assertEqual(response.status_code, 403)
+
 if __name__ == '__main__':
     unittest.main()
 

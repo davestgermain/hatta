@@ -858,7 +858,6 @@ class WikiSearch(object):
         con.execute('create table if not exists links '
                          '(src integer, target integer, label text, number integer);')
         con.commit()
-        self._con = None
         self.stop_words_re = re.compile(u'|'.join(_(
 u"""am ii iii per po re a about above
 across after afterwards again against all almost alone along already also
@@ -888,13 +887,6 @@ whether which while whither who whoever whole whom whose why will with within
 without would yet you your yours yourself yourselves""").split())+ur'|.*\d.*',
 re.U|re.I|re.X)
 
-    @property
-    def con(self):
-        """Lazily create a connection."""
-        if not self._con:
-            self._con = sqlite3.connect(self.filename)
-        return self._con
-
     def split_text(self, text):
         for match in self.word_pattern.finditer(text):
             word = match.group(0)
@@ -917,31 +909,32 @@ re.U|re.I|re.X)
             count[word] = count.get(word, 0) + 1
         return count
 
-    def get_id(self, title):
-        c = self.con.execute('select id from titles where title=?;', (title,))
+    def get_id(self, title, con):
+        c = con.execute('select id from titles where title=?;', (title,))
         idents = c.fetchone()
         if idents is not None:
             return idents[0]
         else:
             return None
 
-    def add_id(self, title):
-        self.con.execute('insert into titles (title) values (?);', (title,))
+    def add_id(self, title, con):
+        con.execute('insert into titles (title) values (?);', (title,))
 
-    def title_id(self, title):
-        ident = self.get_id(title)
+    def title_id(self, title, con):
+        ident = self.get_id(title, con)
         if ident is None:
-            self.add_id(title)
-            ident = self.get_id(title)
+            self.add_id(title, con)
+            ident = self.get_id(title, con)
         return ident
 
-    def id_title(self, ident):
-        c = self.con.execute('select title from titles where id=?;', (ident,))
+    def id_title(self, ident, con):
+        c = con.execute('select title from titles where id=?;', (ident,))
         return c.fetchone()[0]
 
     def add_words(self, title, text):
-        self.add_id(title)
-        title_id = self.get_id(title)
+        con = sqlite3.connect(self.filename)
+        self.add_id(title, con)
+        title_id = self.get_id(title, con)
         if self.lang == 'ja' and split_japanese:
             words = self.count_words(self.split_japanese_text(text))
         else:
@@ -950,12 +943,13 @@ re.U|re.I|re.X)
         for word, count in title_words.iteritems():
             words[word] = words.get(word, 0) + count
         for word, count in words.iteritems():
-            self.con.execute('insert into words values (?, ?, ?);',
+            con.execute('insert into words values (?, ?, ?);',
                              (word, title_id, count))
-        self.con.commit()
+        con.commit()
 
     def update_words(self, title, text):
-        title_id = self.title_id(title)
+        con = sqlite3.connect(self.filename)
+        title_id = self.title_id(title, con)
         if self.lang == 'jp' and split_japanese:
             words = self.count_words(self.split_japanese_text(text))
         else:
@@ -963,46 +957,51 @@ re.U|re.I|re.X)
         title_words = self.count_words(self.split_text(title))
         for word, count in title_words.iteritems():
             words[word] = words.get(word, 0) + count
-        self.con.execute('delete from words where page=?;', (title_id,))
+        con.execute('delete from words where page=?;', (title_id,))
         for word, count in words.iteritems():
-            self.con.execute('insert into words values (?, ?, ?);',
+            con.execute('insert into words values (?, ?, ?);',
                              (word, title_id, count))
-        self.con.commit()
+        con.commit()
 
     def add_links(self, title, links_and_labels):
-        title_id = self.title_id(title)
-        self.con.execute('delete from links where src=?;', (title_id,))
+        con = sqlite3.connect(self.filename)
+        title_id = self.title_id(title, con)
+        con.execute('delete from links where src=?;', (title_id,))
         for number, (link, label) in enumerate(links_and_labels):
-            self.con.execute('insert into links values (?, ?, ?, ?);',
+            con.execute('insert into links values (?, ?, ?, ?);',
                              (title_id, link, label, number))
-        self.con.commit()
+        con.commit()
 
     def page_backlinks(self, title):
+        con = sqlite3.connect(self.filename)
         sql = 'select src from links where target=? order by number;'
-        for (ident,) in self.con.execute(sql, (title,)):
-            yield self.id_title(ident)
+        for (ident,) in con.execute(sql, (title,)):
+            yield self.id_title(ident, con)
 
     def page_links(self, title):
-        title_id = self.title_id(title)
+        con = sqlite3.connect(self.filename)
+        title_id = self.title_id(title, con)
         sql = 'select target from links where src=? order by number;'
-        for (link,) in self.con.execute(sql, (title_id,)):
+        for (link,) in con.execute(sql, (title_id,)):
             yield link
 
     def page_links_and_labels (self, title):
-        title_id = self.title_id(title)
+        con = sqlite3.connect(self.filename)
+        title_id = self.title_id(title, con)
         sql = 'select target, label from links where src=? order by number;'
-        return self.con.execute(sql, (title_id,))
+        return con.execute(sql, (title_id,))
 
     def find(self, words):
+        con = sqlite3.connect(self.filename)
         first = words[0]
         rest = words[1:]
-        first_counts = self.con.execute('select page, count from words '
+        first_counts = con.execute('select page, count from words '
                                         'where word=?;', (first,))
         for title_id, count in first_counts:
             score = count
             got = True
             for word in rest:
-                counts = self.con.execute('select count from words '
+                counts = con.execute('select count from words '
                                           'where word=? and page=?;',
                                           (word, title_id))
                 got = False
@@ -1010,7 +1009,7 @@ re.U|re.I|re.X)
                     score += c
                     got = True
             if got and score > 0:
-                yield score, self.id_title(title_id)
+                yield score, self.id_title(title_id, con)
 
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,

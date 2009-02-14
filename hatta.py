@@ -943,6 +943,7 @@ re.U|re.I|re.X)
             self.con.execute('insert into words values (?, ?, ?);',
                              (word, title_id, count))
             pass
+        self.con.commit()
 
     def update_words(self, title, text):
         title_id = self.title_id(title)

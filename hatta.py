@@ -1352,7 +1352,7 @@ class Wiki(object):
 
     def extract_links(self, text):
         links = []
-        def link(self, addr, label=None, class_=None, image=None):
+        def link(addr, label=None, class_=None, image=None, alt=None):
             if external_link(addr):
                 return u''
             if '#' in addr:
@@ -1956,7 +1956,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         for title in pages:
             mime = self.storage.page_mime(title)
             if mime.startswith('text/'):
-                text = self.page_text(title)
+                data = self.storage.open_page(title).read()
+                text = unicode(data, self.config.page_charset, 'replace')
                 self.index.add_words(title, text)
                 if mime == 'text/x-wiki':
                     links = self.extract_links(text)

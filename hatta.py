@@ -942,7 +942,6 @@ re.U|re.I|re.X)
         for word, count in words.iteritems():
             self.con.execute('insert into words values (?, ?, ?);',
                              (word, title_id, count))
-            pass
         self.con.commit()
 
     def update_words(self, title, text):
@@ -958,7 +957,6 @@ re.U|re.I|re.X)
         for word, count in words.iteritems():
             self.con.execute('insert into words values (?, ?, ?);',
                              (word, title_id, count))
-            pass
         self.con.commit()
 
     def add_links(self, title, links_and_labels):

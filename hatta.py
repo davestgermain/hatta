@@ -1380,7 +1380,6 @@ class Wiki(object):
             self.index.update_words(title, text)
         else:
             self.index.update_words(title, u'')
-        self.index.con.commit()
 
     def save(self, request, title):
         self.check_lock(title)
@@ -1967,7 +1966,6 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 if mime == 'text/x-wiki':
                     links = self.extract_links(text)
                     self.index.add_links(title, links)
-        self.index.con.commit()
         self.index.empty = False
 
     def wiki_math(self, math):

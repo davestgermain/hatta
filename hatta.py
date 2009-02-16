@@ -789,14 +789,14 @@ class WikiParser(object):
         level = 0
         for line in block:
             nest = len(self.bullets_re.match(line).group(0).strip())
-            if nest > level:
+            if nest == level:
+                yield '</li>'
+            while nest > level:
                 yield '<ul>'
                 level += 1
-            elif nest < level:
+            while nest < level:
                 yield '</li></ul></li>'
                 level -= 1
-            else:
-                yield '</li>'
             content = line.lstrip().lstrip('*').strip()
             yield '<li>%s%s' % (
                 u"".join(self.parse_line(content)),

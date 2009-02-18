@@ -852,12 +852,13 @@ class WikiSearch(object):
             self.empty = False
         con = sqlite3.connect(self.filename)
         con.execute('create table if not exists titles '
-                         '(id integer primary key, title text);')
+                '(id integer primary key, title text);')
         con.execute('create table if not exists words '
-                         '(word text, page integer, count integer);')
+                '(word text, page integer, count integer);')
         con.execute('create table if not exists links '
-                         '(src integer, target integer, label text, number integer);')
+                '(src integer, target integer, label text, number integer);')
         con.commit()
+        self.con = None
         self.stop_words_re = re.compile(u'^('+u'|'.join(_(
 u"""am ii iii per po re a about above
 across after afterwards again against all almost alone along already also
@@ -886,6 +887,14 @@ whence whenever where whereafter whereas whereby wherein whereupon wherever
 whether which while whither who whoever whole whom whose why will with within
 without would yet you your yours yourself yourselves""").split())+ur')$|.*\d.*',
 re.U|re.I|re.X)
+
+    def connect(self):
+        if self.con:
+            return
+        self.con = sqlite3.connect(self.filename)
+
+    def disconnect(self):
+        self.con = None
 
     def split_text(self, text):
         for match in self.word_pattern.finditer(text):
@@ -932,7 +941,7 @@ re.U|re.I|re.X)
         return c.fetchone()[0]
 
     def add_words(self, title, text):
-        con = sqlite3.connect(self.filename)
+        con = self.con # sqlite3.connect(self.filename)
         self.add_id(title, con)
         title_id = self.get_id(title, con)
         if self.lang == 'ja' and split_japanese:
@@ -948,7 +957,7 @@ re.U|re.I|re.X)
         con.commit()
 
     def update_words(self, title, text):
-        con = sqlite3.connect(self.filename)
+        con = self.con # sqlite3.connect(self.filename)
         title_id = self.title_id(title, con)
         if self.lang == 'jp' and split_japanese:
             words = self.count_words(self.split_japanese_text(text))
@@ -964,7 +973,7 @@ re.U|re.I|re.X)
         con.commit()
 
     def add_links(self, title, links_and_labels):
-        con = sqlite3.connect(self.filename)
+        con = self.con # sqlite3.connect(self.filename)
         title_id = self.title_id(title, con)
         con.execute('delete from links where src=?;', (title_id,))
         for number, (link, label) in enumerate(links_and_labels):
@@ -973,26 +982,26 @@ re.U|re.I|re.X)
         con.commit()
 
     def page_backlinks(self, title):
-        con = sqlite3.connect(self.filename)
+        con = self.con # sqlite3.connect(self.filename)
         sql = 'select src from links where target=? order by number;'
         for (ident,) in con.execute(sql, (title,)):
             yield self.id_title(ident, con)
 
     def page_links(self, title):
-        con = sqlite3.connect(self.filename)
+        con = self.con # sqlite3.connect(self.filename)
         title_id = self.title_id(title, con)
         sql = 'select target from links where src=? order by number;'
         for (link,) in con.execute(sql, (title_id,)):
             yield link
 
     def page_links_and_labels (self, title):
-        con = sqlite3.connect(self.filename)
+        con = self.con # sqlite3.connect(self.filename)
         title_id = self.title_id(title, con)
         sql = 'select target, label from links where src=? order by number;'
         return con.execute(sql, (title_id,))
 
     def find(self, words):
-        con = sqlite3.connect(self.filename)
+        con = self.con # sqlite3.connect(self.filename)
         first = words[0]
         rest = words[1:]
         first_counts = con.execute('select page, count from words '
@@ -1969,6 +1978,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return werkzeug.Response(robots, mimetype='text/plain')
 
     def reindex(self, pages):
+        self.index.connect()
         for title in pages:
             mime = self.storage.page_mime(title)
             if mime.startswith('text/'):
@@ -1979,6 +1989,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                     links = self.extract_links(text)
                     self.index.add_links(title, links)
         self.index.empty = False
+        self.index.disconnect()
 
     def wiki_math(self, math):
         if '%s' in self.config.math_url:
@@ -2001,6 +2012,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
         if self.config.script_name is not None:
             environ['SCRIPT_NAME'] = self.config.script_name
+        # Delayed connection to the database, to ensure the same thread.
+        self.index.connect()
         adapter = self.url_map.bind_to_environ(environ)
         request = WikiRequest(self, adapter, environ)
         try:

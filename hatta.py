@@ -558,8 +558,8 @@ class WikiParser(object):
     }
     punct = {
         r'...': "&hellip;",
-        r'---': "&mdash;",
         r'--': "&ndash;",
+        r'---': "&mdash;",
         r'~': "&nbsp;",
         r'\~': "~",
         r'~~': "&sim;",
@@ -588,7 +588,7 @@ class WikiParser(object):
         "mail": ur"""(mailto:)?\S+@\S+(\.[^\s.,:;!?()'"/=+<>-]+)+""",
         "math": ur"\$\$(?P<math_text>[^$]+)\$\$",
         "newline": ur"\n",
-        "punct": ur"|".join(re.escape(k) for k in punct),
+        "punct": ur'(^|\b|(?<=\s))('+ur"|".join(re.escape(k) for k in punct)+ur')((?=[\s.,:;!?)/&=+])|\b|$)',
         "smiley": ur"(^|\b|(?<=\s))(?P<smiley_face>%s)((?=[\s.,:;!?)/&=+-])|$)"
                   % ur"|".join(re.escape(k) for k in smilies),
         "text": ur".+?",

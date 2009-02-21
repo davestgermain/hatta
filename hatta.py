@@ -893,6 +893,7 @@ without would yet you your yours yourself yourselves""")).split())
     @property
     def con(self):
         """Keep one connection per thread."""
+
         thread_id = thread.get_ident()
         try:
             return self._con[thread_id]
@@ -902,19 +903,24 @@ without would yet you your yours yourself yourselves""")).split())
             return con
 
     def split_text(self, text):
+        """Splits text into words, removing stop words"""
+
         for match in self.word_pattern.finditer(text):
             word = match.group(0)
             if not self.stop_words_re.match(word):
                 yield word.lower()
 
     def split_japanese_text(self, text):
+        """Splits text into words, including rules for Japanese"""
+
         for match in self.word_pattern.finditer(text):
             word = match.group(0)
             got_japanese = False
             for w in split_japanese(word, False):
                 got_japanese = True
-                yield w.lower()
-            if not got_japanese:
+                if not self.stop_words_re.match(word):
+                    yield w.lower()
+            if not got_japanese and not self.stop_words_re.match(word):
                 yield word.lower()
 
     def count_words(self, words):

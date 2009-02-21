@@ -861,7 +861,7 @@ class WikiSearch(object):
         con.execute('create table if not exists links '
                 '(src integer, target integer, label text, number integer);')
         con.commit()
-        self.stop_words_re = re.compile(u'^('+u'|'.join(_(
+        self.stop_words_re = re.compile(u'^('+u'|'.join(re.escape(_(
 u"""am ii iii per po re a about above
 across after afterwards again against all almost alone along already also
 although always am among ain amongst amoungst amount an and another any aren
@@ -887,8 +887,8 @@ through throughout thru thus to together too toward towards twelve twenty two
 un under ve until up upon us very via was wasn we well were what whatever when
 whence whenever where whereafter whereas whereby wherein whereupon wherever
 whether which while whither who whoever whole whom whose why will with within
-without would yet you your yours yourself yourselves""").split())+ur')$|.*\d.*',
-re.U|re.I|re.X)
+without would yet you your yours yourself yourselves""")).split())
++ur')$|.*\d.*', re.U|re.I|re.X)
 
     @property
     def con(self):

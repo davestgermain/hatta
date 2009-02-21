@@ -848,7 +848,7 @@ class WikiSearch(object):
         if not os.path.isdir(self.path):
             self.empty = True
             os.makedirs(self.path)
-        elif not os.path.exist(self.filename):
+        elif not os.path.exists(self.filename):
             self.empty = True
         else:
             self.empty = False

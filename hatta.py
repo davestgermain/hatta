@@ -577,7 +577,7 @@ class WikiParser(object):
         "bold": ur"[*][*]",
         "code": ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
                 ur"*[}]*)[}][}][}]",
-        "free_link": ur"""(http|https|ftp)://\S+[^\s.,:;!?()'"/=+<>-]""",
+        "free_link": ur"""(http|https|ftp)://\S+[^\s.,:;!?()'"=+<>-]""",
         "italic": ur"//",
         "link": ur"\[\[(?P<link_target>([^|\]]|\][^|\]])+)"
                 ur"(\|(?P<link_text>([^\]]|\][^\]])+))?\]\]",

@@ -113,7 +113,7 @@ class WikiConfig(object):
     math_url = 'http://www.mathtran.org/cgi-bin/mathtran?tex='
     script_name = None
     page_charset = 'utf-8'
-    config_file = 'hatta.conf'
+    config_file = None
     html_head = u''
     default_style = u"""html { background: #fff; color: #2e3436;
     font-family: sans-serif; font-size: 96% }
@@ -240,11 +240,21 @@ hr { background: transparent; border:none; height: 0;
         self.language = options.language or self.language
         self.read_only = options.read_only or self.read_only
 
-    def parse_files(self, files=()):
+    def parse_files(self, files=None):
         """Check the config files for options."""
 
-        # XXX TODO
-        raise NotImplemented
+        import ConfigParser
+        if files is None:
+            if self.config_file is None:
+                self.config_file = 'hatta.conf'
+            files = [self.config_file]
+        parser = ConfigParser.SafeConfigParser()
+        parser.read(files)
+        settings = {}
+        for section in parser.sections():
+            for option, value in parser.items(section):
+                settings[option] = value
+        self.__dict__.update(settings)
 
 class WikiStorage(object):
     """
@@ -2057,6 +2067,8 @@ def main():
         # page_charset = 'UTF-8',
     )
     config.parse_args()
+    config.parse_files()
+    config.sanitize()
     host, port = config.interface, int(config.port)
     wiki = Wiki(config)
     server = wsgiref.simple_server.make_server(host, port, wiki.application)

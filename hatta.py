@@ -70,7 +70,7 @@ try:
 except ImportError:
     split_japanese = None
 
-__version__ = '1.2.3'
+__version__ = '1.3.0'
 
 def external_link(addr):
     """Decide whether a link is absolute or internal."""

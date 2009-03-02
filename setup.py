@@ -8,7 +8,8 @@ setup(
     name='Hatta',
     version=hatta.__version__,
     url='http://hatta.sheep.art.pl/',
-    download_url='http://sheep.art.pl/misc/hatta/Hatta-%s.zip' % hatta.__version__,
+    download_url='http://sheep.art.pl/misc/hatta-%s/Hatta-%s.zip' % (
+        hatta.__version__, hatta.__version__),
     license='GNU General Public License (GPL)',
     author='Radomir Dopieralski',
     author_email='hatta@sheep.art.pl',
@@ -21,7 +22,7 @@ setup(
         ('share/locale/ar/LC_MESSAGES', ['locale/ar/LC_MESSAGES/hatta.mo']),
         ('share/locale/de/LC_MESSAGES', ['locale/de/LC_MESSAGES/hatta.mo']),
         ('share/locale/da/LC_MESSAGES', ['locale/da/LC_MESSAGES/hatta.mo']),
-        ('share/locale/jp/LC_MESSAGES', ['locale/jp/LC_MESSAGES/hatta.mo']),
+        ('share/locale/ja/LC_MESSAGES', ['locale/ja/LC_MESSAGES/hatta.mo']),
         ('share/locale/fr/LC_MESSAGES', ['locale/fr/LC_MESSAGES/hatta.mo']),
         ('share/locale/sv/LC_MESSAGES', ['locale/sv/LC_MESSAGES/hatta.mo']),
         ('share/icons/hicolor/scalable', ['hatta.svg']),

@@ -1442,7 +1442,7 @@ class Wiki(object):
             text = request.form.get("text")
             try:
                 parent = int(request.form.get("parent"))
-            except ValueError:
+            except (ValueError, TypeError):
                 parent = None
             if text is not None:
                 if title == self.config.locked_page:
@@ -1768,6 +1768,10 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 pass
         author = request.get_author()
         if rev is not None:
+            try:
+                parent = int(request.form.get("parent"))
+            except (ValueError, TypeError):
+                parent = None
             if rev == 0:
                 comment = _(u'Delete page %(title)s') % {'title': title}
                 data = ''
@@ -1776,7 +1780,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 comment = _(u'Undo of change %(rev)d of page %(title)s') % {
                     'rev': rev, 'title': title}
                 data = self.storage.page_revision(title, rev-1)
-                self.storage.save_text(title, data, author, comment)
+                self.storage.save_text(title, data, author, comment, parent)
             text = unicode(data, self.config.page_charset, 'replace')
             self.index_text(title, text)
         url = request.adapter.build(self.history, {'title': title},
@@ -1792,12 +1796,15 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return response
 
     def history_list(self, request, title):
+        max_rev = -1;
         yield u'<p>%s</p>' % (
             _(u'History of changes for %(link)s.') % {
                 'link': request.wiki_link(title, title)})
         url = request.adapter.build(self.undo, {'title': title}, method='POST')
         yield u'<form action="%s" method="POST"><ul class="history">' % url
         for rev, date, author, comment in self.storage.page_history(title):
+            if max_rev < 0:
+                max_rev = rev
             if rev > 0:
                 url = request.adapter.build(self.diff, {
                     'title': title, 'from_rev': rev-1, 'to_rev': rev})
@@ -1813,7 +1820,9 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             yield request.wiki_link(author, author)
             yield u'<div class="comment">%s</div>' % werkzeug.escape(comment)
             yield u'</li>'
-        yield u'</ul></form>'
+        yield u'</ul>'
+        yield u'<input type="hidden" name="parent" value="%d">' % max_rev
+        yield u'</form>'
 
     def recent_changes(self, request):
         content = self.html_page(request, u'history',

@@ -1025,18 +1025,29 @@ without would yet you your yours yourself yourselves""")).split())
         con = self.con # sqlite3.connect(self.filename)
         first = words[0]
         rest = words[1:]
+        pattern = '%%%s%%' % first
         first_counts = con.execute('select page, count from words '
-                                        'where word=?;', (first,))
+                                        'where word like ?;', (pattern,))
+        first_hits = {}
         for title_id, count in first_counts:
+            if title_id in first_hits:
+                first_hits[title_id]+=count
+            else:
+                first_hits[title_id]=count
+
+        for title_id in first_hits:
+            count=first_hits[title_id]
+            
             score = count
             got = True
             for word in rest:
+                pattern = '%%%s%%' % word
                 counts = con.execute('select count from words '
-                                          'where word=? and page=?;',
-                                          (word, title_id))
+                                          'where word like ? and page=?;',
+                                          (pattern, title_id))
                 got = False
                 for c in counts:
-                    score += c
+                    score += c[0]
                     got = True
             if got and score > 0:
                 yield score, self.id_title(title_id, con)

@@ -1036,12 +1036,8 @@ without would yet you your yours yourself yourselves""")).split())
                 first_hits[title_id]=count
 
         for title_id in first_hits:
-            print '[DeBUG]: title_id ==', title_id
-            
             count=first_hits[title_id]
-            
             score = count
-            print '[DeBUG]: score ==', score
             
             got = True
             for word in rest:
@@ -1052,10 +1048,6 @@ without would yet you your yours yourself yourselves""")).split())
                 got = False
                 for c in counts:
                     score += c[0]
-                    print '[DeBUG]: score ==', score
-                    
-                    print '[DeBUG]: c[0] ==', c[0]
-                    
                     got = True
             if got and score > 0:
                 yield score, self.id_title(title_id, con)

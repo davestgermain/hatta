@@ -614,12 +614,12 @@ class WikiParser(object):
     def __init__(self, lines, wiki_link, wiki_image,
                  wiki_syntax=None, wiki_math=None):
         self.lines = iter(lines)
-        self.stack = []
         self.wiki_link = wiki_link
         self.wiki_image = wiki_image
         self.wiki_syntax = wiki_syntax
         self.wiki_math = wiki_math
         self.headings = {}
+        self.stack = []
 
     def __iter__(self):
         return self.parse()
@@ -660,6 +660,8 @@ class WikiParser(object):
             pass
         return u"".join(u"</%s>" % tag for tag in tags)
 
+# methods for the markup inside lines:
+
     def lines_until(self, close_re):
         """Get lines from input until the closing markup is encountered."""
 
@@ -667,7 +669,6 @@ class WikiParser(object):
         while not close_re.match(line):
             yield line.rstrip()
             line = self.lines.next()
-
 
     def _line_linebreak(self, groups):
         return u'<br>'
@@ -749,6 +750,8 @@ class WikiParser(object):
             werkzeug.escape(name, quote=True),
             werkzeug.escape(text))
 
+# methods for the block (multiline) markup:
+
     def _block_code(self, block):
         for part in block:
             inside = u"\n".join(self.lines_until(self.code_close_re))
@@ -779,7 +782,7 @@ class WikiParser(object):
 
     def _block_indent(self, block):
         yield u'<pre>%s</pre>' % werkzeug.escape(u"\n".join(line.rstrip()
-                                        for line in block))
+                                                 for line in block))
 
     def _block_table(self, block):
         yield u'<table>'
@@ -834,11 +837,9 @@ class WikiParser(object):
                 yield '</li></ul>'
                 level -= 1
             content = line.lstrip().lstrip('*').strip()
-            yield '<li>%s%s' % (
-                u"".join(self.parse_line(content)),
-                self.pop_to(""))
-        for i in range(level):
-            yield '</li></ul>'
+            yield '<li>%s%s' % (u"".join(self.parse_line(content)),
+                                self.pop_to(""))
+        yield '</li></ul>'*level
 
     def _block_quote(self, block):
         level = 0
@@ -853,8 +854,7 @@ class WikiParser(object):
             content = line.lstrip().lstrip('>').strip()
             yield '%s%s' % (u"".join(self.parse_line(content)),
                             self.pop_to(""))
-        for i in range(level):
-            yield '</blockquote>'
+        yield '</blockquote>'*level
 
 
 class WikiSearch(object):
@@ -1052,7 +1052,6 @@ without would yet you your yours yourself yourselves""")).split())
         for title_id in first_hits:
             count=first_hits[title_id]
             score = count
-            
             got = True
             for word in rest:
                 pattern = '%%%s%%' % word

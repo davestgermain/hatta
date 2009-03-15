@@ -831,7 +831,7 @@ class WikiParser(object):
                 yield '<ul>'
                 level += 1
             while nest < level:
-                yield '</li></ul></li>'
+                yield '</li></ul>'
                 level -= 1
             content = line.lstrip().lstrip('*').strip()
             yield '<li>%s%s' % (

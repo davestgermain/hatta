@@ -145,6 +145,11 @@ u"""Here's a quote:
 > Here is another //quote//:
 >> A quote **within a quote
 normal text""": u"""<p>Here's a quote:</p><blockquote>Here is another <i>quote</i>:<blockquote>A quote <b>within a quote</b></blockquote></blockquote><p>normal text</p>""",
+#--------------------------------------------------------------------
+u"""* sample list
+** sublist
+*** sub-sub-list with **bold
+* list""": u"""<ul><li>sample list<ul><li>sublist<ul><li>sub-sub-list with <b>bold</b></li></ul></li></ul><li>list</li></ul>""",
 }
 
     def test_test_cases(self):

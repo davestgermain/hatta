@@ -542,6 +542,8 @@ class WikiParser(object):
     bullets_re = re.compile(bullets_pat, re.U)
     heading_pat = ur"^\s*=+"
     heading_re = re.compile(heading_pat, re.U)
+    quote_pat = ur"^[>]+\s+"
+    quote_re = re.compile(quote_pat, re.U)
     block = {
         "bullets": bullets_pat,
         "code": ur"^[{][{][{]+\s*$",
@@ -549,6 +551,7 @@ class WikiParser(object):
         "empty": ur"^\s*$",
         "heading": heading_pat,
         "indent": ur"^[ \t]+",
+        "quote": quote_pat,
         "rule": ur"^\s*---+\s*$",
         "syntax": ur"^\{\{\{\#!\w+\s*$",
         "table": ur"^\|",
@@ -836,6 +839,22 @@ class WikiParser(object):
                 self.pop_to(""))
         for i in range(level):
             yield '</li></ul>'
+
+    def _block_quote(self, block):
+        level = 0
+        for line in block:
+            nest = len(self.quote_re.match(line).group(0).strip())
+            while nest > level:
+                yield '<blockquote>'
+                level += 1
+            while nest < level:
+                yield '</blockquote>'
+                level -= 1
+            content = line.lstrip().lstrip('>').strip()
+            yield '%s%s' % (u"".join(self.parse_line(content)),
+                            self.pop_to(""))
+        for i in range(level):
+            yield '</blockquote>'
 
 
 class WikiSearch(object):

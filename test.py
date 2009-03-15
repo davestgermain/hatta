@@ -141,6 +141,10 @@ more code
 }}}""": u"""<div class="highlight"><pre>some code
 more</pre></div><p>some text</p><div class="highlight"><pre>more code</pre></div>""",
 #--------------------------------------------------------------------
+u"""Here's a quote:
+> Here is another //quote//:
+>> A quote **within a quote
+normal text""": u"""<p>Here's a quote:</p><blockquote>Here is another <i>quote</i>:<blockquote>A quote <b>within a quote</b></blockquote></blockquote><p>normal text</p>""",
 }
 
     def test_test_cases(self):

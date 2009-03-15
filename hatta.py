@@ -1175,7 +1175,10 @@ class Wiki(object):
     application and most of the logic.
     """
 
-    def __init__(self, config):
+    def __init__(self, config,
+                 parser_class=WikiParser,
+                 storage_class=WikiStorage,
+                 index_class=WikiSearch):
         self.dead = False
         self.config = config
         global _
@@ -1190,14 +1193,14 @@ class Wiki(object):
             _ = gettext.translation('hatta', fallback=True).ugettext
         self.path = os.path.abspath(config.pages_path)
         self.cache = os.path.abspath(config.cache_path)
-        self.storage = WikiStorage(self.path)
-        self.parser = WikiParser()
+        self.storage = storage_class(self.path)
+        self.parser = parser_class()
         if not os.path.isdir(self.cache):
             os.makedirs(self.cache)
             reindex = True
         else:
             reindex = False
-        self.index = WikiSearch(self.cache, self.config.language)
+        self.index = index_class(self.cache, self.config.language)
         if reindex:
             self.reindex(self.storage.all_pages())
         self.url_map = werkzeug.routing.Map([

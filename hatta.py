@@ -621,6 +621,15 @@ class WikiParser(object):
             pass
         return u"".join(u"</%s>" % tag for tag in tags)
 
+    def lines_until(self, close_re):
+        """Get lines from input until the closing markup is encountered."""
+
+        line = self.lines.next()
+        while not close_re.match(line):
+            yield line.rstrip()
+            line = self.lines.next()
+
+
     def _line_linebreak(self, groups):
         return u'<br>'
 
@@ -702,29 +711,14 @@ class WikiParser(object):
             werkzeug.escape(text))
 
     def _block_code(self, block):
-        # XXX A hack to handle {{{...}}} code blocks, this method reads lines
-        # directly from input.
         for part in block:
-            line = self.lines.next()
-            lines = []
-            while not self.code_close_re.match(line):
-                lines.append(line)
-                line = self.lines.next()
-            inside = u"\n".join(line.rstrip() for line in lines)
+            inside = u"\n".join(self.lines_until(self.code_close_re))
             yield u'<pre class="code">%s</pre>' % werkzeug.escape(inside)
 
     def _block_syntax(self, block):
-        # XXX A hack to handle {{{#!foo...}}} syntax blocks, 
-        # this method reads lines
-        # directly from input.
         for part in block:
             syntax = part.lstrip('{#!').strip()
-            line = self.lines.next()
-            lines = []
-            while not self.code_close_re.match(line):
-                lines.append(line)
-                line = self.lines.next()
-            inside = u"\n".join(line.rstrip() for line in lines)
+            inside = u"\n".join(self.lines_until(self.code_close_re))
             if self.wiki_syntax:
                 return self.wiki_syntax(inside, syntax=syntax)
             else:
@@ -732,16 +726,9 @@ class WikiParser(object):
                         % werkzeug.escape(inside)]
 
     def _block_macro(self, block):
-        # XXX A hack to handle <<...>> macro blocks, this method reads lines
-        # directly from input.
         for part in block:
             name = part.lstrip('<').strip()
-            line = self.lines.next()
-            lines = []
-            while not self.macro_close_re.match(line):
-                lines.append(line)
-                line = self.lines.next()
-            inside = u"\n".join(line.rstrip() for line in lines)
+            inside = u"\n".join(self.lines_until(self.macro_close_re))
             yield u'<div class="%s">%s</div>' % (
                 werkzeug.escape(name, quote=True),
                 werkzeug.escape(inside))

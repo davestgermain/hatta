@@ -112,12 +112,27 @@ class HattaParser(unittest.TestCase):
     def parse_text(self, text):
         parser = hatta.WikiParser()
         def link(addr, label=None, class_=None, image=None, alt=None):
-            return u"<!LINK!>"
-        return u''.join(parser.parse(text.split('\n'), link, link))
+            return u"<a></a>"
+        def image(addr, label=None, class_=None, image=None, alt=None):
+            return u"<img>"
+        return u''.join(parser.parse(text.split('\n'), link, image))
 
     def test_plain_text(self):
         text = u"hello world"
         expect = u'<p>hello world</p>'
+        self.assertEqual(expect, self.parse_text(text))
+
+    def test_code_block(self):
+        text = """{{{
+some code
+more
+}}}
+some text
+{{{
+more code
+}}}"""
+        expect = u"""<pre class="code">some code
+more</pre><p>some text</p><pre class="code">more code</pre>"""
         self.assertEqual(expect, self.parse_text(text))
 
 if __name__ == '__main__':

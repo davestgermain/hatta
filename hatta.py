@@ -847,15 +847,15 @@ class WikiParser(object):
         for line in block:
             nest = len(self.quote_re.match(line).group(0).strip())
             while nest > level:
-                yield '<blockquote>'
+                yield '<blockquote><p>'
                 level += 1
             while nest < level:
-                yield '</blockquote>'
+                yield '</p></blockquote>'
                 level -= 1
             content = line.lstrip().lstrip('>').strip()
             yield '%s%s' % (u"".join(self.parse_line(content)),
                             self.pop_to(""))
-        yield '</blockquote>'*level
+        yield '</p></blockquote>'*level
 
 
 class WikiSearch(object):

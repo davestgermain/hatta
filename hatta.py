@@ -850,7 +850,7 @@ class WikiParser(object):
                 yield '<blockquote><p>'
                 level += 1
             while nest < level:
-                yield '</p></blockquote><p>'
+                yield '</p></blockquote>'
                 level -= 1
             content = line.lstrip().lstrip('>').strip()
             yield '%s%s' % (u"".join(self.parse_line(content)),

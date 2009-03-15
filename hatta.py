@@ -156,7 +156,7 @@ div.header div.menu { float: right; margin-top: 1.25em }
 div.header div.menu a.current { color: #000 }
 hr { background: transparent; border:none; height: 0;
      border-bottom: 1px solid #babdb6; clear: both }
-blockquote { border-left: 2px solid #999; padding-left:.5em; margin-left:0}"""
+blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}"""
     icon = base64.b64decode(
 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhki'
 'AAAAAlwSFlzAAAEnQAABJ0BfDRroQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBo'

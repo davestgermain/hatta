@@ -863,7 +863,7 @@ class WikiParser(object):
             if not in_p:
                 yield '<p>'
                 in_p = True
-            yield '%s%s' % (u"".join(self.parse_line(content)),
+            yield '%s%s' % (u"\n".join(self.parse_line(content)),
                             self.pop_to(""))
         if in_p:
             yield '</p>'

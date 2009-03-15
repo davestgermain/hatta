@@ -847,15 +847,17 @@ class WikiParser(object):
         in_p = False
         for line in block:
             nest = len(self.quote_re.match(line).group(0).strip())
+            if nest == level:
+                yield u'\n'
             while nest > level:
                 if in_p:
-                    yield '</p>'
+                    yield '%s</p>' % self.pop_to("")
                     in_p = False
                 yield '<blockquote>'
                 level += 1
             while nest < level:
                 if in_p:
-                    yield '</p>'
+                    yield '%s</p>' % self.pop_to("")
                     in_p = False
                 yield '</blockquote>'
                 level -= 1
@@ -863,10 +865,9 @@ class WikiParser(object):
             if not in_p:
                 yield '<p>'
                 in_p = True
-            yield '%s%s' % (u"\n".join(self.parse_line(content)),
-                            self.pop_to(""))
+            yield u"".join(self.parse_line(content))
         if in_p:
-            yield '</p>'
+            yield '%s</p>' % self.pop_to("")
         yield '</blockquote>'*level
 
 

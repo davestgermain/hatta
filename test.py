@@ -117,23 +117,35 @@ class HattaParser(unittest.TestCase):
             return u"<img>"
         return u''.join(parser.parse(text.split('\n'), link, image))
 
-    def test_plain_text(self):
-        text = u"hello world"
-        expect = u'<p>hello world</p>'
-        self.assertEqual(expect, self.parse_text(text))
 
-    def test_code_block(self):
-        text = """{{{
+    test_cases = {
+u"""hello world""": u"""<p>hello world</p>""",
+#--------------------------------------------------------------------
+u"""{{{
 some code
 more
 }}}
 some text
 {{{
 more code
-}}}"""
-        expect = u"""<pre class="code">some code
-more</pre><p>some text</p><pre class="code">more code</pre>"""
-        self.assertEqual(expect, self.parse_text(text))
+}}}""": u"""<pre class="code">some code
+more</pre><p>some text</p><pre class="code">more code</pre>""",
+#--------------------------------------------------------------------
+u"""{{{#!python
+some code
+more
+}}}
+some text
+{{{#!bash
+more code
+}}}""": u"""<div class="highlight"><pre>some code
+more</pre></div><p>some text</p><div class="highlight"><pre>more code</pre></div>""",
+#--------------------------------------------------------------------
+}
+
+    def test_test_cases(self):
+        for text, expect in self.test_cases.iteritems():
+            self.assertEqual(expect, self.parse_text(text))
 
 if __name__ == '__main__':
     unittest.main()

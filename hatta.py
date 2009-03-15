@@ -1200,11 +1200,11 @@ class Wiki(object):
     The main class of the wiki, handling initialization of the whole
     application and most of the logic.
     """
+    parser_class = WikiParser
+    storage_class = WikiStorage
+    index_class = WikiSearch
 
-    def __init__(self, config,
-                 parser_class=WikiParser,
-                 storage_class=WikiStorage,
-                 index_class=WikiSearch):
+    def __init__(self, config):
         self.dead = False
         self.config = config
         global _
@@ -1219,14 +1219,14 @@ class Wiki(object):
             _ = gettext.translation('hatta', fallback=True).ugettext
         self.path = os.path.abspath(config.pages_path)
         self.cache = os.path.abspath(config.cache_path)
-        self.storage = storage_class(self.path)
-        self.parser = parser_class
+        self.storage = self.storage_class(self.path)
+        self.parser = self.parser_class
         if not os.path.isdir(self.cache):
             os.makedirs(self.cache)
             reindex = True
         else:
             reindex = False
-        self.index = index_class(self.cache, self.config.language)
+        self.index = self.index_class(self.cache, self.config.language)
         if reindex:
             self.reindex(self.storage.all_pages())
         R = werkzeug.routing.Rule

@@ -41,12 +41,17 @@ class MyWikiParser(hatta.WikiParser):
     markup_re = re.compile(ur"|".join("(?P<%s>%s)" % kv
                            for kv in sorted(markup.iteritems())))
 
+
+class MyWiki(hatta.Wiki):
+    parser_class = MyWikiParser
+
+
 config = hatta.WikiConfig()
 config.parse_args()
 config.parse_files()
 config.sanitize()
 host, port = config.interface, int(config.port)
-wiki = hatta.Wiki(config, parser_class=MyWikiParser)
+wiki = MyWiki(config)
 server = wsgiref.simple_server.make_server(host, port, wiki.application)
 try:
     server.serve_forever()

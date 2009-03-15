@@ -844,18 +844,30 @@ class WikiParser(object):
 
     def _block_quote(self, block):
         level = 0
+        in_p = False
         for line in block:
             nest = len(self.quote_re.match(line).group(0).strip())
             while nest > level:
-                yield '<blockquote><p>'
+                if in_p:
+                    yield '</p>'
+                    in_p = False
+                yield '<blockquote>'
                 level += 1
             while nest < level:
-                yield '</p></blockquote>'
+                if in_p:
+                    yield '</p>'
+                    in_p = False
+                yield '</blockquote>'
                 level -= 1
             content = line.lstrip().lstrip('>').strip()
+            if not in_p:
+                yield '<p>'
+                in_p = True
             yield '%s%s' % (u"".join(self.parse_line(content)),
                             self.pop_to(""))
-        yield '</p></blockquote>'*level
+        if in_p:
+            yield '</p>'
+        yield '</blockquote>'*level
 
 
 class WikiSearch(object):

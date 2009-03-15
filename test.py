@@ -144,7 +144,7 @@ more</pre></div><p>some text</p><div class="highlight"><pre>more code</pre></div
 u"""Here's a quote:
 > Here is another //quote//:
 >> A quote **within a quote
-normal text""": u"""<p>Here's a quote:</p><blockquote><p>Here is another <i>quote</i>:<blockquote><p>A quote <b>within a quote</b></p></blockquote></p></blockquote><p>normal text</p>""",
+normal text""": u"""<p>Here's a quote:</p><blockquote><p>Here is another <i>quote</i>:</p><blockquote><p>A quote <b>within a quote</b></p></blockquote></blockquote><p>normal text</p>""",
 #--------------------------------------------------------------------
 u"""* sample list
 ** sublist

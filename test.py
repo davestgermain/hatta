@@ -110,12 +110,12 @@ class HattaStandalone(unittest.TestCase):
 class HattaParser(unittest.TestCase):
 
     def parse_text(self, text):
-        parser = hatta.WikiParser()
+        parser = hatta.WikiParser
         def link(addr, label=None, class_=None, image=None, alt=None):
             return u"<a></a>"
         def image(addr, label=None, class_=None, image=None, alt=None):
             return u"<img>"
-        return u''.join(parser.parse(text.split('\n'), link, image))
+        return u''.join(parser(text.split('\n'), link, image))
 
 
     test_cases = {

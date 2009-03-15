@@ -533,8 +533,9 @@ class WikiParser(object):
     such as links, bold and italic text and smileys.
 
     Some block-level elements, such as preformatted blocks, consume additional
-    lines from the input until they encounter the end-of-block marker. Most
-    block-level elements are just runs of marked up lines though.
+    lines from the input until they encounter the end-of-block marker, using
+    lines_until. Most block-level elements are just runs of marked up lines
+    though.
     """
 
     bullets_pat = ur"^\s*[*]+\s+"
@@ -605,6 +606,41 @@ class WikiParser(object):
     } # note that the priority is alphabetical
     markup_re = re.compile(ur"|".join("(?P<%s>%s)" % kv
                            for kv in sorted(markup.iteritems())))
+
+
+    def __init__(self, lines, wiki_link, wiki_image,
+                 wiki_syntax=None, wiki_math=None):
+        self.lines = iter(lines)
+        self.stack = []
+        self.wiki_link = wiki_link
+        self.wiki_image = wiki_image
+        self.wiki_syntax = wiki_syntax
+        self.wiki_math = wiki_math
+        self.headings = {}
+
+    def __iter__(self):
+        return self.parse()
+
+    def parse(self):
+        """Parse a list of lines of wiki markup, yielding HTML for it."""
+
+        def key(line):
+            match = self.block_re.match(line)
+            if match:
+                return match.lastgroup
+            return "paragraph"
+
+        for kind, block in itertools.groupby(self.lines, key):
+            func = getattr(self, "_block_%s" % kind)
+            for part in func(block):
+                yield part
+
+    def parse_line(self, line):
+        """Find all the line-level markup and return HTML for it."""
+
+        for m in self.markup_re.finditer(line):
+            func = getattr(self, "_line_%s" % m.lastgroup)
+            yield func(m.groupdict())
 
     def pop_to(self, stop):
         """
@@ -800,34 +836,6 @@ class WikiParser(object):
                 self.pop_to(""))
         for i in range(level):
             yield '</li></ul>'
-
-    def parse_line(self, line):
-        """Find all the line-level markup and return HTML for it."""
-
-        for m in self.markup_re.finditer(line):
-            func = getattr(self, "_line_%s" % m.lastgroup)
-            yield func(m.groupdict())
-
-    def parse(self, lines, wiki_link, wiki_image, wiki_syntax=None,
-              wiki_math=None):
-        """Parse a list of lines of wiki markup, yielding HTML for it."""
-
-        def key(line):
-            match = self.block_re.match(line)
-            if match:
-                return match.lastgroup
-            return "paragraph"
-        self.lines = iter(lines)
-        self.stack = []
-        self.wiki_link = wiki_link
-        self.wiki_image = wiki_image
-        self.wiki_syntax = wiki_syntax
-        self.wiki_math = wiki_math
-        self.headings = {}
-        for kind, block in itertools.groupby(self.lines, key):
-            func = getattr(self, "_block_%s" % kind)
-            for part in func(block):
-                yield part
 
 
 class WikiSearch(object):
@@ -1194,7 +1202,7 @@ class Wiki(object):
         self.path = os.path.abspath(config.pages_path)
         self.cache = os.path.abspath(config.cache_path)
         self.storage = storage_class(self.path)
-        self.parser = parser_class()
+        self.parser = parser_class
         if not os.path.isdir(self.cache):
             os.makedirs(self.cache)
             reindex = True
@@ -1203,7 +1211,7 @@ class Wiki(object):
         self.index = index_class(self.cache, self.config.language)
         if reindex:
             self.reindex(self.storage.all_pages())
-        R = wekzeug.routing.Rule
+        R = werkzeug.routing.Rule
         self.url_map = werkzeug.routing.Map([
             R('/', defaults={'title': self.config.front_page},
               endpoint=self.view, methods=['GET', 'HEAD']),
@@ -1340,9 +1348,9 @@ class Wiki(object):
                 f = self.storage.open_page(title)
                 lines = (unicode(line, self.config.page_charset,
                      "replace") for line in f)
-            content = self.parser.parse(lines, request.wiki_link,
-                                        request.wiki_image, self.highlight,
-                                        self.wiki_math)
+            content = self.parser(lines, request.wiki_link,
+                                  request.wiki_image, self.highlight,
+                                  self.wiki_math)
         elif mime.startswith('image/'):
             if title not in self.storage:
                 raise werkzeug.exceptions.NotFound()
@@ -1399,7 +1407,7 @@ class Wiki(object):
             links.append((addr, label))
             return u''
         lines = text.split('\n')
-        for part in self.parser.parse(lines, link, link):
+        for part in self.parser(lines, link, link):
             pass
         return links
 

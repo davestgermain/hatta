@@ -105,6 +105,21 @@ class HattaStandalone(unittest.TestCase):
                             content_type='application/x-www-form-urlencoded')
         self.assertEqual(response.status_code, 403)
 
+
+
+class HattaParser(unittest.TestCase):
+
+    def parse_text(self, text):
+        parser = hatta.WikiParser()
+        def link(addr, label=None, class_=None, image=None, alt=None):
+            return u"<!LINK!>"
+        return u''.join(parser.parse(text.split('\n'), link, link))
+
+    def test_plain_text(self):
+        text = u"hello world"
+        expect = u'<p>hello world</p>'
+        self.assertEqual(expect, self.parse_text(text))
+
 if __name__ == '__main__':
     unittest.main()
 

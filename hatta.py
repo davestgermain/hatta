@@ -1348,8 +1348,6 @@ class Wiki(object):
                 werkzeug.escape(_(u'History')))
             yield u'<a href="%s" class="backlinks">%s</a> ' % (backlinks,
                 werkzeug.escape(_(u'Backlinks')))
-            yield u'<a href="/search?q=" class="pageindex">%s</a> ' % (
-                werkzeug.escape(_(u'PageIndex')))
             yield u'</div>'
         yield u'</div></body></html>'
 

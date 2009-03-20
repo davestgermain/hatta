@@ -168,12 +168,30 @@ class TestHTML(unittest.TestCase):
             cache_path=os.path.join(self.basedir, 'cache'),
         )
         self.wiki = hatta.Wiki(self.config)
-        self.request = werkzeug.Request.from_values()
-        self.request.adapter = self.wiki.url_map.bind_to_environ(
-            self.request.environ)
+        environ = {
+            'SERVER_NAME': 'hatta',
+            'wsgi.url_scheme': 'http',
+            'SERVER_PORT': '80',
+            'REQUEST_METHOD': 'GET',
+            'PATH_INFO': '/',
+            'SCRIPT_NAME': '',
+        }
+        adapter = self.wiki.url_map.bind_to_environ(environ)
+        self.request = hatta.WikiRequest(self.wiki, adapter, environ)
 
     def tearDown(self):
         clear_directory(self.basedir)
+
+    def test_wiki_request_get_page_url(self):
+        self.assertEqual(self.request.get_page_url('title'),
+                         u'/title')
+        self.assertEqual(self.request.get_download_url('title'),
+                         u'/download/title')
+        self.assertEqual(self.request.get_page_url('title', self.wiki.edit),
+                         u'/edit/title')
+        self.assertEqual(self.request.get_page_url(None, self.wiki.favicon),
+                         u'/favicon.ico')
+
 
     def test_html_page(self):
         content = ["some <content>"]

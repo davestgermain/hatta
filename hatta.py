@@ -1091,21 +1091,22 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
     """
     charset = 'utf-8'
     encoding_errors = 'ignore'
-    def __init__(self, wiki, adapter, environ, populate_request=True,
-                 shallow=False):
-        werkzeug.BaseRequest.__init__(self, environ, populate_request, shallow)
+    def __init__(self, wiki, adapter, environ, **kw):
+        werkzeug.BaseRequest.__init__(self, environ, **kw)
         self.wiki = wiki
         self.adapter = adapter
         self.tmpfiles = []
         self.tmppath = wiki.path
 
-    def get_page_url(self, title):
-        return self.adapter.build(self.wiki.view, {'title': title},
-                                  method='GET')
+    def get_page_url(self, title=None, view=None, method='GET', **kw):
+        if view is None:
+            view = self.wiki.view
+        if title is not None:
+            kw['title'] = title
+        return self.adapter.build(view, kw, method=method)
 
     def get_download_url(self, title):
-        return self.adapter.build(self.wiki.download, {'title': title},
-                                  method='GET')
+        return self.get_page_url(title, view=self.wiki.download)
 
     def wiki_link(self, addr, label, class_='wiki', image=None):
         """Create HTML for a wiki link."""
@@ -1271,20 +1272,21 @@ class Wiki(object):
             R('/off-with-his-head', endpoint=self.die, methods=['GET']),
         ])
 
-    def html_page(self, request, title, content, page_title=u''):
-        """The main page template."""
-
-        rss = request.adapter.build(self.rss, method='GET')
-        atom = request.adapter.build(self.atom, method='GET')
-        icon = request.adapter.build(self.favicon, method='GET')
-        yield (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
-               '"http://www.w3.org/TR/html4/strict.dtd">')
-        yield u'<html><head><title>%s - %s</title>' % (
-            werkzeug.escape(page_title or title),
-            werkzeug.escape(self.config.site_name))
+    def html_head(self, request, title, page_title):
+        html = werkzeug.html
+        rss = request.get_page_url(None, self.rss)
+        atom = request.get_page_url(None, self.atom)
+        icon = request.get_page_url(None, self.favicon)
+        doctype = (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
+                   '"http://www.w3.org/TR/html4/strict.dtd">')
+        yield doctype
+        yield u'<html><head>'
+        head_title = u'%s - %s' % (page_title or title, self.config.site_name)
+        yield u'<title>%s</title>' % werkzeug.escape(head_title)
         if self.config.style_page in self.storage:
             css = request.get_download_url(self.config.style_page)
-            yield u'<link rel="stylesheet" type="text/css" href="%s">' % css
+#            yield u'<link rel="stylesheet" type="text/css" href="%s">' % css
+            yield html.link(rel="stylesheet", type_="text/css", href=css)
         else:
             yield (u'<style type="text/css">%s</style>'
                    % self.config.default_style)
@@ -1303,9 +1305,13 @@ class Wiki(object):
                u'title="%s (ATOM)" href="%s">' % (
                     werkzeug.escape(self.config.site_name, quote=True), atom))
         yield u'%s</head>' % self.config.html_head
-#        if self.config.language in ('ar', 'he'):
-#            yield u'<body dir="rtl">'
-#        else:
+
+    def html_page(self, request, title, content, page_title=u''):
+        """The main page template."""
+
+        html = werkzeug.html
+        for part in self.html_head(request, title, page_title):
+            yield part
         yield u'<body>'
         yield u'<div class="header">'
         if self.config.logo_page in self.storage:
@@ -1340,6 +1346,7 @@ class Wiki(object):
                                             method='GET')
             backlinks = request.adapter.build(self.backlinks, {'title': title},
                                               method='GET')
+            edit = request.adapter.build(self.edit, {'title': title})
             yield u'<div class="footer">'
             if not self.config.read_only:
                 yield u'<a href="%s" class="edit">%s</a> ' % (edit,
@@ -2076,8 +2083,6 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 endpoint, values = adapter.match()
                 return endpoint(request, **values)
             except werkzeug.exceptions.HTTPException, err:
-    #            import traceback
-    #            traceback.print_exc()
                 return err
         finally:
             request.cleanup()

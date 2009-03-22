@@ -1275,7 +1275,7 @@ class WikiPage(object):
             yield self.logo()
         yield self.search_form()
         if self.config.menu_page in self.wiki.storage:
-            yield html.div(*self.menu(), class_="menu")
+            yield html.div(u" ".join(self.menu()), class_="menu")
         yield html.h1(html(special_title or self.title))
 
     def footer(self):
@@ -1295,7 +1295,7 @@ class WikiPage(object):
         for part in content:
             yield part
         if not special_title:
-            yield html.div(*self.footer(), class_="footer")
+            yield html.div(u" ".join(self.footer()), class_="footer")
         yield u'</div>'
 
     def render_content(self, content, special_title=None):

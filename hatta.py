@@ -1378,9 +1378,9 @@ class Wiki(object):
             R('/off-with-his-head', endpoint=self.die, methods=['GET']),
         ])
 
-    def html_page(self, request, title, content, page_title=u''):
-        page = WikiPage(self, request, title)
-        return page.render_content(content, page_title)
+#    def html_page(self, request, title, content, page_title=u''):
+#        page = WikiPage(self, request, title)
+#        return page.render_content(content, page_title)
 
     def view(self, request, title):
         page = WikiPage(self, request, title)
@@ -1389,6 +1389,7 @@ class Wiki(object):
         except werkzeug.exceptions.NotFound:
             url = request.get_url(title, self.edit, external=True)
             return werkzeug.routing.redirect(url, code=303)
+        html = page.render_content(content)
 
         dependencies = []
         unique_titles = set()
@@ -1404,7 +1405,6 @@ class Wiki(object):
                 dependencies.append(u'%s' % werkzeug.url_quote(title))
         etag = '/(%s)' % u','.join(dependencies)
 
-        html = page.render_content(content)
         return self.response(request, title, html, etag=etag)
 
     def view_content(self, request, title, page, lines=None):
@@ -1440,18 +1440,18 @@ class Wiki(object):
     def revision(self, request, title, rev):
         text = unicode(self.storage.page_revision(title, rev),
                        self.config.page_charset, 'replace')
+        link = werkzeug.html.a(werkzeug.html(title),
+                               href=request.get_url(title))
         content = [
-            u'<p>%s</p>' % (
-                werkzeug.escape(
+            werkzeug.html.p(
+                werkzeug.html(
                     _(u'Content of revision %(rev)d of page %(title)s:'))
-                % {'rev': rev,
-                   'title': u'<a href="%s">%s</a>' % (request.get_url(title),
-                                                      werkzeug.escape(title))}
-            ),
-            u'<pre>%s</pre>' % werkzeug.escape(text),
+                % {'rev': rev, 'title': link }),
+            werkzeug.html.pre(werkzeug.html(text)),
         ]
-        html = self.html_page(request, title, content,
-            page_title=_(u'Revision of "%(title)s"') % {'title': title})
+        special_title = _(u'Revision of "%(title)s"') % {'title': title}
+        page = WikiPage(self, request, title)
+        html = page.render_content(content, special_title)
         response = self.response(request, title, html, rev=rev, etag='/old')
         return response
 
@@ -1499,8 +1499,8 @@ class Wiki(object):
             if text is not None:
                 lines = text.split('\n')
             else:
-                lines = [u'<p>%s</p>'
-                         % werkzeug.escape(_(u'No preview for binaries.'))]
+                lines = [werkzeug.html.p(werkzeug.html(
+                    _(u'No preview for binaries.')))]
             return self.edit(request, title, preview=lines)
         elif request.form.get('save'):
             comment = request.form.get("comment", "")
@@ -1550,8 +1550,10 @@ class Wiki(object):
             form = self.editor_form
         else:
             form = self.upload_form
-        html = self.html_page(request, title, form(request, title, preview),
-                    page_title=_(u'Editing "%(title)s"') % {'title': title})
+        content = form(request, title, preview)
+        page = WikiPage(self, request, title)
+        special_title = _(u'Editing "%(title)s"') % {'title': title}
+        html = page.render_content(content, special_title)
         if title not in self.storage:
             return werkzeug.Response(html, mimetype="text/html",
                                      status='404 Not found')
@@ -1567,28 +1569,28 @@ class Wiki(object):
             import pygments.lexers
             import pygments.formatters
             import pygments.styles
-            if 'tango' in pygments.styles.STYLE_MAP:
-                style = 'tango'
-            else:
-                style = 'friendly'
-            formatter = pygments.formatters.HtmlFormatter(style=style)
-            try:
-                if mime:
-                    lexer = pygments.lexers.get_lexer_for_mimetype(mime)
-                elif syntax:
-                    lexer = pygments.lexers.get_lexer_by_name(syntax)
-                else:
-                    lexer = pygments.lexers.guess_lexer(text)
-                css = formatter.get_style_defs('.highlight')
-                html = pygments.highlight(text, lexer, formatter)
-                yield u'<style type="text/css"><!--\n%s\n--></style>' % css
-                yield html
-                return
-            except pygments.util.ClassNotFound:
-                pass
         except ImportError:
-            pass
-        yield u'<pre>%s</pre>' % werkzeug.escape(text)
+            yield werkzeug.html.pre(werkzeug.html(text))
+            return
+        if 'tango' in pygments.styles.STYLE_MAP:
+            style = 'tango'
+        else:
+            style = 'friendly'
+        formatter = pygments.formatters.HtmlFormatter(style=style)
+        try:
+            if mime:
+                lexer = pygments.lexers.get_lexer_for_mimetype(mime)
+            elif syntax:
+                lexer = pygments.lexers.get_lexer_by_name(syntax)
+            else:
+                lexer = pygments.lexers.guess_lexer(text)
+        except pygments.util.ClassNotFound:
+            yield werkzeug.html.pre(werkzeug.html(text))
+            return
+        css = formatter.get_style_defs('.highlight')
+        html = pygments.highlight(text, lexer, formatter)
+        yield werkzeug.html.style(werkzeug.html(css), type="text/css")
+        yield html
 
     def editor_form(self, request, title, preview=None):
         author = request.get_author()
@@ -1855,18 +1857,18 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return werkzeug.redirect(url, 303)
 
     def history(self, request, title):
-        content = self.html_page(request, title,
-                                 self.history_list(request, title),
-                                 page_title=_(u'History of "%(title)s"') % {
-                                    'title': title})
+        page = WikiPage(self, request, title)
+        content = page.render_content(self.history_list(request, title),
+            _(u'History of "%(title)s"') % {'title': title})
         response = self.response(request, title, content, '/history')
         return response
 
     def history_list(self, request, title):
         max_rev = -1;
-        yield u'<p>%s</p>' % (
-            _(u'History of changes for %(link)s.') % {
-                'link': request.wiki_link(title, title)})
+        link = werkzeug.html.a(werkzeug.html(title),
+                               href=request.get_url(title))
+        yield werkzeug.html.p(
+            _(u'History of changes for %(link)s.') % {'link': link})
         url = request.adapter.build(self.undo, {'title': title}, method='POST')
         yield u'<form action="%s" method="POST"><ul class="history">' % url
         for rev, date, author, comment in self.storage.page_history(title):
@@ -1884,7 +1886,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 yield (u'<input type="submit" name="%d" value="Undo" '
                        u'class="button">' % rev)
             yield u' . . . . '
-            yield request.wiki_link(author, author)
+            yield werkzeug.html.a(werkzeug.html(author),
+                                  href=request.get_url(author))
             yield u'<div class="comment">%s</div>' % werkzeug.escape(comment)
             yield u'</li>'
         yield u'</ul>'
@@ -1892,9 +1895,9 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         yield u'</form>'
 
     def recent_changes(self, request):
-        content = self.html_page(request, u'history',
-                                 self.changes_list(request),
-                                 page_title=_(u'Recent changes'))
+        page = WikiPage(self, request, u'history')
+        content = page.render_content(self.changes_list(request),
+            _(u'Recent changes'))
         response = werkzeug.Response(content, mimetype='text/html')
         response.set_etag('/recentchanges/%d' % self.storage.repo_revision())
         response.make_conditional(request)
@@ -1927,9 +1930,9 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             lastrev[title] = rev
             yield u'<li>'
             yield u'<a href="%s">%s</a> ' % (url, date.strftime('%F %H:%M'))
-            yield request.wiki_link(title, title)
+            yield werkzeug.html.a(werkzeug.html(title), href=request.get_url(title))
             yield u' . . . . '
-            yield request.wiki_link(author, author)
+            yield werkzeug.html.a(werkzeug.html(author), href=request.get_url(author))
             yield u'<div class="comment">%s</div>' % werkzeug.escape(comment)
             yield u'</li>'
         yield u'</ul>'
@@ -1943,16 +1946,18 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                                          {'title': title, 'rev': from_rev})
         to_url = request.adapter.build(self.revision,
                                        {'title': title, 'rev': to_rev})
-        content = self.html_page(request, title, itertools.chain(
-            [u'<p>%s</p>' % werkzeug.escape(_(u'Differences between revisions '
+        content = itertools.chain(
+            [werkzeug.html.p(werkzeug.escape(_(u'Differences between revisions '
                 u'%(link1)s and %(link2)s of page %(link)s.')) % {
-                'link1': u'<a href="%s">%d</a>' % (from_url, from_rev),
-                'link2': u'<a href="%s">%d</a>' % (to_url, to_rev),
-                'link': request.wiki_link(title, title)
-            }],
-            self.diff_content(from_page, to_page)),
-            page_title=_(u'Diff for "%(title)s"') % {'title': title})
-        response = werkzeug.Response(content, mimetype='text/html')
+                'link1': werkzeug.html.a(from_rev, href=from_url),
+                'link2': werkzeug.html.a(to_rev, href=to_url),
+                'link': werkzeug.html.a(werkzeug.html(title), href=request.get_url(title))
+            })],
+            self.diff_content(from_page, to_page))
+        page = WikiPage(self, request, title)
+        special_title=_(u'Diff for "%(title)s"') % {'title': title}
+        html = page.render_content(content, special_title)
+        response = werkzeug.Response(html, mimetype='text/html')
         return response
 
     def diff_content(self, text, other_text):
@@ -2008,14 +2013,16 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         else:
             title = _(u'Searching for "%s"') % u" ".join(words)
             content = self.page_search(request, words)
-        html = self.html_page(request, u'', content, page_title=title)
+        page = WikiPage(self, request, '')
+        html = page.render_content(content, title)
         return WikiResponse(html, mimetype='text/html')
 
     def page_index(self, request):
         yield u'<p>%s</p>' % werkzeug.escape(_(u'Index of all pages.'))
         yield u'<ul>'
         for title in sorted(self.storage.all_pages()):
-            yield u'<li>%s</li>' % request.wiki_link(title, title)
+            yield werkzeug.li(werkzeug.html.a(werkzeug.html(title),
+                                              href=request.get_url(title)))
         yield u'</ul>'
 
     def page_search(self, request, words):
@@ -2047,8 +2054,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
     def backlinks(self, request, title):
         content = self.page_backlinks(request, title)
-        html = self.html_page(request, u'', content,
-                              page_title=_(u'Links to "%s"') % title)
+        page = WikiPage(self, request, title)
+        html = page.render_content(content, _(u'Links to "%s"') % title)
         response = werkzeug.Response(html, mimetype='text/html')
         response.set_etag('/backlinks/%d' % self.storage.repo_revision())
         response.make_conditional(request)
@@ -2056,10 +2063,12 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
     def page_backlinks(self, request, title):
         yield u'<p>%s</p>' % (_(u'Pages that contain a link to %s.')
-            % request.wiki_link(title, title))
+            % werkzeug.html.a(werkzeug.html(title),
+                              href=request.get_url(title)))
         yield u'<ul>'
         for link in self.index.page_backlinks(title):
-            yield '<li>%s</li>' % request.wiki_link(link, link)
+            yield '<li>%s</li>' % werkzeug.html.a(werkzeug.html(link),
+                                                  href=request.get_url(link))
         yield u'</ul>'
 
 

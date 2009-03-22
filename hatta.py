@@ -1205,34 +1205,24 @@ class WikiPage(object):
         if external_link(addr):
             return html.img(src=werkzeug.url_fix(addr), class_="external",
                             alt=alt)
-#            return u'<img src="%s" class="external" alt="%s">' % (
-#                werkzeug.url_fix(addr), werkzeug.escape(alt))
         if '#' in addr:
             addr, chunk = addr.split('#', 1)
         if addr == '':
             return html.a(name=chunk)
-#            return u'<a name="%s"></a>' % werkzeug.escape(chunk, quote=True)
         if addr in self.wiki.storage:
             mime = self.wiki.storage.page_mime(addr)
             if mime.startswith('image/'):
                 return html.img(src=self.get_download_url(addr), class_=class_,
                                 alt=alt)
-#                return u'<img src="%s" class="%s" alt="%s">' % (
-#                    self.get_download_url(addr), class_,
-#                    werkzeug.escape(alt, quote="True"))
             else:
                 return html.img(href=self.get_download_url(addr), alt=alt)
-#                return u'<a href="%s" class="download">%s</a>' % (
-#                    self.get_download_url(addr), werkzeug.escape(alt))
         else:
             return html.a(html(alt), href=self.get_url(addr))
-#            return u'<a href="%s" class="nonexistent">%s</a>' % (
-#                self.get_url(addr), werkzeug.escape(alt))
-    def html_head(self, page_title):
+
+    def html_head(self, title, robots=False, edit_button=False):
         html = werkzeug.html
 
-        yield html.title(html(u'%s - %s'
-                         % (page_title or self.title, self.config.site_name)))
+        yield html.title(html(u'%s - %s' % (title, self.config.site_name)))
         if self.config.style_page in self.wiki.storage:
             yield html.link(rel="stylesheet", type_="text/css",
                 href=self.get_download_url(self.config.style_page))
@@ -1240,12 +1230,12 @@ class WikiPage(object):
             yield html.style(html(self.config.default_style),
                              type_="text/css")
 
-        if page_title:
+        if not robots:
             yield html.meta(name="robots", content="NOINDEX,NOFOLLOW")
-        else:
+
+        if edit_button:
             yield html.link(rel="alternate", type_="application/wiki",
-                            href=self.get_url(self.title,
-                                                      self.wiki.edit))
+                            href=self.get_url(self.title, self.wiki.edit))
 
         yield html.link(rel="shortcut icon", type_="image/x-icon",
                         href=self.get_url(None, self.wiki.favicon))
@@ -1257,20 +1247,20 @@ class WikiPage(object):
                          href=self.get_url(None, self.wiki.atom))
         yield self.config.html_head
 
-    def html_search_form(self):
+    def search_form(self):
         html = werkzeug.html
         return html.form(html.div(html.input(name="q", class_="search"),
                 html.input(class_="button", type_="submit", value=_(u'Search')),
             ), method="GET", class_="search",
             action=self.get_url(None, self.wiki.search))
 
-    def html_logo(self):
+    def logo(self):
         html = werkzeug.html
         return html.a(html.img(alt=u"[%s]" % self.config.front_page,
             src=self.get_download_url(self.config.logo_page)),
             class_='logo', href=self.get_url(self.config.front_page))
 
-    def html_menu(self):
+    def menu(self):
         html = werkzeug.html
         items = self.wiki.index.page_links_and_labels(self.config.menu_page)
         for link, label in items:
@@ -1280,16 +1270,16 @@ class WikiPage(object):
                 css = ""
             yield html.a(label, href=self.get_url(link), class_=css)
 
-    def html_page_header(self, page_title):
+    def header(self, special_title):
         html = werkzeug.html
         if self.config.logo_page in self.wiki.storage:
-            yield self.html_logo()
-        yield self.html_search_form()
+            yield self.logo()
+        yield self.search_form()
         if self.config.menu_page in self.wiki.storage:
-            yield html.div(self.html_menu(), class_="menu")
-        yield html.h1(html(page_title or self.title))
+            yield html.div(self.menu(), class_="menu")
+        yield html.h1(html(special_title or self.title))
 
-    def html_page_footer(self):
+    def footer(self):
         html = werkzeug.html
         if not self.config.read_only:
             yield html.a(html(_(u'Edit')), class_="edit",
@@ -1299,21 +1289,31 @@ class WikiPage(object):
         yield html.a(html(_(u'Backlinks')), class_="backlinks",
                      href=self.get_url(self.title, self.wiki.backlinks))
 
-    def render_content(self, content, page_title=u''):
+    def page(self, content, special_title, footer=False):
+        html = werkzeug.html
+        yield html.div(*self.header(special_title), class_="header")
+        yield u'<div class="content">'
+        for part in content:
+            yield part
+        if not special_title:
+            yield html.div(*self.footer(), class_="footer")
+        yield u'</div>'
+
+    def render_content(self, content, special_title=None):
         """The main page template."""
 
         html = werkzeug.html
         yield (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
                '"http://www.w3.org/TR/html4/strict.dtd"><html>')
-        yield html.head(*self.html_head(page_title))
+        if special_title:
+            yield html.head(*self.html_head(special_title))
+        else:
+            yield html.head(*self.html_head(self.title, robots=True,
+                                            edit_button=True))
         yield u'<body>'
-        yield html.div(*self.html_page_header(page_title), class_="header")
-        yield u'<div class="content">'
-        for part in content:
+        for part in self.page(content, special_title):
             yield part
-        if not page_title:
-            yield html.div(*self.html_page_footer(), class_="footer")
-        yield u'</div></body></html>'
+        yield u'</body></html>'
 
 
 class Wiki(object):
@@ -1380,28 +1380,32 @@ class Wiki(object):
 
     def html_page(self, request, title, content, page_title=u''):
         page = WikiPage(self, request, title)
-        return page.render_content(content)
+        return page.render_content(content, page_title)
 
     def view(self, request, title):
+        page = WikiPage(self, request, title)
         try:
-            page = WikiPage(self, request, title)
             content = self.view_content(request, title, page)
-            html = page.render_content(content)
-            revs = []
-            unique_titles = {}
-            for link in itertools.chain(self.index.page_links(title),
-                                        [self.config.style_page,
-                                         self.config.logo_page,
-                                         self.config.menu_page]):
-                if link not in self.storage and link not in unique_titles:
-                    unique_titles[link] = True
-                    revs.append(u'%s' % werkzeug.url_quote(link))
-            etag = '/(%s)' % u','.join(revs)
-            response = self.response(request, title, html, etag=etag)
         except werkzeug.exceptions.NotFound:
             url = request.get_url(title, self.edit, external=True)
-            response = werkzeug.routing.redirect(url, code=303)
-        return response
+            return werkzeug.routing.redirect(url, code=303)
+
+        dependencies = []
+        unique_titles = set()
+        config_pages = [
+            self.config.style_page,
+            self.config.logo_page,
+            self.config.menu_page,
+        ]
+        linked_pages = self.index.page_links(title)
+        for title in itertools.chain(linked_pages, config_pages):
+            if title not in self.storage and title not in unique_titles:
+                unique_titles.add(title)
+                dependencies.append(u'%s' % werkzeug.url_quote(title))
+        etag = '/(%s)' % u','.join(dependencies)
+
+        html = page.render_content(content)
+        return self.response(request, title, html, etag=etag)
 
     def view_content(self, request, title, page, lines=None):
         mime = self.storage.page_mime(title)

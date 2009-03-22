@@ -1098,7 +1098,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         self.tmpfiles = []
         self.tmppath = wiki.path
 
-    def get_page_url(self, title=None, view=None, method='GET', **kw):
+    def get_url(self, title=None, view=None, method='GET', **kw):
         if view is None:
             view = self.wiki.view
         if title is not None:
@@ -1106,7 +1106,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         return self.adapter.build(view, kw, method=method)
 
     def get_download_url(self, title):
-        return self.get_page_url(title, view=self.wiki.download)
+        return self.get_url(title, view=self.wiki.download)
 
     def wiki_link(self, addr, label, class_='wiki', image=None):
         """Create HTML for a wiki link."""
@@ -1130,7 +1130,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
             if addr == u'':
                 href = chunk
             else:
-                href = self.get_page_url(addr)+chunk
+                href = self.get_url(addr)+chunk
             if addr in ('history', 'search'):
                 class_ = 'special'
             elif addr not in self.wiki.storage:
@@ -1159,7 +1159,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
                     self.get_download_url(addr), werkzeug.escape(alt))
         else:
             return u'<a href="%s" class="nonexistent">%s</a>' % (
-                self.get_page_url(addr), werkzeug.escape(alt))
+                self.get_url(addr), werkzeug.escape(alt))
 
     def get_author(self):
         """Try to guess the author name. Use IP address as last resort."""
@@ -1209,6 +1209,103 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
                 os.rmdir(temp_path)
             except OSError:
                 pass
+
+class WikiPage(object):
+    """Everything needed for rendering a page."""
+
+    def __init__(self, wiki, request, title):
+        self.wiki = wiki
+        self.request = request
+        self.title = title
+        self.config = self.wiki.config
+
+    def html_head(self, page_title):
+        html = werkzeug.html
+
+        yield html.title(html(u'%s - %s'
+                         % (page_title or self.title, self.config.site_name)))
+        if self.config.style_page in self.wiki.storage:
+            yield html.link(rel="stylesheet", type_="text/css",
+                href=self.request.get_download_url(self.config.style_page))
+        else:
+            yield html.style(html(self.config.default_style),
+                             type_="text/css")
+
+        if page_title:
+            yield html.meta(name="robots", content="NOINDEX,NOFOLLOW")
+        else:
+            yield html.link(rel="alternate", type_="application/wiki",
+                            href=self.request.get_url(self.title,
+                                                      self.wiki.edit))
+
+        yield html.link(rel="shortcut icon", type_="image/x-icon",
+                        href=self.request.get_url(None, self.wiki.favicon))
+        yield html.link(rel="alternate", type_="application/rss+xml",
+                        title=u"%s (RSS)" % self.config.site_name,
+                        href=self.request.get_url(None, self.wiki.rss))
+        yield html.link(rel="alternate", type_="application/rss+xml",
+                        title="%s (ATOM)" % self.config.site_name,
+                         href=self.request.get_url(None, self.wiki.atom))
+        yield self.config.html_head
+
+    def html_search_form(self):
+        html = werkzeug.html
+        return html.form(html.div(html.input(name="q", class_="search"),
+                html.input(class_="button", type_="submit", value=_(u'Search')),
+            ), method="GET", class_="search",
+            action=self.request.get_url(None, self.wiki.search))
+
+    def html_logo(self):
+        html = werkzeug.html
+        return html.a(html.img(alt=u"[%s]" % self.config.front_page,
+            src=self.request.get_download_url(self.config.logo_page)),
+            class_='logo', href=self.request.get_url(self.config.front_page))
+
+    def html_menu(self):
+        html = werkzeug.html
+        items = self.wiki.index.page_links_and_labels(self.config.menu_page)
+        for link, label in items:
+            if link == title:
+                css = "current"
+            else:
+                css = ""
+            yield html.a(label, href=self.request.get_url(link), class_=css)
+
+    def html_page_header(self, page_title):
+        html = werkzeug.html
+        if self.config.logo_page in self.wiki.storage:
+            yield self.html_logo()
+        yield self.html_search_form()
+        if self.config.menu_page in self.wiki.storage:
+            yield html.div(self.html_menu(), class_="menu")
+        yield html.h1(html(page_title or self.title))
+
+    def html_page_footer(self):
+        html = werkzeug.html
+        if not self.config.read_only:
+            yield html.a(html(_(u'Edit')), class_="edit",
+                         href=self.request.get_url(self.title, self.wiki.edit))
+        yield html.a(html(_(u'History')), class_="history",
+                     href=self.request.get_url(self.title, self.wiki.history))
+        yield html.a(html(_(u'Backlinks')), class_="backlinks",
+                     href=self.request.get_url(self.title, self.wiki.backlinks))
+
+    def render_content(self, content, page_title=u''):
+        """The main page template."""
+
+        html = werkzeug.html
+        yield (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
+               '"http://www.w3.org/TR/html4/strict.dtd"><html>')
+        yield html.head(*self.html_head(page_title))
+        yield u'<body>'
+        yield html.div(*self.html_page_header(page_title), class_="header")
+        yield u'<div class="content">'
+        for part in content:
+            yield part
+        if not page_title:
+            yield html.div(*self.html_page_footer(), class_="footer")
+        yield u'</div></body></html>'
+
 
 class Wiki(object):
     """
@@ -1272,96 +1369,15 @@ class Wiki(object):
             R('/off-with-his-head', endpoint=self.die, methods=['GET']),
         ])
 
-    def html_head(self, request, title, page_title):
-        html = werkzeug.html
-        rss = request.get_page_url(None, self.rss)
-        atom = request.get_page_url(None, self.atom)
-        icon = request.get_page_url(None, self.favicon)
-        doctype = (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
-                   '"http://www.w3.org/TR/html4/strict.dtd">')
-        yield doctype
-        yield u'<html><head>'
-        head_title = u'%s - %s' % (page_title or title, self.config.site_name)
-        yield u'<title>%s</title>' % werkzeug.escape(head_title)
-        if self.config.style_page in self.storage:
-            css = request.get_download_url(self.config.style_page)
-#            yield u'<link rel="stylesheet" type="text/css" href="%s">' % css
-            yield html.link(rel="stylesheet", type_="text/css", href=css)
-        else:
-            yield (u'<style type="text/css">%s</style>'
-                   % self.config.default_style)
-        if page_title:
-            yield u'<meta name="robots" content="NOINDEX,NOFOLLOW">'
-        else:
-            edit = request.adapter.build(self.edit, {'title': title})
-            yield (u'<link rel="alternate" type="application/wiki" href="%s">'
-                   % edit)
-        yield (u'<link rel="shortcut icon" type="image/x-icon" href="%s">'
-               % icon)
-        yield (u'<link rel="alternate" type="application/rss+xml" '
-               u'title="%s (RSS)" href="%s">' % (
-                    werkzeug.escape(self.config.site_name, quote=True), rss))
-        yield (u'<link rel="alternate" type="application/rss+xml" '
-               u'title="%s (ATOM)" href="%s">' % (
-                    werkzeug.escape(self.config.site_name, quote=True), atom))
-        yield u'%s</head>' % self.config.html_head
-
     def html_page(self, request, title, content, page_title=u''):
-        """The main page template."""
-
-        html = werkzeug.html
-        for part in self.html_head(request, title, page_title):
-            yield part
-        yield u'<body>'
-        yield u'<div class="header">'
-        if self.config.logo_page in self.storage:
-            home = request.get_page_url(self.config.front_page)
-            logo = request.get_download_url(self.config.logo_page)
-            yield u'<a href="%s" class="logo"><img src="%s" alt="[%s]"></a>' % (
-                home, logo, werkzeug.escape(self.config.front_page))
-        search = request.adapter.build(self.search, method='GET')
-        yield u'<form class="search" action="%s" method="GET"><div>' % search
-        yield u'<input name="q" class="search">'
-        yield (u'<input class="button" type="submit" value="%s">'
-               % werkzeug.escape(_(u'Search'), quote=True))
-        yield u'</div></form>'
-        if self.config.menu_page in self.storage:
-            menu = self.index.page_links_and_labels(self.config.menu_page)
-            if menu:
-                yield u'<div class="menu">'
-                for link, label in menu:
-                    if link == title:
-                        css = u' class="current"'
-                    else:
-                        css = u''
-                    yield u'<a href="%s"%s>%s</a> ' % (
-                        request.get_page_url(link), css, werkzeug.escape(label))
-                yield u'</div>'
-        yield u'<h1>%s</h1>' % werkzeug.escape(page_title or title)
-        yield u'</div><div class="content">'
-        for part in content:
-            yield part
-        if not page_title:
-            history = request.adapter.build(self.history, {'title': title},
-                                            method='GET')
-            backlinks = request.adapter.build(self.backlinks, {'title': title},
-                                              method='GET')
-            edit = request.adapter.build(self.edit, {'title': title})
-            yield u'<div class="footer">'
-            if not self.config.read_only:
-                yield u'<a href="%s" class="edit">%s</a> ' % (edit,
-                    werkzeug.escape(_(u'Edit')))
-            yield u'<a href="%s" class="history">%s</a> ' % (history,
-                werkzeug.escape(_(u'History')))
-            yield u'<a href="%s" class="backlinks">%s</a> ' % (backlinks,
-                werkzeug.escape(_(u'Backlinks')))
-            yield u'</div>'
-        yield u'</div></body></html>'
+        page = WikiPage(self, request, title)
+        return page.render_content(content)
 
     def view(self, request, title):
         try:
             content = self.view_content(request, title)
-            html = self.html_page(request, title, content)
+            page = WikiPage(self, request, title)
+            html = page.render_content(content)
             revs = []
             unique_titles = {}
             for link in itertools.chain(self.index.page_links(title),
@@ -1460,10 +1476,10 @@ class Wiki(object):
 
     def save(self, request, title):
         self.check_lock(title)
-        url = request.get_page_url(title)
+        url = request.get_url(title)
         if request.form.get('cancel'):
             if title not in self.storage:
-                url = request.get_page_url(self.config.front_page)
+                url = request.get_url(self.config.front_page)
         if request.form.get('preview'):
             text = request.form.get("text")
             if text is not None:
@@ -1489,7 +1505,7 @@ class Wiki(object):
                     raise werkzeug.exceptions.Forbidden()
                 if text.strip() == '':
                     self.storage.delete_page(title, author, comment)
-                    url = request.get_page_url(self.config.front_page)
+                    url = request.get_url(self.config.front_page)
                 else:
                     data = text.encode(self.config.page_charset)
                     self.storage.save_text(title, data, author, comment, parent)
@@ -1506,7 +1522,7 @@ class Wiki(object):
                                                comment, parent)
                 else:
                     self.storage.delete_page(title, author, comment)
-                    url = request.get_page_url(self.config.front_page)
+                    url = request.get_url(self.config.front_page)
             self.index_text(title, text)
         response = werkzeug.routing.redirect(url, code=303)
         response.set_cookie('author',

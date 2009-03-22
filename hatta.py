@@ -1290,7 +1290,7 @@ class WikiPage(object):
 
     def page(self, content, special_title, footer=False):
         html = werkzeug.html
-        yield html.div(*self.header(special_title), class_="header")
+        yield html.div(class_="header", *self.header(special_title))
         yield u'<div class="content">'
         for part in content:
             yield part
@@ -1314,6 +1314,12 @@ class WikiPage(object):
             yield part
         yield u'</body></html>'
 
+
+class WikiTitleConverter(werkzeug.routing.PathConverter):
+    """Behaves like the path converter, except that it escapes slashes."""
+
+    def to_url(self, value):
+        return werkzeug.url_quote(value, self.map.charset, safe="")
 
 class Wiki(object):
     """
@@ -1353,29 +1359,29 @@ class Wiki(object):
         self.url_map = werkzeug.routing.Map([
             R('/', defaults={'title': self.config.front_page},
               endpoint=self.view, methods=['GET', 'HEAD']),
-            R('/edit/<path:title>', endpoint=self.edit, methods=['GET']),
-            R('/edit/<path:title>', endpoint=self.save, methods=['POST']),
-            R('/history/<path:title>', endpoint=self.history,
+            R('/edit/<title:title>', endpoint=self.edit, methods=['GET']),
+            R('/edit/<title:title>', endpoint=self.save, methods=['POST']),
+            R('/history/<title:title>', endpoint=self.history,
               methods=['GET', 'HEAD']),
-            R('/undo/<path:title>', endpoint=self.undo, methods=['POST']),
+            R('/undo/<title:title>', endpoint=self.undo, methods=['POST']),
             R('/history/', endpoint=self.recent_changes,
               methods=['GET', 'HEAD']),
-            R('/history/<path:title>/<int:rev>', endpoint=self.revision,
+            R('/history/<title:title>/<int:rev>', endpoint=self.revision,
               methods=['GET']),
             R('/history/<title>/<int:from_rev>:<int:to_rev>',
               endpoint=self.diff, methods=['GET']),
-            R('/download/<path:title>', endpoint=self.download,
+            R('/download/<title:title>', endpoint=self.download,
               methods=['GET', 'HEAD']),
-            R('/<path:title>', endpoint=self.view, methods=['GET', 'HEAD']),
+            R('/<title:title>', endpoint=self.view, methods=['GET', 'HEAD']),
             R('/feed/rss', endpoint=self.rss, methods=['GET', 'HEAD']),
             R('/feed/atom', endpoint=self.atom, methods=['GET', 'HEAD']),
             R('/favicon.ico', endpoint=self.favicon, methods=['GET', 'HEAD']),
             R('/robots.txt', endpoint=self.robots, methods=['GET']),
             R('/search', endpoint=self.search, methods=['GET', 'POST']),
-            R('/search/<path:title>', endpoint=self.backlinks,
+            R('/search/<title:title>', endpoint=self.backlinks,
               methods=['GET', 'POST']),
             R('/off-with-his-head', endpoint=self.die, methods=['GET']),
-        ])
+        ], converters={'title':WikiTitleConverter})
 
 #    def html_page(self, request, title, content, page_title=u''):
 #        page = WikiPage(self, request, title)
@@ -1398,10 +1404,10 @@ class Wiki(object):
             self.config.menu_page,
         ]
         linked_pages = self.index.page_links(title)
-        for title in itertools.chain(linked_pages, config_pages):
-            if title not in self.storage and title not in unique_titles:
-                unique_titles.add(title)
-                dependencies.append(u'%s' % werkzeug.url_quote(title))
+        for link_title in itertools.chain(linked_pages, config_pages):
+            if link_title not in self.storage and title not in unique_titles:
+                unique_titles.add(link_title)
+                dependencies.append(u'%s' % werkzeug.url_quote(link_title))
         etag = '/(%s)' % u','.join(dependencies)
 
         return self.response(request, title, html, etag=etag)

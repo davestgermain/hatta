@@ -1613,31 +1613,25 @@ class Wiki(object):
         if preview:
             lines = preview
             comment = request.form.get('comment', comment)
+        html = werkzeug.html
         yield u'<form action="" method="POST" class="editor"><div>'
         yield u'<textarea name="text" cols="80" rows="20">'
         for line in lines:
             yield werkzeug.escape(line)
         yield u"""</textarea>"""
-        yield u'<input type="hidden" name="parent" value="%d">' % rev
-        yield (u'<label class="comment">%s <input name="comment" value="%s">'
-               u'</label>' % (
-                    werkzeug.escape(_(u'Comment')),
-                    werkzeug.escape(comment, quote=True)))
-        yield u'<label>%s <input name="author" value="%s"></label>' % (
-            werkzeug.escape(_(u'Author')),
-            werkzeug.escape(request.get_author(), quote=True))
-        yield u'<div class="buttons">'
-        yield (u'<input type="submit" name="save" value="%s">'
-               % werkzeug.escape(_(u'Save'), quote=True))
-        yield (u'<input type="submit" name="preview" value="%s">'
-               % werkzeug.escape(_(u'Preview'), quote=True))
-        yield (u'<input type="submit" name="cancel" value="%s">'
-               % werkzeug.escape(_(u'Cancel'), quote=True))
-        yield u'</div>'
+        yield html.input(type_="hidden", name="parent", value=rev)
+        yield html.label(html(_(u'Comment')), html.input(name="comment",
+            value=comment), class_="comment")
+        yield html.label(html(_(u'Author')), html.input(name="author",
+            value=request.get_author()), class_="comment")
+        yield html.div(
+                html.input(type_="submit", name="save", value=_(u'Save')),
+                html.input(type_="submit", name="preview", value=_(u'Preview')),
+                html.input(type_="submit", name="cancel", value=_(u'Cancel')),
+                class_="buttons")
         yield u'</div></form>'
         if preview:
-            yield u'<h1 id="preview">%s</h1>' % werkzeug.escape(
-                _(u'Preview, not saved'))
+            yield html.h1(html(_(u'Preview, not saved')), class_="preview")
             page = WikiPage(self, request, title)
             for part in self.view_content(request, title, page, preview):
                 yield part

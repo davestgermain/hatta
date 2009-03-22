@@ -1102,7 +1102,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         if view is None:
             view = self.wiki.view
         if title is not None:
-            kw['title'] = title
+            kw['title'] = title.replace('/', '%2F')
         return self.adapter.build(view, kw, method=method)
 
     def get_download_url(self, title):
@@ -1119,9 +1119,8 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
                 href = addr.replace('@', '%40').replace('.', '%2E')
             else:
                 class_ = 'external'
-                href = addr
+                href = werkzeug.url_fix(addr)
         else:
-            #addr = addr.replace('/', '%2F')
             if '#' in addr:
                 addr, chunk = addr.split('#', 1)
                 chunk = '#%s' % chunk
@@ -1130,36 +1129,44 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
             if addr == u'':
                 href = chunk
             else:
-                href = self.get_url(addr)+chunk
+                href = self.get_url(addr) + chunk
             if addr in ('history', 'search'):
                 class_ = 'special'
             elif addr not in self.wiki.storage:
                 class_ = 'nonexistent'
-        return u'<a href="%s" class="%s">%s</a>' % (href, class_, image or text)
+        return werkzeug.html.a(image or text, href=href, class_=class_)
 
     def wiki_image(self, addr, alt, class_='wiki'):
         """Create HTML for a wiki image."""
 
+        html = werkzeug.html
         chunk = ''
         if external_link(addr):
-            return u'<img src="%s" class="external" alt="%s">' % (
-                werkzeug.url_fix(addr), werkzeug.escape(alt))
+            return html.img(src=werkzeug.url_fix(addr), class_="external",
+                            alt=alt)
+#            return u'<img src="%s" class="external" alt="%s">' % (
+#                werkzeug.url_fix(addr), werkzeug.escape(alt))
         if '#' in addr:
             addr, chunk = addr.split('#', 1)
         if addr == '':
-            return u'<a name="%s"></a>' % werkzeug.escape(chunk, quote=True)
+            return html.a(name=chunk)
+#            return u'<a name="%s"></a>' % werkzeug.escape(chunk, quote=True)
         if addr in self.wiki.storage:
             mime = self.wiki.storage.page_mime(addr)
             if mime.startswith('image/'):
-                return u'<img src="%s" class="%s" alt="%s">' % (
-                    self.get_download_url(addr), class_,
-                    werkzeug.escape(alt, quote="True"))
+                return html.img(src=self.get_download_url(addr), class_=class_,
+                                alt=alt)
+#                return u'<img src="%s" class="%s" alt="%s">' % (
+#                    self.get_download_url(addr), class_,
+#                    werkzeug.escape(alt, quote="True"))
             else:
-                return u'<a href="%s" class="download">%s</a>' % (
-                    self.get_download_url(addr), werkzeug.escape(alt))
+                return html.img(href=self.get_download_url(addr), alt=alt)
+#                return u'<a href="%s" class="download">%s</a>' % (
+#                    self.get_download_url(addr), werkzeug.escape(alt))
         else:
-            return u'<a href="%s" class="nonexistent">%s</a>' % (
-                self.get_url(addr), werkzeug.escape(alt))
+            return html.a(html(alt), href=self.get_url(addr))
+#            return u'<a href="%s" class="nonexistent">%s</a>' % (
+#                self.get_url(addr), werkzeug.escape(alt))
 
     def get_author(self):
         """Try to guess the author name. Use IP address as last resort."""

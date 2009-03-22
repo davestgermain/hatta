@@ -36,6 +36,8 @@ class HattaStandalone(unittest.TestCase):
 
         response = self.client.get('')
         self.assertEqual(response.status_code, 303)
+        self.assertEqual(response.headers['Location'],
+                         'http://localhost/edit/Home')
         response = self.client.get('/edit/Home')
         self.assertEqual(response.status_code, 404)
 

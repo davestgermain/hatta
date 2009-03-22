@@ -1098,15 +1098,76 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         self.tmpfiles = []
         self.tmppath = wiki.path
 
-    def get_url(self, title=None, view=None, method='GET', **kw):
+    def get_url(self, title=None, view=None, method='GET', external=False, **kw):
         if view is None:
             view = self.wiki.view
         if title is not None:
-            kw['title'] = title.replace('/', '%2F')
-        return self.adapter.build(view, kw, method=method)
+            kw['title'] = title
+        return self.adapter.build(view, kw, method=method,
+                                  force_external=external)
 
     def get_download_url(self, title):
         return self.get_url(title, view=self.wiki.download)
+
+    def get_author(self):
+        """Try to guess the author name. Use IP address as last resort."""
+
+        author = (self.form.get("author")
+                  or werkzeug.url_unquote(self.cookies.get("author", ""))
+                  or werkzeug.url_unquote(self.environ.get('REMOTE_USER', ""))
+                  or self.remote_addr)
+        return author
+
+    def _get_file_stream(self):
+        """Save all the POSTs to temporary files."""
+
+        class FileWrapper(file):
+            def __init__(self, f):
+                self.f = f
+
+            def read(self, *args, **kw):
+                return self.f.read(*args, **kw)
+
+            def write(self, *args, **kw):
+                return self.f.write(*args, **kw)
+
+            def seek(self, *args, **kw):
+                return self.f.seek(*args, **kw)
+
+            def close(self, *args, **kw):
+                return self.f.close(*args, **kw)
+
+        temp_path = tempfile.mkdtemp(dir=self.tmppath)
+        file_path = os.path.join(temp_path, 'saved')
+        self.tmpfiles.append(temp_path)
+        # We need to wrap the file object in order to add an attribute
+        tmpfile = FileWrapper(open(file_path, "wb"))
+        tmpfile.tmpname = file_path
+        return tmpfile
+
+    def cleanup(self):
+        """Clean up the temporary files created by POSTs."""
+
+        for temp_path in self.tmpfiles:
+            try:
+                os.unlink(os.path.join(temp_path, 'saved'))
+            except OSError:
+                pass
+            try:
+                os.rmdir(temp_path)
+            except OSError:
+                pass
+
+class WikiPage(object):
+    """Everything needed for rendering a page."""
+
+    def __init__(self, wiki, request, title):
+        self.wiki = wiki
+        self.request = request
+        self.title = title
+        self.config = self.wiki.config
+        self.get_url = self.request.get_url
+        self.get_download_url = self.request.get_download_url
 
     def wiki_link(self, addr, label, class_='wiki', image=None):
         """Create HTML for a wiki link."""
@@ -1167,65 +1228,6 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
             return html.a(html(alt), href=self.get_url(addr))
 #            return u'<a href="%s" class="nonexistent">%s</a>' % (
 #                self.get_url(addr), werkzeug.escape(alt))
-
-    def get_author(self):
-        """Try to guess the author name. Use IP address as last resort."""
-
-        author = (self.form.get("author")
-                  or werkzeug.url_unquote(self.cookies.get("author", ""))
-                  or werkzeug.url_unquote(self.environ.get('REMOTE_USER', ""))
-                  or self.remote_addr)
-        return author
-
-    def _get_file_stream(self):
-        """Save all the POSTs to temporary files."""
-
-        class FileWrapper(file):
-            def __init__(self, f):
-                self.f = f
-
-            def read(self, *args, **kw):
-                return self.f.read(*args, **kw)
-
-            def write(self, *args, **kw):
-                return self.f.write(*args, **kw)
-
-            def seek(self, *args, **kw):
-                return self.f.seek(*args, **kw)
-
-            def close(self, *args, **kw):
-                return self.f.close(*args, **kw)
-
-        temp_path = tempfile.mkdtemp(dir=self.tmppath)
-        file_path = os.path.join(temp_path, 'saved')
-        self.tmpfiles.append(temp_path)
-        # We need to wrap the file object in order to add an attribute
-        tmpfile = FileWrapper(open(file_path, "wb"))
-        tmpfile.tmpname = file_path
-        return tmpfile
-
-    def cleanup(self):
-        """Clean up the temporary files created by POSTs."""
-
-        for temp_path in self.tmpfiles:
-            try:
-                os.unlink(os.path.join(temp_path, 'saved'))
-            except OSError:
-                pass
-            try:
-                os.rmdir(temp_path)
-            except OSError:
-                pass
-
-class WikiPage(object):
-    """Everything needed for rendering a page."""
-
-    def __init__(self, wiki, request, title):
-        self.wiki = wiki
-        self.request = request
-        self.title = title
-        self.config = self.wiki.config
-
     def html_head(self, page_title):
         html = werkzeug.html
 
@@ -1233,7 +1235,7 @@ class WikiPage(object):
                          % (page_title or self.title, self.config.site_name)))
         if self.config.style_page in self.wiki.storage:
             yield html.link(rel="stylesheet", type_="text/css",
-                href=self.request.get_download_url(self.config.style_page))
+                href=self.get_download_url(self.config.style_page))
         else:
             yield html.style(html(self.config.default_style),
                              type_="text/css")
@@ -1242,17 +1244,17 @@ class WikiPage(object):
             yield html.meta(name="robots", content="NOINDEX,NOFOLLOW")
         else:
             yield html.link(rel="alternate", type_="application/wiki",
-                            href=self.request.get_url(self.title,
+                            href=self.get_url(self.title,
                                                       self.wiki.edit))
 
         yield html.link(rel="shortcut icon", type_="image/x-icon",
-                        href=self.request.get_url(None, self.wiki.favicon))
+                        href=self.get_url(None, self.wiki.favicon))
         yield html.link(rel="alternate", type_="application/rss+xml",
                         title=u"%s (RSS)" % self.config.site_name,
-                        href=self.request.get_url(None, self.wiki.rss))
+                        href=self.get_url(None, self.wiki.rss))
         yield html.link(rel="alternate", type_="application/rss+xml",
                         title="%s (ATOM)" % self.config.site_name,
-                         href=self.request.get_url(None, self.wiki.atom))
+                         href=self.get_url(None, self.wiki.atom))
         yield self.config.html_head
 
     def html_search_form(self):
@@ -1260,13 +1262,13 @@ class WikiPage(object):
         return html.form(html.div(html.input(name="q", class_="search"),
                 html.input(class_="button", type_="submit", value=_(u'Search')),
             ), method="GET", class_="search",
-            action=self.request.get_url(None, self.wiki.search))
+            action=self.get_url(None, self.wiki.search))
 
     def html_logo(self):
         html = werkzeug.html
         return html.a(html.img(alt=u"[%s]" % self.config.front_page,
-            src=self.request.get_download_url(self.config.logo_page)),
-            class_='logo', href=self.request.get_url(self.config.front_page))
+            src=self.get_download_url(self.config.logo_page)),
+            class_='logo', href=self.get_url(self.config.front_page))
 
     def html_menu(self):
         html = werkzeug.html
@@ -1276,7 +1278,7 @@ class WikiPage(object):
                 css = "current"
             else:
                 css = ""
-            yield html.a(label, href=self.request.get_url(link), class_=css)
+            yield html.a(label, href=self.get_url(link), class_=css)
 
     def html_page_header(self, page_title):
         html = werkzeug.html
@@ -1291,11 +1293,11 @@ class WikiPage(object):
         html = werkzeug.html
         if not self.config.read_only:
             yield html.a(html(_(u'Edit')), class_="edit",
-                         href=self.request.get_url(self.title, self.wiki.edit))
+                         href=self.get_url(self.title, self.wiki.edit))
         yield html.a(html(_(u'History')), class_="history",
-                     href=self.request.get_url(self.title, self.wiki.history))
+                     href=self.get_url(self.title, self.wiki.history))
         yield html.a(html(_(u'Backlinks')), class_="backlinks",
-                     href=self.request.get_url(self.title, self.wiki.backlinks))
+                     href=self.get_url(self.title, self.wiki.backlinks))
 
     def render_content(self, content, page_title=u''):
         """The main page template."""
@@ -1382,8 +1384,8 @@ class Wiki(object):
 
     def view(self, request, title):
         try:
-            content = self.view_content(request, title)
             page = WikiPage(self, request, title)
+            content = self.view_content(request, title, page)
             html = page.render_content(content)
             revs = []
             unique_titles = {}
@@ -1397,20 +1399,19 @@ class Wiki(object):
             etag = '/(%s)' % u','.join(revs)
             response = self.response(request, title, html, etag=etag)
         except werkzeug.exceptions.NotFound:
-            url = request.adapter.build(self.edit, {'title':title})
+            url = request.get_url(title, self.edit, external=True)
             response = werkzeug.routing.redirect(url, code=303)
         return response
 
-    def view_content(self, request, title, lines=None):
+    def view_content(self, request, title, page, lines=None):
         mime = self.storage.page_mime(title)
         if mime == 'text/x-wiki':
             if lines is None:
                 f = self.storage.open_page(title)
                 lines = (unicode(line, self.config.page_charset,
                      "replace") for line in f)
-            content = self.parser(lines, request.wiki_link,
-                                  request.wiki_image, self.highlight,
-                                  self.wiki_math)
+            content = self.parser(lines, page.wiki_link, page.wiki_image,
+                                  self.highlight, self.wiki_math)
         elif mime.startswith('image/'):
             if title not in self.storage:
                 raise werkzeug.exceptions.NotFound()
@@ -1439,7 +1440,9 @@ class Wiki(object):
             u'<p>%s</p>' % (
                 werkzeug.escape(
                     _(u'Content of revision %(rev)d of page %(title)s:'))
-                % {'rev': rev, 'title': request.wiki_link(title, title)}
+                % {'rev': rev,
+                   'title': u'<a href="%s">%s</a>' % (request.get_url(title),
+                                                      werkzeug.escape(title))}
             ),
             u'<pre>%s</pre>' % werkzeug.escape(text),
         ]
@@ -1624,7 +1627,8 @@ class Wiki(object):
         if preview:
             yield u'<h1 id="preview">%s</h1>' % werkzeug.escape(
                 _(u'Preview, not saved'))
-            for part in self.view_content(request, title, preview):
+            page = WikiPage(self, request, title)
+            for part in self.view_content(request, title, page, preview):
                 yield part
 
     def upload_form(self, request, title, preview=None):
@@ -2017,7 +2021,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         yield u'<ul>'
         for score, title in result:
             yield '<li><b>%s</b> (%d)<div class="snippet">%s</div></li>' % (
-                request.wiki_link(title, title),
+                u'<a href="%s">%s</a>' % (request.get_url(title),
+                                          werkzeug.escape(title)),
                 score,
                 self.search_snippet(title, words))
         yield u'</ul>'

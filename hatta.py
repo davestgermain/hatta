@@ -1264,11 +1264,10 @@ class WikiPage(object):
         html = werkzeug.html
         items = self.wiki.index.page_links_and_labels(self.config.menu_page)
         for link, label in items:
-            if link == title:
-                css = "current"
+            if link == self.title:
+                yield html.a(label, href=self.get_url(link), class_="current")
             else:
-                css = ""
-            yield html.a(label, href=self.get_url(link), class_=css)
+                yield html.a(label, href=self.get_url(link))
 
     def header(self, special_title):
         html = werkzeug.html
@@ -1276,7 +1275,7 @@ class WikiPage(object):
             yield self.logo()
         yield self.search_form()
         if self.config.menu_page in self.wiki.storage:
-            yield html.div(self.menu(), class_="menu")
+            yield html.div(*self.menu(), class_="menu")
         yield html.h1(html(special_title or self.title))
 
     def footer(self):
@@ -1639,36 +1638,31 @@ class Wiki(object):
 
     def upload_form(self, request, title, preview=None):
         author = request.get_author()
-        try:
-            f = self.storage.open_page(title)
+        if title in self.storage:
             comment = _(u'changed')
             (rev, old_date, old_author,
                 old_comment) = self.storage.page_meta(title)
             if old_author == author:
                 comment = old_comment
-        except werkzeug.exceptions.NotFound:
-            f = []
+        else:
             comment = _(u'uploaded')
             rev = -1
-        yield u"<p>%s</p>" % werkzeug.escape(
+        html = werkzeug.html
+        yield html.p(html(
                 _(u"This is a binary file, it can't be edited on a wiki. "
-                  u"Please upload a new version instead."))
-        yield (u'<form action="" method="POST" class="editor" '
-               u'enctype="multipart/form-data">')
-        yield u'<div><div class="upload"><input type="file" name="data"></div>'
-        yield u'<input type="hidden" name="parent" value="%d">' % rev
-        yield (u'<label class="comment">%s <input name="comment" value="%s">'
-               u'</label>' % (
-                werkzeug.escape(_(u'Comment')),
-                werkzeug.escape(comment, quote=True)))
-        yield u'<label>%s <input name="author" value="%s"></label>' % (
-            _(u'Author'), werkzeug.escape(author))
-        yield u'<div class="buttons">'
-        yield (u'<input type="submit" name="save" value="%s">'
-               % werkzeug.escape(_(u'Save'), quote=True))
-        yield (u'<input type="submit" name="cancel" value="%s">'
-               % werkzeug.escape(_(u'Cancel'), quote=True))
-        yield u'</div></div></form>'
+                  u"Please upload a new version instead.")))
+        yield html.form(html.div(
+            html.div(html.input(type_="file", name="data"), class_="upload"),
+            html.input(type_="hidden", name="parent", value=rev),
+            html.label(html(_(u'Comment')),
+                       html.input(name="comment", value=comment)),
+            html.label(html(_(u'Author')),
+                       html.input(name="author", value=author)),
+            html.div(
+                html.input(type_="submit", name="save", value=_(u'Save')),
+                html.input(type_="submit", name="cancel", value=_(u'Cancel')),
+                class_="buttons")), action="", method="POST", class_="editor",
+                                    enctype="multipart/form-data")
 
     def atom(self, request):
         date_format = "%Y-%m-%dT%H:%M:%SZ"

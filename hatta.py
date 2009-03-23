@@ -787,7 +787,7 @@ class WikiParser(object):
         text = u"".join(self.parse_line(u"".join(parts)))
         if self.numbers:
             yield werkzeug.html.p(text, self.pop_to(""),
-                                  id_="line-%d" % self.line_no)
+                id="line_%d" % self.line_no)
         else:
             yield werkzeug.html.p(text, self.pop_to(""))
 
@@ -1326,6 +1326,16 @@ class WikiPage(object):
         yield u'<body>'
         for part in self.page(content, special_title):
             yield part
+        yield html.script(u"""
+var paragraphs = document.getElementsByTagName('p');
+for (var i = 0; i < paragraphs.length; ++i) {
+    if (paragraphs[i].id) {
+        paragraphs[i].ondblclick = function () {
+            document.location.href = '%s?'+this.id.replace('_', '=');
+        };
+    }
+};
+""" % self.request.get_url(self.title, self.wiki.edit))
         yield u'</body></html>'
 
 

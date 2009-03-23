@@ -613,14 +613,17 @@ class WikiParser(object):
 
 
     def __init__(self, lines, wiki_link, wiki_image,
-                 wiki_syntax=None, wiki_math=None):
-        self.lines = iter(lines)
+                 wiki_syntax=None, wiki_math=None, numbers=False):
         self.wiki_link = wiki_link
         self.wiki_image = wiki_image
         self.wiki_syntax = wiki_syntax
         self.wiki_math = wiki_math
         self.headings = {}
         self.stack = []
+        # self.lines = iter(lines)
+        self.line_no = 0
+        self.enumerated_lines = enumerate(lines)
+        self.numbers = numbers
 
     def __iter__(self):
         return self.parse()
@@ -628,13 +631,14 @@ class WikiParser(object):
     def parse(self):
         """Parse a list of lines of wiki markup, yielding HTML for it."""
 
-        def key(line):
+        def key(enumerated_line):
+            line_no, line = enumerated_line
             match = self.block_re.match(line)
             if match:
                 return match.lastgroup
             return "paragraph"
 
-        for kind, block in itertools.groupby(self.lines, key):
+        for kind, block in itertools.groupby(self.enumerated_lines, key):
             func = getattr(self, "_block_%s" % kind)
             for part in func(block):
                 yield part
@@ -666,10 +670,10 @@ class WikiParser(object):
     def lines_until(self, close_re):
         """Get lines from input until the closing markup is encountered."""
 
-        line = self.lines.next()
+        self.line_no, line = self.enumerated_lines.next()
         while not close_re.match(line):
             yield line.rstrip()
-            line = self.lines.next()
+            line_no, line = self.enumerated_lines.next()
 
     def _line_linebreak(self, groups):
         return u'<br>'
@@ -754,12 +758,12 @@ class WikiParser(object):
 # methods for the block (multiline) markup:
 
     def _block_code(self, block):
-        for part in block:
+        for self.line_no, part in block:
             inside = u"\n".join(self.lines_until(self.code_close_re))
             yield u'<pre class="code">%s</pre>' % werkzeug.escape(inside)
 
     def _block_syntax(self, block):
-        for part in block:
+        for self.line_no, part in block:
             syntax = part.lstrip('{#!').strip()
             inside = u"\n".join(self.lines_until(self.code_close_re))
             if self.wiki_syntax:
@@ -769,7 +773,7 @@ class WikiParser(object):
                         % werkzeug.escape(inside)]
 
     def _block_macro(self, block):
-        for part in block:
+        for self.line_no, part in block:
             name = part.lstrip('<').strip()
             inside = u"\n".join(self.lines_until(self.macro_close_re))
             yield u'<div class="%s">%s</div>' % (
@@ -777,18 +781,27 @@ class WikiParser(object):
                 werkzeug.escape(inside))
 
     def _block_paragraph(self, block):
-        text = u"".join(block)
-        yield u'<p>%s%s</p>' % (u"".join(self.parse_line(text)),
-                                self.pop_to(""))
+        parts = []
+        for self.line_no, part in block:
+            parts.append(part)
+        text = u"".join(self.parse_line(u"".join(parts)))
+        if self.numbers:
+            yield werkzeug.html.p(text, self.pop_to(""),
+                                  id_="line-%d" % self.line_no)
+        else:
+            yield werkzeug.html.p(text, self.pop_to(""))
 
     def _block_indent(self, block):
-        yield u'<pre>%s</pre>' % werkzeug.escape(u"\n".join(line.rstrip()
-                                                 for line in block))
+        parts = []
+        for self.line_no, part in block:
+            parts.append(part.rstrip())
+        text = u"\n".join(parts)
+        yield werkzeug.html.pre(werkzeug.html(text))
 
     def _block_table(self, block):
         yield u'<table>'
         in_head = False
-        for line in block:
+        for self.line_no, line in block:
             table_row = line.strip()
             is_header = table_row.startswith('|=') and table_row.endswith('=|')
             if not in_head and is_header:
@@ -811,10 +824,11 @@ class WikiParser(object):
         yield u''
 
     def _block_rule(self, block):
-        yield u'<hr>'
+        for self.line_no, line in block:
+            yield werkzeug.html.hr()
 
     def _block_heading(self, block):
-        for line in block:
+        for self.line_no, line in block:
             level = min(len(self.heading_re.match(line).group(0).strip()), 5)
             self.headings[level-1] = self.headings.get(level-1, 0)+1
             label = u"-".join(str(self.headings.get(i, 0))
@@ -827,7 +841,7 @@ class WikiParser(object):
 
     def _block_bullets(self, block):
         level = 0
-        for line in block:
+        for self.line_no, line in block:
             nest = len(self.bullets_re.match(line).group(0).strip())
             if nest == level:
                 yield '</li>'
@@ -845,7 +859,7 @@ class WikiParser(object):
     def _block_quote(self, block):
         level = 0
         in_p = False
-        for line in block:
+        for self.line_no, line in block:
             nest = len(self.quote_re.match(line).group(0).strip())
             if nest == level:
                 yield u'\n'
@@ -1420,7 +1434,14 @@ class Wiki(object):
                 lines = (unicode(line, self.config.page_charset,
                      "replace") for line in f)
             content = self.parser(lines, page.wiki_link, page.wiki_image,
-                                  self.highlight, self.wiki_math)
+                                  self.highlight, self.wiki_math, numbers=True)
+#            def add_line_numbers(parser):
+#                for part in parser:
+#                    if part:
+#                        yield werkzeug.html.a(name="line-%d" % parser.line_no,
+#                                              class_="line-no")
+#                    yield part
+#            content = add_line_numbers(content)
         elif mime.startswith('image/'):
             if title not in self.storage:
                 raise werkzeug.exceptions.NotFound()
@@ -1615,10 +1636,23 @@ class Wiki(object):
             comment = request.form.get('comment', comment)
         html = werkzeug.html
         yield u'<form action="" method="POST" class="editor"><div>'
-        yield u'<textarea name="text" cols="80" rows="20">'
-        for line in lines:
-            yield werkzeug.escape(line)
+        yield u'<textarea name="text" cols="80" rows="20" id="editortext">'
+        try:
+            jump_line = int(request.values.get('line', 0))
+        except ValueError:
+            jump_line = 0
+        scrolled_lines = []
+        scrolled_characters = 0
+        for line_no, line in enumerate(lines):
+            encoded = unicode(line, "utf-8", 'replace').replace(u'\r', u'')
+            yield werkzeug.escape(encoded)
+            if line_no < jump_line-1:
+                scrolled_lines.append(encoded)
+            if line_no < jump_line:
+                scrolled_characters += len(encoded)
         yield u"""</textarea>"""
+
+
         yield html.input(type_="hidden", name="parent", value=rev)
         yield html.label(html(_(u'Comment')), html.input(name="comment",
             value=comment), class_="comment")
@@ -1635,6 +1669,39 @@ class Wiki(object):
             page = WikiPage(self, request, title)
             for part in self.view_content(request, title, page, preview):
                 yield part
+
+        # Scroll the textarea to the line specified
+        # Move the cursor to the specified line
+        yield werkzeug.html.pre(id="textdiv")
+        scrolled_text = u"".join(scrolled_lines).replace(u'\n', r'\n').replace(u'"', r'\"')
+        yield html.script(u"""
+var textBox=document.getElementById("editortext");
+textBox.focus();
+var cursorPosition = %d;
+if (textBox.setSelectionRange) {
+    textBox.setSelectionRange(cursorPosition, cursorPosition);
+    var scrollPre = document.getElementById("textdiv");
+    scrollPre.style.fontFamily = textBox.style.fontFamily;
+    scrollPre.style.fontSize = textBox.style.fontSize;
+    scrollPre.style.lineHeight = textBox.style.lineHeight;
+    scrollPre.style.width = textBox.style.width;
+    scrollPre.style.padding = textBox.style.padding;
+    try { scrollPre.style.whiteSpace = "-moz-pre-wrap" } catch(e) {};
+    try { scrollPre.style.whiteSpace = "-o-pre-wrap" } catch(e) {};
+    try { scrollPre.style.whiteSpace = "-pre-wrap" } catch(e) {};
+    try { scrollPre.style.whiteSpace = "pre-wrap" } catch(e) {};
+    try { scrollPre.style.wordWrap = "break-word" } catch(e) {};
+    scrollPre.textContent = "%s";
+    textBox.scrollTop = scrollPre.clientHeight;
+    scrollPre.textContent = "";
+} else if (textBox.createTextRange) {
+    var range = textBox.createTextRange();
+    range.collapse(true);
+    range.moveEnd('character', cursorPosition);
+    range.moveStart('character', cursorPosition);
+    range.select();
+}
+""" % (scrolled_characters, scrolled_text))
 
     def upload_form(self, request, title, preview=None):
         author = request.get_author()
@@ -1847,7 +1914,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             text = unicode(data, self.config.page_charset, 'replace')
             self.index_text(title, text)
         url = request.adapter.build(self.history, {'title': title},
-                                    method='GET')
+                                    method='GET', force_external=True)
         return werkzeug.redirect(url, 303)
 
     def history(self, request, title):

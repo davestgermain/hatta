@@ -1685,7 +1685,7 @@ class Wiki(object):
 
         # Scroll the textarea to the line specified
         # Move the cursor to the specified line
-        yield werkzeug.html.pre(id="textdiv")
+        yield werkzeug.html.pre(id="textpre")
         scrolled_text = u"".join(scrolled_lines).replace(u'\n', r'\n').replace(u'"', r'\"')
         yield html.script(u"""
 var textBox=document.getElementById("editortext");
@@ -1693,7 +1693,7 @@ textBox.focus();
 var cursorPosition = %d;
 if (textBox.setSelectionRange) {
     textBox.setSelectionRange(cursorPosition, cursorPosition);
-    var scrollPre = document.getElementById("textdiv");
+    var scrollPre = document.getElementById("textpre");
     scrollPre.style.fontFamily = textBox.style.fontFamily;
     scrollPre.style.fontSize = textBox.style.fontSize;
     scrollPre.style.lineHeight = textBox.style.lineHeight;
@@ -1703,7 +1703,6 @@ if (textBox.setSelectionRange) {
     try { scrollPre.style.whiteSpace = "-o-pre-wrap" } catch(e) {};
     try { scrollPre.style.whiteSpace = "-pre-wrap" } catch(e) {};
     try { scrollPre.style.whiteSpace = "pre-wrap" } catch(e) {};
-    try { scrollPre.style.wordWrap = "break-word" } catch(e) {};
     scrollPre.textContent = "%s";
     textBox.scrollTop = scrollPre.clientHeight;
     scrollPre.textContent = "";
@@ -2095,8 +2094,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         yield u'<p>%s</p>' % werkzeug.escape(_(u'Index of all pages.'))
         yield u'<ul>'
         for title in sorted(self.storage.all_pages()):
-            yield werkzeug.li(werkzeug.html.a(werkzeug.html(title),
-                                              href=request.get_url(title)))
+            yield werkzeug.html.li(werkzeug.html.a(werkzeug.html(title),
+                                                   href=request.get_url(title)))
         yield u'</ul>'
 
     def page_search(self, request, words):

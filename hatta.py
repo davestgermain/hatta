@@ -782,12 +782,15 @@ class WikiParser(object):
 
     def _block_paragraph(self, block):
         parts = []
+        first_line = None
         for self.line_no, part in block:
+            if first_line is None:
+                first_line = self.line_no
             parts.append(part)
         text = u"".join(self.parse_line(u"".join(parts)))
         if self.numbers:
             yield werkzeug.html.p(text, self.pop_to(""),
-                id="line_%d" % self.line_no)
+                id="line_%d" % first_line)
         else:
             yield werkzeug.html.p(text, self.pop_to(""))
 

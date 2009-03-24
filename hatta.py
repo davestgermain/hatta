@@ -1334,7 +1334,7 @@ var paragraphs = document.getElementsByTagName('p');
 for (var i = 0; i < paragraphs.length; ++i) {
     if (paragraphs[i].id) {
         paragraphs[i].ondblclick = function () {
-            document.location.href = '%s?'+this.id.replace('_', '=');
+            document.location.href = '%s#'+this.id.replace('line_', '');
         };
     }
 };
@@ -1650,22 +1650,10 @@ class Wiki(object):
         html = werkzeug.html
         yield u'<form action="" method="POST" class="editor"><div>'
         yield u'<textarea name="text" cols="80" rows="20" id="editortext">'
-        try:
-            jump_line = int(request.values.get('line', 0))
-        except ValueError:
-            jump_line = 0
-        scrolled_lines = []
-        scrolled_characters = 0
-        for line_no, line in enumerate(lines):
-            encoded = unicode(line, "utf-8", 'replace').replace(u'\r', u'')
+        for line in lines:
+            encoded = unicode(line, self.config.page_charset, 'replace')
             yield werkzeug.escape(encoded)
-            if line_no < jump_line-1:
-                scrolled_lines.append(encoded)
-            if line_no < jump_line:
-                scrolled_characters += len(encoded)
         yield u"""</textarea>"""
-
-
         yield html.input(type_="hidden", name="parent", value=rev)
         yield html.label(html(_(u'Comment')), html.input(name="comment",
             value=comment), class_="comment")
@@ -1685,35 +1673,42 @@ class Wiki(object):
 
         # Scroll the textarea to the line specified
         # Move the cursor to the specified line
-        yield werkzeug.html.pre(id="textpre")
-        scrolled_text = u"".join(scrolled_lines).replace(u'\n', r'\n').replace(u'"', r'\"')
-        yield html.script(u"""
-var textBox=document.getElementById("editortext");
-textBox.focus();
-var cursorPosition = %d;
-if (textBox.setSelectionRange) {
-    textBox.setSelectionRange(cursorPosition, cursorPosition);
-    var scrollPre = document.getElementById("textpre");
-    scrollPre.style.fontFamily = textBox.style.fontFamily;
-    scrollPre.style.fontSize = textBox.style.fontSize;
-    scrollPre.style.lineHeight = textBox.style.lineHeight;
-    scrollPre.style.width = textBox.style.width;
-    scrollPre.style.padding = textBox.style.padding;
-    try { scrollPre.style.whiteSpace = "-moz-pre-wrap" } catch(e) {};
-    try { scrollPre.style.whiteSpace = "-o-pre-wrap" } catch(e) {};
-    try { scrollPre.style.whiteSpace = "-pre-wrap" } catch(e) {};
-    try { scrollPre.style.whiteSpace = "pre-wrap" } catch(e) {};
-    scrollPre.textContent = "%s";
-    textBox.scrollTop = scrollPre.clientHeight;
-    scrollPre.textContent = "";
-} else if (textBox.createTextRange) {
-    var range = textBox.createTextRange();
-    range.collapse(true);
-    range.moveEnd('character', cursorPosition);
-    range.moveStart('character', cursorPosition);
-    range.select();
+        yield html.script(ur"""
+var jumpLine = 0+document.location.hash.substring(1);
+if (jumpLine) {
+    var textBox = document.getElementById('editortext');
+    var textLines = textBox.textContent.match(/(.*\n)/g);
+    var scrolledText = '';
+    for (var i = 0; i < textLines.length && i < jumpLine; ++i) {
+        scrolledText += textLines[i];
+    }
+    textBox.focus();
+    if (textBox.setSelectionRange) {
+        textBox.setSelectionRange(scrolledText.length, scrolledText.length);
+        var scrollPre = document.createElement('pre');
+        textBox.parentNode.appendChild(scrollPre);
+        var style = window.getComputedStyle(textBox, '');
+        scrollPre.style.lineHeight = style.lineHeight;
+        scrollPre.style.fontFamily = style.fontFamily;
+        scrollPre.style.fontSize = style.fontSize;
+        scrollPre.style.padding = 0;
+        scrollPre.style.letterSpacing = style.letterSpacing;
+        try { scrollPre.style.whiteSpace = "-moz-pre-wrap" } catch(e) {};
+        try { scrollPre.style.whiteSpace = "-o-pre-wrap" } catch(e) {};
+        try { scrollPre.style.whiteSpace = "-pre-wrap" } catch(e) {};
+        try { scrollPre.style.whiteSpace = "pre-wrap" } catch(e) {};
+        scrollPre.textContent = scrolledText;
+        textBox.scrollTop = scrollPre.clientHeight;
+        scrollPre.parentNode.removeChild(scrollPre);
+    } else if (textBox.createTextRange) {
+        var range = textBox.createTextRange();
+        range.collapse(true);
+        range.moveEnd('character', scrolledText.length);
+        range.moveStart('character', scrolledText.length);
+        range.select();
+    }
 }
-""" % (scrolled_characters, scrolled_text))
+""")
 
     def upload_form(self, request, title, preview=None):
         author = request.get_author()
@@ -2020,10 +2015,10 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         to_url = request.adapter.build(self.revision,
                                        {'title': title, 'rev': to_rev})
         content = itertools.chain(
-            [werkzeug.html.p(werkzeug.escape(_(u'Differences between revisions '
+            [werkzeug.html.p(werkzeug.html(_(u'Differences between revisions '
                 u'%(link1)s and %(link2)s of page %(link)s.')) % {
-                'link1': werkzeug.html.a(from_rev, href=from_url),
-                'link2': werkzeug.html.a(to_rev, href=to_url),
+                'link1': werkzeug.html.a(str(from_rev), href=from_url),
+                'link2': werkzeug.html.a(str(to_rev), href=to_url),
                 'link': werkzeug.html.a(werkzeug.html(title), href=request.get_url(title))
             })],
             self.diff_content(from_page, to_page))

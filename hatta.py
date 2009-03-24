@@ -1698,7 +1698,7 @@ if (jumpLine) {
         try { scrollPre.style.whiteSpace = "-pre-wrap" } catch(e) {};
         try { scrollPre.style.whiteSpace = "pre-wrap" } catch(e) {};
         scrollPre.textContent = scrolledText;
-        textBox.scrollTop = scrollPre.clientHeight;
+        textBox.scrollTop = scrollPre.scrollHeight;
         scrollPre.parentNode.removeChild(scrollPre);
     } else if (textBox.createTextRange) {
         var range = textBox.createTextRange();

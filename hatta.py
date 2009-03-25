@@ -760,17 +760,20 @@ class WikiParser(object):
     def _block_code(self, block):
         for self.line_no, part in block:
             inside = u"\n".join(self.lines_until(self.code_close_re))
-            yield u'<pre class="code">%s</pre>' % werkzeug.escape(inside)
+            yield werkzeug.html.pre(werkzeug.html(inside), class_="code",
+                                    id="line_%d" % self.line_no)
 
     def _block_syntax(self, block):
         for self.line_no, part in block:
             syntax = part.lstrip('{#!').strip()
             inside = u"\n".join(self.lines_until(self.code_close_re))
             if self.wiki_syntax:
-                return self.wiki_syntax(inside, syntax=syntax)
+                return self.wiki_syntax(inside, syntax=syntax,
+                                        line_no=self.line_no)
             else:
-                return [u'<div class="highlight"><pre>%s</pre></div>'
-                        % werkzeug.escape(inside)]
+                return [werkzeug.html.div(werkzeug.html.pre(
+                    werkzeug.html(inside), id="line_%d" % self.line_no),
+                    class_="highlight")]
 
     def _block_macro(self, block):
         for self.line_no, part in block:
@@ -788,18 +791,17 @@ class WikiParser(object):
                 first_line = self.line_no
             parts.append(part)
         text = u"".join(self.parse_line(u"".join(parts)))
-        if self.numbers:
-            yield werkzeug.html.p(text, self.pop_to(""),
-                id="line_%d" % first_line)
-        else:
-            yield werkzeug.html.p(text, self.pop_to(""))
+        yield werkzeug.html.p(text, self.pop_to(""), id="line_%d" % first_line)
 
     def _block_indent(self, block):
         parts = []
+        first_line = None
         for self.line_no, part in block:
+            if first_line is None:
+                first_line = self.line_no
             parts.append(part.rstrip())
         text = u"\n".join(parts)
-        yield werkzeug.html.pre(werkzeug.html(text))
+        yield werkzeug.html.pre(werkzeug.html(text), id="line_%d" % first_line)
 
     def _block_table(self, block):
         yield u'<table>'
@@ -836,11 +838,9 @@ class WikiParser(object):
             self.headings[level-1] = self.headings.get(level-1, 0)+1
             label = u"-".join(str(self.headings.get(i, 0))
                               for i in range(level))
-            yield u'<a name="head-%s"></a><h%d>%s</h%d>' % (
-                label,
-                level,
-                werkzeug.escape(line.strip("= \t\n\r\v")),
-                level)
+            yield werkzeug.html.a(name="head-%s" % label)
+            yield u'<h%d id="line_%d">%s</h%d>' % (level, self.line_no,
+                werkzeug.escape(line.strip("= \t\n\r\v")), level)
 
     def _block_bullets(self, block):
         level = 0
@@ -849,7 +849,7 @@ class WikiParser(object):
             if nest == level:
                 yield '</li>'
             while nest > level:
-                yield '<ul>'
+                yield '<ul id="line_%d">' % self.line_no
                 level += 1
             while nest < level:
                 yield '</li></ul>'
@@ -880,7 +880,7 @@ class WikiParser(object):
                 level -= 1
             content = line.lstrip().lstrip('>').strip()
             if not in_p:
-                yield '<p>'
+                yield '<p id="line_%d">' % self.line_no
                 in_p = True
             yield u"".join(self.parse_line(content))
         if in_p:
@@ -1330,12 +1330,18 @@ class WikiPage(object):
         for part in self.page(content, special_title):
             yield part
         yield html.script(u"""
-var paragraphs = document.getElementsByTagName('p');
-for (var i = 0; i < paragraphs.length; ++i) {
-    if (paragraphs[i].id) {
-        paragraphs[i].ondblclick = function () {
-            document.location.href = '%s#'+this.id.replace('line_', '');
-        };
+var tagList = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'ul'];
+var baseUrl = '%s';
+for (var j = 0; j < tagList.length; ++j) {
+    var tags = document.getElementsByTagName(tagList[j]);
+    for (var i = 0; i < tags.length; ++i) {
+        var tag = tags[i];
+        if (tag.id && tag.id.match(/^line_\d+$/)) {
+            tag.ondblclick = function () {
+                var url = baseUrl+'#'+this.id.replace('line_', '');
+                document.location.href = url;
+            };
+        }
     }
 };
 """ % self.request.get_url(self.title, self.wiki.edit))
@@ -1601,7 +1607,7 @@ class Wiki(object):
         else:
             return self.response(request, title, html, '/edit')
 
-    def highlight(self, text, mime=None, syntax=None):
+    def highlight(self, text, mime=None, syntax=None, line_no=0):
         try:
             import pygments
             import pygments.util
@@ -1616,6 +1622,12 @@ class Wiki(object):
         else:
             style = 'friendly'
         formatter = pygments.formatters.HtmlFormatter(style=style)
+        def wrapper(source, outfile):
+            yield 0, '<div class="highlight"><pre id="line_%d">' % line_no
+            for lineno, line in source:
+                yield lineno, line
+            yield 0, '</div></pre>'
+        formatter.wrap = wrapper
         try:
             if mime:
                 lexer = pygments.lexers.get_lexer_for_mimetype(mime)

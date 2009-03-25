@@ -1688,11 +1688,14 @@ if (jumpLine) {
         var scrollPre = document.createElement('pre');
         textBox.parentNode.appendChild(scrollPre);
         var style = window.getComputedStyle(textBox, '');
+        scrollPre.style.font = style.font;
+        scrollPre.style.border = style.border;
         scrollPre.style.lineHeight = style.lineHeight;
+        scrollPre.style.letterSpacing = style.letterSpacing;
         scrollPre.style.fontFamily = style.fontFamily;
         scrollPre.style.fontSize = style.fontSize;
         scrollPre.style.padding = 0;
-        scrollPre.style.letterSpacing = style.letterSpacing;
+        scrollPre.style.overflow = 'scroll';
         try { scrollPre.style.whiteSpace = "-moz-pre-wrap" } catch(e) {};
         try { scrollPre.style.whiteSpace = "-o-pre-wrap" } catch(e) {};
         try { scrollPre.style.whiteSpace = "-pre-wrap" } catch(e) {};

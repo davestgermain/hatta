@@ -1690,6 +1690,7 @@ if (jumpLine) {
         var style = window.getComputedStyle(textBox, '');
         scrollPre.style.font = style.font;
         scrollPre.style.border = style.border;
+        scrollPre.style.outline = style.outline;
         scrollPre.style.lineHeight = style.lineHeight;
         scrollPre.style.letterSpacing = style.letterSpacing;
         scrollPre.style.fontFamily = style.fontFamily;

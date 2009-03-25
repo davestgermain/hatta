@@ -1212,7 +1212,8 @@ class WikiPage(object):
                 class_ = 'special'
             elif addr not in self.wiki.storage:
                 class_ = 'nonexistent'
-        return werkzeug.html.a(image or text, href=href, class_=class_)
+        return werkzeug.html.a(image or text, href=href, class_=class_,
+                               title=addr)
 
     def wiki_image(self, addr, alt, class_='wiki'):
         """Create HTML for a wiki image."""

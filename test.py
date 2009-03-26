@@ -121,7 +121,7 @@ class HattaParser(unittest.TestCase):
 
 
     test_cases = {
-u"""hello world""": u"""<p>hello world</p>""",
+u"""hello world""": u"""<p id="line_0">hello world</p>""",
 #--------------------------------------------------------------------
 u"""{{{
 some code
@@ -130,8 +130,8 @@ more
 some text
 {{{
 more code
-}}}""": u"""<pre class="code">some code
-more</pre><p>some text</p><pre class="code">more code</pre>""",
+}}}""": u"""<pre class="code" id="line_1">some code
+more</pre><p id="line_4">some text</p><pre class="code" id="line_6">more code</pre>""",
 #--------------------------------------------------------------------
 u"""{{{#!python
 some code
@@ -140,22 +140,22 @@ more
 some text
 {{{#!bash
 more code
-}}}""": u"""<div class="highlight"><pre>some code
-more</pre></div><p>some text</p><div class="highlight"><pre>more code</pre></div>""",
+}}}""": u"""<div class="highlight"><pre id="line_1">some code
+more</pre></div><p id="line_4">some text</p><div class="highlight"><pre id="line_6">more code</pre></div>""",
 #--------------------------------------------------------------------
 u"""Here's a quote:
 > Here is
 > another //quote//:
 >> A quote **within
 >> a quote
-normal text""": u"""<p>Here's a quote:</p><blockquote><p>Here is
-another <i>quote</i>:</p><blockquote><p>A quote <b>within
-a quote</b></p></blockquote></blockquote><p>normal text</p>""",
+normal text""": u"""<p id="line_0">Here's a quote:</p><blockquote><p id="line_1">Here is
+another <i>quote</i>:</p><blockquote><p id="line_3">A quote <b>within
+a quote</b></p></blockquote></blockquote><p id="line_5">normal text</p>""",
 #--------------------------------------------------------------------
 u"""* sample list
 ** sublist
 *** sub-sub-list with **bold
-* list""": u"""<ul><li>sample list<ul><li>sublist<ul><li>sub-sub-list with <b>bold</b></li></ul></li></ul><li>list</li></ul>""",
+* list""": u"""<ul id="line_0"><li>sample list<ul id="line_1"><li>sublist<ul id="line_2"><li>sub-sub-list with <b>bold</b></li></ul></li></ul><li>list</li></ul>""",
 }
 
     def test_test_cases(self):
@@ -235,6 +235,7 @@ class TestHTML(unittest.TestCase):
         <a href="/history/page%20%3Ctitle%3E" class="history">History</a>
         <a href="/search/page%20%3Ctitle%3E" class="backlinks">Backlinks</a>
     </div></div>
+<script>...</script>
 </body></html>"""
         self.html_eq(expect, html)
         page_title = "different <title>"
@@ -259,6 +260,7 @@ class TestHTML(unittest.TestCase):
         <h1>different &lt;title&gt;</h1>
     </div>
     <div class="content">some &lt;content&gt;</div>
+<script>...</script>
 </body></html>"""
         self.html_eq(expect, html)
 

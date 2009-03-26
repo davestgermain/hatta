@@ -1298,9 +1298,12 @@ class WikiPage(object):
 
     def footer(self):
         html = werkzeug.html
-        if not self.config.read_only:
+        try:
+            self.wiki.check_lock(self.title)
             yield html.a(html(_(u'Edit')), class_="edit",
                          href=self.get_url(self.title, self.wiki.edit))
+        except werkzeug.exceptions.Forbidden:
+            pass
         yield html.a(html(_(u'History')), class_="history",
                      href=self.get_url(self.title, self.wiki.history))
         yield html.a(html(_(u'Backlinks')), class_="backlinks",
@@ -1330,7 +1333,9 @@ class WikiPage(object):
         yield u'<body>'
         for part in self.page(content, special_title):
             yield part
-        yield html.script(u"""
+        try:
+            self.wiki.check_lock(self.title)
+            yield html.script(u"""
 var tagList = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'ul'];
 var baseUrl = '%s';
 for (var j = 0; j < tagList.length; ++j) {
@@ -1346,6 +1351,8 @@ for (var j = 0; j < tagList.length; ++j) {
     }
 };
 """ % self.request.get_url(self.title, self.wiki.edit))
+        except werkzeug.exceptions.Forbidden:
+            pass
         yield u'</body></html>'
 
 
@@ -1558,9 +1565,9 @@ class Wiki(object):
                 parent = None
             if text is not None:
                 if title == self.config.locked_page:
-                    links, labels = self.extract_links(text)
-                    if title in links:
-                        raise werkzeug.exceptions.Forbidden()
+                    for link, label in self.extract_links(text):
+                        if title == link:
+                            raise werkzeug.exceptions.Forbidden()
                 if u'href="' in comment or u'http:' in comment:
                     raise werkzeug.exceptions.Forbidden()
                 if text.strip() == '':

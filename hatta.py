@@ -101,6 +101,7 @@ class WikiConfig(object):
     port = 8080
     language = None
     read_only = False
+    js_editor = False
     pages_path = 'docs'
     cache_path = 'cache'
     site_name = u'Hatta Wiki'
@@ -228,6 +229,9 @@ blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}"""
         parser.add_option('-r', '--read-only', dest='read_only', default=False,
                           help='Whether the wiki should be read-only',
                           action="store_true")
+        parser.add_option('-j', '--js-editor', dest='js_editor',
+                          help='Enable JavaScript in the editor.',
+                          default=False, action="store_true")
         options, args = parser.parse_args()
         self.pages_path = options.pages_path or self.pages_path
         self.cache_path = options.cache_path or self.cache_path
@@ -240,6 +244,7 @@ blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}"""
         self.config_file = options.config_file or self.config_file
         self.language = options.language or self.language
         self.read_only = options.read_only or self.read_only
+        self.js_editor = options.js_editor or self.js_editor
 
     def parse_files(self, files=None):
         """Check the config files for options."""
@@ -1333,9 +1338,10 @@ class WikiPage(object):
         yield u'<body>'
         for part in self.page(content, special_title):
             yield part
-        try:
-            self.wiki.check_lock(self.title)
-            yield html.script(u"""
+        if self.config.js_editor:
+            try:
+                self.wiki.check_lock(self.title)
+                yield html.script(u"""
 var tagList = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'ul'];
 var baseUrl = '%s';
 for (var j = 0; j < tagList.length; ++j) {
@@ -1351,8 +1357,8 @@ for (var j = 0; j < tagList.length; ++j) {
     }
 };
 """ % self.request.get_url(self.title, self.wiki.edit))
-        except werkzeug.exceptions.Forbidden:
-            pass
+            except werkzeug.exceptions.Forbidden:
+                pass
         yield u'</body></html>'
 
 
@@ -1691,9 +1697,11 @@ class Wiki(object):
             for part in self.view_content(request, title, page, preview):
                 yield part
 
-        # Scroll the textarea to the line specified
-        # Move the cursor to the specified line
-        yield html.script(ur"""
+
+        if self.config.js_editor:
+            # Scroll the textarea to the line specified
+            # Move the cursor to the specified line
+            yield html.script(ur"""
 var jumpLine = 0+document.location.hash.substring(1);
 if (jumpLine) {
     var textBox = document.getElementById('editortext');
@@ -1705,25 +1713,6 @@ if (jumpLine) {
     textBox.focus();
     if (textBox.setSelectionRange) {
         textBox.setSelectionRange(scrolledText.length, scrolledText.length);
-        var scrollPre = document.createElement('pre');
-        textBox.parentNode.appendChild(scrollPre);
-        var style = window.getComputedStyle(textBox, '');
-        scrollPre.style.font = style.font;
-        scrollPre.style.border = style.border;
-        scrollPre.style.outline = style.outline;
-        scrollPre.style.lineHeight = style.lineHeight;
-        scrollPre.style.letterSpacing = style.letterSpacing;
-        scrollPre.style.fontFamily = style.fontFamily;
-        scrollPre.style.fontSize = style.fontSize;
-        scrollPre.style.padding = 0;
-        scrollPre.style.overflow = 'scroll';
-        try { scrollPre.style.whiteSpace = "-moz-pre-wrap" } catch(e) {};
-        try { scrollPre.style.whiteSpace = "-o-pre-wrap" } catch(e) {};
-        try { scrollPre.style.whiteSpace = "-pre-wrap" } catch(e) {};
-        try { scrollPre.style.whiteSpace = "pre-wrap" } catch(e) {};
-        scrollPre.textContent = scrolledText;
-        textBox.scrollTop = scrollPre.scrollHeight;
-        scrollPre.parentNode.removeChild(scrollPre);
     } else if (textBox.createTextRange) {
         var range = textBox.createTextRange();
         range.collapse(true);
@@ -1731,6 +1720,25 @@ if (jumpLine) {
         range.moveStart('character', scrolledText.length);
         range.select();
     }
+    var scrollPre = document.createElement('pre');
+    textBox.parentNode.appendChild(scrollPre);
+    var style = window.getComputedStyle(textBox, '');
+    scrollPre.style.font = style.font;
+    scrollPre.style.border = style.border;
+    scrollPre.style.outline = style.outline;
+    scrollPre.style.lineHeight = style.lineHeight;
+    scrollPre.style.letterSpacing = style.letterSpacing;
+    scrollPre.style.fontFamily = style.fontFamily;
+    scrollPre.style.fontSize = style.fontSize;
+    scrollPre.style.padding = 0;
+    scrollPre.style.overflow = 'scroll';
+    try { scrollPre.style.whiteSpace = "-moz-pre-wrap" } catch(e) {};
+    try { scrollPre.style.whiteSpace = "-o-pre-wrap" } catch(e) {};
+    try { scrollPre.style.whiteSpace = "-pre-wrap" } catch(e) {};
+    try { scrollPre.style.whiteSpace = "pre-wrap" } catch(e) {};
+    scrollPre.textContent = scrolledText;
+    textBox.scrollTop = scrollPre.scrollHeight;
+    scrollPre.parentNode.removeChild(scrollPre);
 }
 """)
 

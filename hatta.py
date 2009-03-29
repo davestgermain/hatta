@@ -1640,7 +1640,7 @@ class Wiki(object):
             yield 0, '<div class="highlight"><pre id="line_%d">' % line_no
             for lineno, line in source:
                 yield lineno, line
-            yield 0, '</div></pre>'
+            yield 0, '</pre></div>'
         formatter.wrap = wrapper
         try:
             if mime:

@@ -849,21 +849,25 @@ class WikiParser(object):
 
     def _block_bullets(self, block):
         level = 0
+        in_ul = False
         for self.line_no, line in block:
             nest = len(self.bullets_re.match(line).group(0).strip())
-            if nest == level:
-                yield '</li>'
             while nest > level:
+                if in_ul:
+                    yield '<li>'
                 yield '<ul id="line_%d">' % self.line_no
+                in_ul = True
                 level += 1
             while nest < level:
                 yield '</li></ul>'
+                in_ul = False
                 level -= 1
-                if nest == level:
-                    yield '</li>'
+            if nest == level and not in_ul:
+                yield '</li>'
             content = line.lstrip().lstrip('*').strip()
             yield '<li>%s%s' % (u"".join(self.parse_line(content)),
                                 self.pop_to(""))
+            in_ul = False
         yield '</li></ul>'*level
 
     def _block_quote(self, block):

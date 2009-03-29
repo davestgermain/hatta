@@ -1202,7 +1202,7 @@ class WikiPage(object):
                 href = addr.replace('@', '%40').replace('.', '%2E')
             else:
                 class_ = 'external'
-                href = werkzeug.url_fix(addr)
+                href = werkzeug.escape(addr, quote=True)
         else:
             if '#' in addr:
                 addr, chunk = addr.split('#', 1)

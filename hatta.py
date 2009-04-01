@@ -377,7 +377,7 @@ class WikiStorage(object):
                 # Mercurial 1.1 and later need updating the merge state
                 try:
                     mercurial.merge.mergestate(self.repo).mark(repo_file, "r")
-                except AttributeError:
+                except (AttributeError, KeyError):
                     pass
             self.repo.commit(files=[repo_file], text=text, user=user,
                              force=True, empty_ok=True)

@@ -374,6 +374,11 @@ class WikiStorage(object):
                     del wlock
             self.repo.commit(files=[repo_file], text=text, user=user,
                              force=True, empty_ok=True)
+            # Mercurial 1.1 and later need updating the merge state
+            try:
+                mercurial.merge.mergestate(self.repo).mark(repo_file, "r")
+            except AttributeError:
+                pass
         finally:
             del lock
 

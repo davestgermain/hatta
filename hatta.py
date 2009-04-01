@@ -374,11 +374,11 @@ class WikiStorage(object):
                     self.repo.dirstate.setparents(tip_node, node)
                 finally:
                     del wlock
-            # Mercurial 1.1 and later need updating the merge state
-            try:
-                mercurial.merge.mergestate(self.repo).mark(repo_file, "r")
-            except AttributeError:
-                pass
+                # Mercurial 1.1 and later need updating the merge state
+                try:
+                    mercurial.merge.mergestate(self.repo).mark(repo_file, "r")
+                except AttributeError:
+                    pass
             self.repo.commit(files=[repo_file], text=text, user=user,
                              force=True, empty_ok=True)
         finally:

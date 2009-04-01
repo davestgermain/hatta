@@ -130,6 +130,8 @@ img.math, img.smiley { vertical-align: middle }
 pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word;
     white-space: -moz-pre-wrap; white-space: -pre-wrap;
     white-space: -o-pre-wrap; line-height: 1.2; color: #555753 }
+div.conflict pre.local { background: #fcaf3e; margin-bottom: 0; color: 000}
+div.conflict pre.other { background: #ffdd66; margin-top: 0; color: 000; border-top: #d80 dashed 1px; }
 pre.diff div.orig { font-size: 75%; color: #babdb6 }
 b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e;
 color: #ce5c00; text-decoration: none }
@@ -572,6 +574,8 @@ class WikiParser(object):
                           for kv in sorted(block.iteritems())))
     code_close_re = re.compile(ur"^\}\}\}\s*$", re.U)
     macro_close_re = re.compile(ur"^>>\s*$", re.U)
+    conflict_close_re = re.compile(ur"^>>>>>>> other\s*$", re.U)
+    conflict_sep_re = re.compile(ur"^=======\s*$", re.U)
     image_pat = (ur"\{\{(?P<image_target>([^|}]|}[^|}])*)"
                  ur"(\|(?P<image_text>([^}]|}[^}])*))?}}")
     image_re = re.compile(image_pat, re.U)
@@ -905,8 +909,17 @@ class WikiParser(object):
         yield '</blockquote>'*level
 
     def _block_conflict(self, block):
-        for self.line_no, line in block:
-            yield werkzeug.html.hr(class_="conflict")
+        for self.line_no, part in block:
+            yield u'<div class="conflict">'
+            local = u"\n".join(self.lines_until(self.conflict_sep_re))
+            yield werkzeug.html.pre(werkzeug.html(local),
+                                    class_="local",
+                                    id="line_%d" % self.line_no)
+            other = u"\n".join(self.lines_until(self.conflict_close_re))
+            yield werkzeug.html.pre(werkzeug.html(other),
+                                    class_="other",
+                                    id="line_%d" % self.line_no)
+            yield u'</div>'
 
 class WikiSearch(object):
     """

@@ -558,6 +558,7 @@ class WikiParser(object):
     block = {
         "bullets": bullets_pat,
         "code": ur"^[{][{][{]+\s*$",
+        "conflict": ur"^<<<<<<< local|^=======|^>>>>>>> other",
         "macro": ur"^<<\w+\s*$",
         "empty": ur"^\s*$",
         "heading": heading_pat,
@@ -903,6 +904,9 @@ class WikiParser(object):
             yield '%s</p>' % self.pop_to("")
         yield '</blockquote>'*level
 
+    def _block_conflict(self, block):
+        for self.line_no, line in block:
+            yield werkzeug.html.hr(class_="conflict")
 
 class WikiSearch(object):
     """

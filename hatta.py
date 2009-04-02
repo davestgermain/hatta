@@ -560,7 +560,7 @@ class WikiParser(object):
     block = {
         "bullets": bullets_pat,
         "code": ur"^[{][{][{]+\s*$",
-        "conflict": ur"^<<<<<<< local|^=======|^>>>>>>> other",
+        "conflict": ur"^<<<<<<< local\s*$",
         "macro": ur"^<<\w+\s*$",
         "empty": ur"^\s*$",
         "heading": heading_pat,
@@ -1370,7 +1370,7 @@ class WikiPage(object):
             try:
                 self.wiki.check_lock(self.title)
                 yield html.script(u"""
-var tagList = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'ul'];
+var tagList = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'ul', 'div'];
 var baseUrl = '%s';
 for (var j = 0; j < tagList.length; ++j) {
     var tags = document.getElementsByTagName(tagList[j]);
@@ -1664,10 +1664,13 @@ class Wiki(object):
         else:
             style = 'friendly'
         formatter = pygments.formatters.HtmlFormatter(style=style)
+        formatter.line_no = line_no
         def wrapper(source, outfile):
-            yield 0, '<div class="highlight"><pre id="line_%d">' % line_no
+            yield 0, '<div class="highlight"><pre>'
             for lineno, line in source:
-                yield lineno, line
+                yield lineno, werkzeug.html.div(line.strip('\n'),
+                                                id_="line_%d" % formatter.line_no)
+                formatter.line_no += 1
             yield 0, '</pre></div>'
         formatter.wrap = wrapper
         try:

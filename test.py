@@ -155,7 +155,7 @@ a quote</b></p></blockquote></blockquote><p id="line_5">normal text</p>""",
 u"""* sample list
 ** sublist
 *** sub-sub-list with **bold
-* list""": u"""<ul id="line_0"><li>sample list<ul id="line_1"><li>sublist<ul id="line_2"><li>sub-sub-list with <b>bold</b></li></ul></li></ul><li>list</li></ul>""",
+* list""": u"""<ul id="line_0"><li>sample list<ul id="line_1"><li>sublist<ul id="line_2"><li>sub-sub-list with <b>bold</b></li></ul></li></ul></li><li>list</li></ul>""",
 }
 
     def test_test_cases(self):
@@ -235,7 +235,6 @@ class TestHTML(unittest.TestCase):
         <a href="/history/page%20%3Ctitle%3E" class="history">History</a>
         <a href="/search/page%20%3Ctitle%3E" class="backlinks">Backlinks</a>
     </div></div>
-<script>...</script>
 </body></html>"""
         self.html_eq(expect, html)
         page_title = "different <title>"
@@ -260,7 +259,6 @@ class TestHTML(unittest.TestCase):
         <h1>different &lt;title&gt;</h1>
     </div>
     <div class="content">some &lt;content&gt;</div>
-<script>...</script>
 </body></html>"""
         self.html_eq(expect, html)
 

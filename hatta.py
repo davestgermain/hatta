@@ -73,7 +73,23 @@ except ImportError:
 __version__ = '1.3.0-dev'
 
 def external_link(addr):
-    """Decide whether a link is absolute or internal."""
+    """
+    Decide whether a link is absolute or internal.
+
+    >>> external_link('http://example.com')
+    True
+    >>> external_link('https://example.com')
+    True
+    >>> external_link('ftp://example.com')
+    True
+    >>> external_link('mailto:user@example.com')
+    True
+    >>> external_link('PageTitle')
+    False
+    >>> external_link(u'ąęśćUnicodePage')
+    False
+
+    """
 
     return (addr.startswith('http://')
             or addr.startswith('https://')
@@ -81,7 +97,22 @@ def external_link(addr):
             or addr.startswith('mailto:'))
 
 def page_mime(addr):
-    """Guess the mime type based on the page name."""
+    """
+    Guess the mime type based on the page name.
+
+    >>> page_mime('something.txt')
+    'text/plain'
+    >>> page_mime('SomePage')
+    'text/x-wiki'
+    >>> page_mime(u'ąęśUnicodePage')
+    'text/x-wiki'
+    >>> page_mime('image.png')
+    'image/png'
+    >>> page_mime('style.css')
+    'text/css'
+    >>> page_mime('archive.tar.gz')
+    'archive/gzip'
+    """
 
     mime, encoding = mimetypes.guess_type(addr, strict=False)
     if encoding:
@@ -94,6 +125,10 @@ class WikiConfig(object):
     """
     Responsible for reading and storing site configuration. Contains the
     default settings.
+
+    >>> config = WikiConfig(port='2080')
+    >>> config.port
+    2080
     """
 
     # Please see the bottom of the script for modifying these values.
@@ -183,6 +218,19 @@ blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}"""
         self.sanitize()
 
     def sanitize(self):
+        """
+        Convert options to their required types.
+
+        >>> config = WikiConfig()
+        >>> config.read_only = 'on'
+        >>> config.port = '2080'
+        >>> config.sanitize()
+        >>> config.port
+        2080
+        >>> config.read_only
+        True
+        """
+
         if self.read_only in (True, 'True', 'true', 'TRUE',
                               '1', 'on', 'On', 'ON'):
             self.read_only = True
@@ -549,6 +597,14 @@ class WikiParser(object):
     lines from the input until they encounter the end-of-block marker, using
     lines_until. Most block-level elements are just runs of marked up lines
     though.
+
+    >>> import lxml.html.usedoctest
+    >>> def test(text):
+    ...    link = lambda self, addr, label, class_=None, image=None: u'<img>'
+    ...    print u''.join(WikiParser(text.split('\\n'), link, link))
+    ...
+    >>> test(u"ziew")
+    <p id="line_0">ziew</p>
     """
 
     bullets_pat = ur"^\s*[*]+\s+"
@@ -628,7 +684,7 @@ class WikiParser(object):
 
 
     def __init__(self, lines, wiki_link, wiki_image,
-                 wiki_syntax=None, wiki_math=None, numbers=False):
+                 wiki_syntax=None, wiki_math=None):
         self.wiki_link = wiki_link
         self.wiki_image = wiki_image
         self.wiki_syntax = wiki_syntax
@@ -638,7 +694,6 @@ class WikiParser(object):
         # self.lines = iter(lines)
         self.line_no = 0
         self.enumerated_lines = enumerate(lines)
-        self.numbers = numbers
 
     def __iter__(self):
         return self.parse()
@@ -1495,7 +1550,7 @@ class Wiki(object):
                 lines = (unicode(line, self.config.page_charset,
                      "replace") for line in f)
             content = self.parser(lines, page.wiki_link, page.wiki_image,
-                                  self.highlight, self.wiki_math, numbers=True)
+                                  self.highlight, self.wiki_math)
 #            def add_line_numbers(parser):
 #                for part in parser:
 #                    if part:

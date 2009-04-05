@@ -70,7 +70,7 @@ try:
 except ImportError:
     split_japanese = None
 
-__version__ = '1.3.0-dev'
+__version__ = '1.3.1'
 
 def external_link(addr):
     """
@@ -605,6 +605,10 @@ class WikiParser(object):
     ...
     >>> test(u"ziew")
     <p id="line_0">ziew</p>
+    >>> test(u"d&d")
+    <p id="line_0">d&amp;d</p>
+    >>> test(u"= head =")
+    <a name="head-1"></a><h1 id="line_0">head</h1>
     """
 
     bullets_pat = ur"^\s*[*]+\s+"
@@ -617,10 +621,10 @@ class WikiParser(object):
         "bullets": bullets_pat,
         "code": ur"^[{][{][{]+\s*$",
         "conflict": ur"^<<<<<<< local\s*$",
-        "macro": ur"^<<\w+\s*$",
         "empty": ur"^\s*$",
         "heading": heading_pat,
         "indent": ur"^[ \t]+",
+        "macro": ur"^<<\w+\s*$",
         "quote": quote_pat,
         "rule": ur"^\s*---+\s*$",
         "syntax": ur"^\{\{\{\#!\w+\s*$",
@@ -714,7 +718,16 @@ class WikiParser(object):
                 yield part
 
     def parse_line(self, line):
-        """Find all the line-level markup and return HTML for it."""
+        """
+        Find all the line-level markup and return HTML for it.
+
+        >>> import lxml.html.usedoctest
+        >>> parser = WikiParser([], None, None)
+        >>> print u''.join(parser.parse_line(u'some **bold** words'))
+        some <b>bold</b> words
+        >>> print u''.join(parser.parse_line(u'some **bold words'))
+        some <b>bold words
+        """
 
         for m in self.markup_re.finditer(line):
             func = getattr(self, "_line_%s" % m.lastgroup)
@@ -735,8 +748,6 @@ class WikiParser(object):
             pass
         return u"".join(u"</%s>" % tag for tag in tags)
 
-# methods for the markup inside lines:
-
     def lines_until(self, close_re):
         """Get lines from input until the closing markup is encountered."""
 
@@ -744,6 +755,8 @@ class WikiParser(object):
         while not close_re.match(line):
             yield line.rstrip()
             line_no, line = self.enumerated_lines.next()
+
+# methods for the markup inside lines:
 
     def _line_linebreak(self, groups):
         return u'<br>'

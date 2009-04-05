@@ -70,7 +70,7 @@ try:
 except ImportError:
     split_japanese = None
 
-__version__ = '1.3.1'
+__version__ = '1.3.1-dev'
 
 def external_link(addr):
     """

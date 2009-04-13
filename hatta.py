@@ -1197,6 +1197,17 @@ without would yet you your yours yourself yourselves""")).split())
             if got and score > 0:
                 yield score, self.id_title(title_id, con)
 
+    def reindex(self, wiki, pages):
+        for title in pages:
+            mime = wiki.storage.page_mime(title)
+            if mime.startswith('text/'):
+                data = wiki.storage.open_page(title).read()
+                text = unicode(data, wiki.config.page_charset, 'replace')
+                self.add_words(title, text)
+                if mime == 'text/x-wiki':
+                    links = wiki.extract_links(text)
+                    self.add_links(title, links)
+        self.empty = False
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):
@@ -1216,7 +1227,8 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         self.tmpfiles = []
         self.tmppath = wiki.path
 
-    def get_url(self, title=None, view=None, method='GET', external=False, **kw):
+    def get_url(self, title=None, view=None, method='GET', external=False,
+                **kw):
         if view is None:
             view = self.wiki.view
         if title is not None:
@@ -1497,7 +1509,7 @@ class Wiki(object):
             reindex = False
         self.index = self.index_class(self.cache, self.config.language)
         if reindex:
-            self.reindex(self.storage.all_pages())
+            self.index.reindex(self, self.storage.all_pages())
         R = werkzeug.routing.Rule
         self.url_map = werkzeug.routing.Map([
             R('/', defaults={'title': self.config.front_page},
@@ -2282,18 +2294,6 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                   'Disallow: /search\r\n'
                  )
         return werkzeug.Response(robots, mimetype='text/plain')
-
-    def reindex(self, pages):
-        for title in pages:
-            mime = self.storage.page_mime(title)
-            if mime.startswith('text/'):
-                data = self.storage.open_page(title).read()
-                text = unicode(data, self.config.page_charset, 'replace')
-                self.index.add_words(title, text)
-                if mime == 'text/x-wiki':
-                    links = self.extract_links(text)
-                    self.index.add_links(title, links)
-        self.index.empty = False
 
     def wiki_math(self, math):
         if '%s' in self.config.math_url:

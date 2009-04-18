@@ -1154,9 +1154,10 @@ class WikiSearch(object):
     word_pattern = re.compile(ur"""\w[-~&\w]+\w""", re.UNICODE)
     _con = {}
 
-    def __init__(self, cache_path, lang, storage):
+    def __init__(self, cache_path, lang, storage, parser):
         self.path = cache_path
         self.storage = storage
+        self.parser = parser
         self.lang = lang
         if lang == "ja" and split_japanese:
             self.split_text = self.split_japanese_text
@@ -1170,11 +1171,11 @@ class WikiSearch(object):
             self.empty = False
         con = self.con # sqlite3.connect(self.filename)
         self.con.execute('create table if not exists titles '
-                '(id integer primary key, title text);')
+                '(id integer primary key, title varchar);')
         self.con.execute('create table if not exists words '
-                '(word text, page integer, count integer);')
+                '(word varchar, page integer, count integer);')
         self.con.execute('create table if not exists links '
-                '(src integer, target integer, label text, number integer);')
+                '(src integer, target integer, label varchar, number integer);')
         self.con.commit()
         self.stop_words_re = re.compile(u'^('+u'|'.join(re.escape(_(
 u"""am ii iii per po re a about above
@@ -1204,6 +1205,8 @@ whence whenever where whereafter whereas whereby wherein whereupon wherever
 whether which while whither who whoever whole whom whose why will with within
 without would yet you your yours yourself yourselves""")).split())
 +ur')$|.*\d.*', re.U|re.I|re.X)
+        if self.empty:
+            self.reindex(self.storage.all_pages())
 
     @property
     def con(self):
@@ -1248,6 +1251,8 @@ without would yet you your yours yourself yourselves""")).split())
         c = con.execute('select id from titles where title=?;', (title,))
         idents = c.fetchone()
         if idents is None:
+            con.execute('commit transaction;')
+            con.execute('begin exclusive transaction;')
             con.execute('insert into titles (title) values (?);', (title,))
             c = con.execute('select id from titles where title=?;', (title,))
             idents = c.fetchone()
@@ -1257,27 +1262,23 @@ without would yet you your yours yourself yourselves""")).split())
             c = con.execute('select title from titles where id=?;', (ident,))
             return c.fetchone()[0]
 
-    def update_words(self, title, text):
-        con = self.con
-        title_id = self.title_id(title, con)
+    def update_words(self, title, text, cursor):
+        title_id = self.title_id(title, cursor)
         words = self.count_words(self.split_text(text))
         title_words = self.count_words(self.split_text(title))
         for word, count in title_words.iteritems():
             words[word] = words.get(word, 0) + count
-        con.execute('delete from words where page=?;', (title_id,))
+        cursor.execute('delete from words where page=?;', (title_id,))
         for word, count in words.iteritems():
-            con.execute('insert into words values (?, ?, ?);',
+            cursor.execute('insert into words values (?, ?, ?);',
                              (word, title_id, count))
-        con.commit()
 
-    def update_links(self, title, links_and_labels):
-        con = self.con # sqlite3.connect(self.filename)
-        title_id = self.title_id(title, con)
-        con.execute('delete from links where src=?;', (title_id,))
+    def update_links(self, title, links_and_labels, cursor):
+        title_id = self.title_id(title, cursor)
+        cursor.execute('delete from links where src=?;', (title_id,))
         for number, (link, label) in enumerate(links_and_labels):
-            con.execute('insert into links values (?, ?, ?, ?);',
+            cursor.execute('insert into links values (?, ?, ?, ?);',
                              (title_id, link, label, number))
-        con.commit()
 
     def page_backlinks(self, title):
         con = self.con # sqlite3.connect(self.filename)
@@ -1309,6 +1310,9 @@ without would yet you your yours yourself yourselves""")).split())
             con.commit()
 
     def find(self, words):
+        """Returns an iterator of all pages containing the words, and their
+            scores."""
+
         con = self.con # sqlite3.connect(self.filename)
         try:
             first = words[0]
@@ -1336,25 +1340,57 @@ without would yet you your yours yourself yourselves""")).split())
         finally:
             con.commit()
 
-    def update_page(self, wiki, title, data=None, text=None):
+
+    def reindex_page(self, title, cursor, text=None):
+        """Updates the content of the database, needs locks around."""
+
         mime = self.storage.page_mime(title)
         if not mime.startswith('text/'):
-            self.update_words(title, '')
+            self.update_words(title, '', cursor=cursor)
             return
         if text is None:
-            if data is None:
-                text = self.storage.page_text(title)
-            else:
-                text = unicode(data, self.storage.charset, 'replace')
-        self.update_words(title, text)
+            text = self.storage.page_text(title)
         if mime == 'text/x-wiki':
-            links = wiki.extract_links(text)
-            self.update_links(title, links)
+            links = []
+            def link(addr, label=None, class_=None, image=None, alt=None):
+                if external_link(addr):
+                    return u''
+                if '#' in addr:
+                    addr, chunk = addr.split('#', 1)
+                if addr == u'':
+                    return u''
+                links.append((addr, label))
+                return u''
+            lines = text.split('\n')
+            for part in self.parser(lines, link, link):
+                pass
+            self.update_links(title, links, cursor=cursor)
+        self.update_words(title, text, cursor=cursor)
 
-    def reindex(self, wiki, pages):
-        for title in pages:
-            self.update_page(wiki, title)
-        self.empty = False
+    def update_page(self, title, data=None, text=None):
+        """Updates the index with new page content, for a single page."""
+
+        if text is None and data is not None:
+            text = unicode(data, self.storage.charset, 'replace')
+        try:
+            self.reindex_page(title, self.con.cursor(), text)
+        finally:
+            self.con.commit()
+
+    def reindex(self, pages):
+        """Updates specified pages in bulk."""
+
+        isolation_level = self.con.isolation_level
+        self.con.isolation_level = None
+        cursor = self.con.cursor()
+        cursor.execute('begin exclusive transaction;')
+        try:
+            for title in pages:
+                self.reindex_page(title, cursor)
+            self.empty = False
+        finally:
+            cursor.execute('commit transaction;')
+            self.con.isolation_level = isolation_level
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):
@@ -1662,9 +1698,7 @@ class Wiki(object):
         else:
             reindex = False
         self.index = self.index_class(self.cache, self.config.language,
-                                      self.storage)
-        if reindex:
-            self.index.reindex(self, self.storage.all_pages())
+                                      self.storage, self.parser)
         R = werkzeug.routing.Rule
         self.url_map = werkzeug.routing.Map([
             R('/', defaults={'title': self.config.front_page},
@@ -1774,22 +1808,6 @@ class Wiki(object):
             if title in self.index.page_links(self.config.locked_page):
                 raise werkzeug.exceptions.Forbidden()
 
-    def extract_links(self, text):
-        links = []
-        def link(addr, label=None, class_=None, image=None, alt=None):
-            if external_link(addr):
-                return u''
-            if '#' in addr:
-                addr, chunk = addr.split('#', 1)
-            if addr == u'':
-                return u''
-            links.append((addr, label))
-            return u''
-        lines = text.split('\n')
-        for part in self.parser(lines, link, link):
-            pass
-        return links
-
     def save(self, request, title):
         self.check_lock(title)
         url = request.get_url(title)
@@ -1838,7 +1856,7 @@ class Wiki(object):
                 else:
                     self.storage.delete_page(title, author, comment)
                     url = request.get_url(self.config.front_page)
-            self.index.update_page(self, title, text=text)
+            self.index.update_page(title, text=text)
         response = werkzeug.routing.redirect(url, code=303)
         response.set_cookie('author',
                             werkzeug.url_quote(request.get_author()),
@@ -1904,16 +1922,16 @@ class Wiki(object):
 
     def editor_form(self, request, title, preview=None):
         author = request.get_author()
+        lines = []
         try:
             page_file = self.storage.open_page(title)
             lines = self.storage.page_lines(page_file)
-            comment = _(u'modified')
             (rev, old_date, old_author,
                 old_comment) = self.storage.page_meta(title)
+            comment = _(u'modified')
             if old_author == author:
                 comment = old_comment
         except werkzeug.exceptions.NotFound:
-            lines = []
             comment = _(u'created')
             rev = -1
         if preview:
@@ -2195,7 +2213,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                     'rev': rev, 'title': title}
                 data = self.storage.page_revision(title, rev-1)
                 self.storage.save_data(title, data, author, comment, parent)
-            self.index.update_page(self, title, data=data)
+            self.index.update_page(title, data=data)
         url = request.adapter.build(self.history, {'title': title},
                                     method='GET', force_external=True)
         return werkzeug.redirect(url, 303)

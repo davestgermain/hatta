@@ -372,6 +372,9 @@ class WikiStorage(object):
     def __contains__(self, title):
         return os.path.exists(self._file_path(title))
 
+    def __iter__(self):
+        return self.all_pages()
+
     def save_file(self, title, file_name, author=u'', comment=u'', parent=None):
         """Save an existing file as specified page."""
 

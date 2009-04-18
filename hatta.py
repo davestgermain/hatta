@@ -457,7 +457,7 @@ class WikiStorage(object):
                 pass
 
     def save_text(self, title, text, author=u'', comment=u'', parent=None):
-        """Save text as specified page, encoded to page_charser."""
+        """Save text as specified page, encoded to charset."""
 
         data = text.encode(self.charset)
         self.save_data(title, data, author, comment, parent)
@@ -469,8 +469,8 @@ class WikiStorage(object):
         text = unicode(data, self.charset, 'replace')
         return text
 
-    def page_lines(self, title):
-        for data in self.open_page(title):
+    def page_lines(self, page):
+        for data in page:
             yield unicode(data, self.charset, 'replace')
 
     def delete_page(self, title, author=u'', comment=u''):
@@ -1154,8 +1154,9 @@ class WikiSearch(object):
     word_pattern = re.compile(ur"""\w[-~&\w]+\w""", re.UNICODE)
     _con = {}
 
-    def __init__(self, cache_path, lang):
+    def __init__(self, cache_path, lang, storage):
         self.path = cache_path
+        self.storage = storage
         self.lang = lang
         if lang == "ja" and split_japanese:
             self.split_text = self.split_japanese_text
@@ -1335,15 +1336,24 @@ without would yet you your yours yourself yourselves""")).split())
         finally:
             con.commit()
 
+    def update_page(self, wiki, title, data=None, text=None):
+        mime = self.storage.page_mime(title)
+        if not mime.startswith('text/'):
+            self.update_words(title, '')
+            return
+        if text is None:
+            if data is None:
+                text = self.storage.page_text(title)
+            else:
+                text = unicode(data, self.storage.charset, 'replace')
+        self.update_words(title, text)
+        if mime == 'text/x-wiki':
+            links = wiki.extract_links(text)
+            self.update_links(title, links)
+
     def reindex(self, wiki, pages):
         for title in pages:
-            mime = wiki.storage.page_mime(title)
-            if mime.startswith('text/'):
-                text = wiki.storage.page_text(title)
-                self.update_words(title, text)
-                if mime == 'text/x-wiki':
-                    links = wiki.extract_links(text)
-                    self.update_links(title, links)
+            self.update_page(wiki, title)
         self.empty = False
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
@@ -1651,7 +1661,8 @@ class Wiki(object):
             reindex = True
         else:
             reindex = False
-        self.index = self.index_class(self.cache, self.config.language)
+        self.index = self.index_class(self.cache, self.config.language,
+                                      self.storage)
         if reindex:
             self.index.reindex(self, self.storage.all_pages())
         R = werkzeug.routing.Rule
@@ -1715,7 +1726,8 @@ class Wiki(object):
         mime = self.storage.page_mime(title)
         if mime == 'text/x-wiki':
             if lines is None:
-                lines = self.storage.page_lines(title)
+                page_file = self.storage.open_page(title)
+                lines = self.storage.page_lines(page_file)
             content = self.parser(lines, page.wiki_link, page.wiki_image,
                                   self.highlight, self.wiki_math)
         elif mime.startswith('image/'):
@@ -1778,16 +1790,6 @@ class Wiki(object):
             pass
         return links
 
-    def index_text(self, title, text):
-        mime = self.storage.page_mime(title)
-        if mime == 'text/x-wiki':
-            links = self.extract_links(text)
-            self.index.update_links(title, links)
-        if mime.startswith('text/'):
-            self.index.update_words(title, text)
-        else:
-            self.index.update_words(title, u'')
-
     def save(self, request, title):
         self.check_lock(title)
         url = request.get_url(title)
@@ -1836,7 +1838,7 @@ class Wiki(object):
                 else:
                     self.storage.delete_page(title, author, comment)
                     url = request.get_url(self.config.front_page)
-            self.index_text(title, text)
+            self.index.update_page(self, title, text=text)
         response = werkzeug.routing.redirect(url, code=303)
         response.set_cookie('author',
                             werkzeug.url_quote(request.get_author()),
@@ -1903,7 +1905,8 @@ class Wiki(object):
     def editor_form(self, request, title, preview=None):
         author = request.get_author()
         try:
-            lines = self.storage.page_lines(title)
+            page_file = self.storage.open_page(title)
+            lines = self.storage.page_lines(page_file)
             comment = _(u'modified')
             (rev, old_date, old_author,
                 old_comment) = self.storage.page_meta(title)
@@ -2192,8 +2195,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                     'rev': rev, 'title': title}
                 data = self.storage.page_revision(title, rev-1)
                 self.storage.save_data(title, data, author, comment, parent)
-            text = unicode(data, self.storage.charset, 'replace')
-            self.index_text(title, text)
+            self.index.update_page(self, title, data=data)
         url = request.adapter.build(self.history, {'title': title},
                                     method='GET', force_external=True)
         return werkzeug.redirect(url, 303)

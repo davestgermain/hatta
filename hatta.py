@@ -318,7 +318,7 @@ class WikiStorage(object):
     change history, using Mercurial repository as the storage method.
     """
 
-    def __init__(self, path):
+    def __init__(self, path, charset=None):
         """
         Takes the path to the directory where the pages are to be kept.
         If the directory doen't exist, it will be created. If it's inside
@@ -326,6 +326,7 @@ class WikiStorage(object):
         a new repository will be created in it.
         """
 
+        self.charset = 'utf-8' or None
         self.path = path
         self._lockref = None
         if not os.path.exists(self.path):
@@ -435,14 +436,14 @@ class WikiStorage(object):
         finally:
             del lock
 
-    def save_text(self, title, text, author=u'', comment=u'', parent=None):
-        """Save text or data as specified page."""
+    def save_data(self, title, data, author=u'', comment=u'', parent=None):
+        """Save data as specified page."""
 
         try:
             temp_path = tempfile.mkdtemp(dir=self.path)
             file_path = os.path.join(temp_path, 'saved')
             f = open(file_path, "wb")
-            f.write(text)
+            f.write(data)
             f.close()
             self.save_file(title, file_path, author, comment, parent)
         finally:
@@ -454,6 +455,23 @@ class WikiStorage(object):
                 os.rmdir(temp_path)
             except OSError:
                 pass
+
+    def save_text(self, title, text, author=u'', comment=u'', parent=None):
+        """Save text as specified page, encoded to page_charser."""
+
+        data = text.encode(self.charset)
+        self.save_data(title, data, author, comment, parent)
+
+    def page_text(self, title):
+        """Read unicode text of a page."""
+
+        data = self.open_page(title).read()
+        text = unicode(data, self.charset, 'replace')
+        return text
+
+    def page_lines(self, title):
+        for data in self.open_page(title):
+            yield unicode(data, self.charset, 'replace')
 
     def delete_page(self, title, author=u'', comment=u''):
         user = author.encode('utf-8') or 'anon'
@@ -546,15 +564,21 @@ class WikiStorage(object):
             yield rev, date, author, comment
 
     def page_revision(self, title, rev):
-        """Get the contents of specified revision of the page."""
+        """Get unicode contents of specified revision of the page."""
 
         filectx_tip = self._find_filectx(title)
         if filectx_tip is None:
             raise werkzeug.exceptions.NotFound()
         try:
-            return filectx_tip.filectx(rev).data()
+            data = filectx_tip.filectx(rev).data()
         except IndexError:
             raise werkzeug.exceptions.NotFound()
+        return data
+
+    def revision_text(self, title, rev):
+        data = self.page_revision(title, rev)
+        text = unicode(data, self.charset, 'replace')
+        return text
 
     def history(self):
         """Iterate over the history of entire wiki."""
@@ -1315,8 +1339,7 @@ without would yet you your yours yourself yourselves""")).split())
         for title in pages:
             mime = wiki.storage.page_mime(title)
             if mime.startswith('text/'):
-                data = wiki.storage.open_page(title).read()
-                text = unicode(data, wiki.config.page_charset, 'replace')
+                text = wiki.storage.page_text(title)
                 self.update_words(title, text)
                 if mime == 'text/x-wiki':
                     links = wiki.extract_links(text)
@@ -1621,7 +1644,7 @@ class Wiki(object):
             _ = gettext.translation('hatta', fallback=True).ugettext
         self.path = os.path.abspath(config.pages_path)
         self.cache = os.path.abspath(config.cache_path)
-        self.storage = self.storage_class(self.path)
+        self.storage = self.storage_class(self.path, self.config.page_charset)
         self.parser = self.parser_class
         if not os.path.isdir(self.cache):
             os.makedirs(self.cache)
@@ -1692,18 +1715,9 @@ class Wiki(object):
         mime = self.storage.page_mime(title)
         if mime == 'text/x-wiki':
             if lines is None:
-                f = self.storage.open_page(title)
-                lines = (unicode(line, self.config.page_charset,
-                     "replace") for line in f)
+                lines = self.storage.page_lines(title)
             content = self.parser(lines, page.wiki_link, page.wiki_image,
                                   self.highlight, self.wiki_math)
-#            def add_line_numbers(parser):
-#                for part in parser:
-#                    if part:
-#                        yield werkzeug.html.a(name="line-%d" % parser.line_no,
-#                                              class_="line-no")
-#                    yield part
-#            content = add_line_numbers(content)
         elif mime.startswith('image/'):
             if title not in self.storage:
                 raise werkzeug.exceptions.NotFound()
@@ -1712,8 +1726,7 @@ class Wiki(object):
                           werkzeug.escape(title))]
         elif mime.startswith('text/'):
             if lines is None:
-                text = unicode(self.storage.open_page(title).read(),
-                               self.config.page_charset, 'replace')
+                text = self.storage.page_text(title)
             else:
                 text = ''.join(lines)
             content = self.highlight(text, mime=mime)
@@ -1726,8 +1739,7 @@ class Wiki(object):
         return content
 
     def revision(self, request, title, rev):
-        text = unicode(self.storage.page_revision(title, rev),
-                       self.config.page_charset, 'replace')
+        text = self.storage.revision_text(title, rev)
         link = werkzeug.html.a(werkzeug.html(title),
                                href=request.get_url(title))
         content = [
@@ -1809,8 +1821,7 @@ class Wiki(object):
                     self.storage.delete_page(title, author, comment)
                     url = request.get_url(self.config.front_page)
                 else:
-                    data = text.encode(self.config.page_charset)
-                    self.storage.save_text(title, data, author, comment, parent)
+                    self.storage.save_text(title, text, author, comment, parent)
             else:
                 text = u''
                 upload = request.files['data']
@@ -1820,7 +1831,7 @@ class Wiki(object):
                         self.storage.save_file(title, f.tmpname, author,
                                                comment, parent)
                     except AttributeError:
-                        self.storage.save_text(title, f.read(), author,
+                        self.storage.save_data(title, f.read(), author,
                                                comment, parent)
                 else:
                     self.storage.delete_page(title, author, comment)
@@ -1892,7 +1903,7 @@ class Wiki(object):
     def editor_form(self, request, title, preview=None):
         author = request.get_author()
         try:
-            lines = self.storage.open_page(title)
+            lines = self.storage.page_lines(title)
             comment = _(u'modified')
             (rev, old_date, old_author,
                 old_comment) = self.storage.page_meta(title)
@@ -1909,8 +1920,7 @@ class Wiki(object):
         yield u'<form action="" method="POST" class="editor"><div>'
         yield u'<textarea name="text" cols="80" rows="20" id="editortext">'
         for line in lines:
-            encoded = unicode(line, self.config.page_charset, 'replace')
-            yield werkzeug.escape(encoded)
+            yield werkzeug.escape(line)
         yield u"""</textarea>"""
         yield html.input(type_="hidden", name="parent", value=rev)
         yield html.label(html(_(u'Comment')), html.input(name="comment",
@@ -2181,8 +2191,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 comment = _(u'Undo of change %(rev)d of page %(title)s') % {
                     'rev': rev, 'title': title}
                 data = self.storage.page_revision(title, rev-1)
-                self.storage.save_text(title, data, author, comment, parent)
-            text = unicode(data, self.config.page_charset, 'replace')
+                self.storage.save_data(title, data, author, comment, parent)
+            text = unicode(data, self.storage.charset, 'replace')
             self.index_text(title, text)
         url = request.adapter.build(self.history, {'title': title},
                                     method='GET', force_external=True)
@@ -2270,10 +2280,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         yield u'</ul>'
 
     def diff(self, request, title, from_rev, to_rev):
-        from_page = unicode(self.storage.page_revision(title, from_rev),
-                            self.config.page_charset, 'replace')
-        to_page = unicode(self.storage.page_revision(title, to_rev),
-                          self.config.page_charset, 'replace')
+        from_page = self.storage.revision_text(title, from_rev)
+        to_page = self.storage.revision_text(title, to_rev)
         from_url = request.adapter.build(self.revision,
                                          {'title': title, 'rev': from_rev})
         to_url = request.adapter.build(self.revision,

@@ -227,6 +227,10 @@ class TestHTML(unittest.TestCase):
             <input class="search" name="q">
             <input class="button" type="submit" value="Search">
         </div></form>
+        <div class="menu">
+          <a href="/">Home</a>
+          <a href="/history">Recent changes</a>
+        </div>
         <h1>page &lt;title&gt;</h1>
     </div>
     <div class="content">some &lt;content&gt;
@@ -256,6 +260,10 @@ class TestHTML(unittest.TestCase):
             <input class="search" name="q">
             <input class="button" type="submit" value="Search">
         </div></form>
+        <div class="menu">
+          <a href="/">Home</a>
+          <a href="/history">Recent changes</a>
+        </div>
         <h1>different &lt;title&gt;</h1>
     </div>
     <div class="content">some &lt;content&gt;</div>

@@ -1251,8 +1251,6 @@ without would yet you your yours yourself yourselves""")).split())
         c = con.execute('select id from titles where title=?;', (title,))
         idents = c.fetchone()
         if idents is None:
-            con.execute('commit transaction;')
-            con.execute('begin exclusive transaction;')
             con.execute('insert into titles (title) values (?);', (title,))
             c = con.execute('select id from titles where title=?;', (title,))
             idents = c.fetchone()

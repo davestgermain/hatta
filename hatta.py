@@ -701,23 +701,33 @@ class WikiParser(object):
     </table>
 
     >>> parse(u'test http://example.com/test test')
-    <p id="line_0">test <a href="http://example.com/test">http://example.com/test</a> test</p>
+    <p id="line_0">
+        test <a href="http://example.com/test">
+                http://example.com/test
+        </a> test</p>
 
     >>> parse(u'http://example.com/,test, test')
-    <p id="line_0"><a href="http://example.com/,test">http://example.com/,test</a>, test</p>
+    <p id="line_0">
+        <a href="http://example.com/,test">http://example.com/,test</a>, test
+    </p>
 
     >>> parse(u'(http://example.com/test)')
-    <p id="line_0">(<a href="http://example.com/test">http://example.com/test</a>)</p>
+    <p id="line_0">
+        (<a href="http://example.com/test">http://example.com/test</a>)</p>
 
-    XXX This might be considered a bug, but it's impossible to detect in general.
+    XXX This might be considered a bug, but impossible to detect in general.
     >>> parse(u'http://example.com/(test)')
-    <p id="line_0"><a href="http://example.com/(test">http://example.com/(test</a>)</p>
+    <p id="line_0">
+        <a href="http://example.com/(test">http://example.com/(test</a>)</p>
 
     >>> parse(u'http://example.com/test?test&test=1')
-    <p id="line_0"><a href="http://example.com/test?test&amp;test=1">http://example.com/test?test&amp;test=1</a></p>
+    <p id="line_0"><a href="http://example.com/test?test&amp;test=1">
+            http://example.com/test?test&amp;test=1
+    </a></p>
 
     >>> parse(u'http://example.com/~test')
-    <p id="line_0"><a href="http://example.com/~test">http://example.com/~test</a></p>
+    <p id="line_0">
+        <a href="http://example.com/~test">http://example.com/~test</a></p>
 
     >>> parse(u'[[test]] [[tset|test]]')
     <p id="line_0"><a href="test">test</a> <a href="tset">test</a></p>
@@ -1337,8 +1347,10 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
     A Werkzeug's request with additional functions for handling file
     uploads and wiki-specific link generation.
     """
+
     charset = 'utf-8'
     encoding_errors = 'ignore'
+
     def __init__(self, wiki, adapter, environ, **kw):
         werkzeug.BaseRequest.__init__(self, environ, **kw)
         self.wiki = wiki
@@ -1346,8 +1358,8 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         self.tmpfiles = []
         self.tmppath = wiki.path
 
-    def get_url(self, title=None, view=None, method='GET', external=False,
-                **kw):
+    def get_url(self, title=None, view=None, method='GET',
+                external=False, **kw):
         if view is None:
             view = self.wiki.view
         if title is not None:

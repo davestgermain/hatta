@@ -1524,7 +1524,13 @@ class WikiPage(object):
 
     def menu(self):
         html = werkzeug.html
-        items = self.wiki.index.page_links_and_labels(self.config.menu_page)
+        if self.config.menu_page in self.wiki.storage:
+            items = self.wiki.index.page_links_and_labels(self.config.menu_page)
+        else:
+            items = [
+                (self.wiki.config.front_page, self.wiki.config.front_page),
+                ('history', _(u'Recent changes')),
+            ]
         for link, label in items:
             if link == self.title:
                 yield html.a(label, href=self.get_url(link), class_="current")
@@ -1536,8 +1542,7 @@ class WikiPage(object):
         if self.config.logo_page in self.wiki.storage:
             yield self.logo()
         yield self.search_form()
-        if self.config.menu_page in self.wiki.storage:
-            yield html.div(u" ".join(self.menu()), class_="menu")
+        yield html.div(u" ".join(self.menu()), class_="menu")
         yield html.h1(html(special_title or self.title))
 
     def footer(self):

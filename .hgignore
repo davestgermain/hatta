@@ -3,3 +3,8 @@ syntax: glob
 *~
 .*.swp
 docs/*
+build/*
+dist/*
+pygments/*
+werkzeug/*
+cache/*

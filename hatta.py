@@ -617,7 +617,8 @@ class WikiStorage(object):
         status = self.repo.status(current, last)
         modified, added, removed, deleted, unknown, ignored, clean = status
         for filename in modified+added+removed+deleted:
-            return self._file_to_title(filename)
+            if filename.startswith(self.repo_prefix):
+                yield self._file_to_title(filename)
 
 class WikiParser(object):
     r"""
@@ -1216,8 +1217,7 @@ whether which while whither who whoever whole whom whose why will with within
 without would yet you your yours yourself yourselves""")).split())
 +ur')$|.*\d.*', re.U|re.I|re.X)
 
-        changed = self.storage.changed_since(self.get_last_revision())
-        self.reindex(changed)
+
 
     @property
     def con(self):
@@ -1350,7 +1350,6 @@ without would yet you your yours yourself yourselves""")).split())
         finally:
             con.commit()
 
-
     def reindex_page(self, title, cursor, text=None):
         """Updates the content of the database, needs locks around."""
 
@@ -1419,6 +1418,14 @@ without would yet you your yours yourself yourselves""")).split())
         c = con.execute('pragma user_version;')
         rev = c.fetchone()[0]
         return rev
+
+    def update(self):
+        """Reindex al pages that changed since last indexing."""
+
+        changed = self.storage.changed_since(self.get_last_revision())
+        self.reindex(changed)
+
+
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):

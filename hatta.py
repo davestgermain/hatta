@@ -1867,6 +1867,7 @@ class Wiki(object):
                 parent = int(request.form.get("parent"))
             except (ValueError, TypeError):
                 parent = None
+            self.index.update()
             if text is not None:
                 if title == self.config.locked_page:
                     for link, label in self.extract_links(text):
@@ -2241,6 +2242,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 parent = int(request.form.get("parent"))
             except (ValueError, TypeError):
                 parent = None
+            self.index.update()
             if rev == 0:
                 comment = _(u'Delete page %(title)s') % {'title': title}
                 data = ''

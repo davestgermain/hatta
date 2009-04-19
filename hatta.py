@@ -1252,7 +1252,7 @@ without would yet you your yours yourself yourselves""")).split())
         idents = c.fetchone()
         if idents is None:
             con.execute('insert into titles (title) values (?);', (title,))
-            c = con.execute('select id from titles where title=?;', (title,))
+            c = con.execute('select last_insert_rowid();')
             idents = c.fetchone()
         return idents[0]
 

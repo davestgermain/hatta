@@ -2409,12 +2409,14 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         yield u'</pre>'
 
     def search(self, request):
-        query = request.values.get('q', u'')
-        words = tuple(self.index.split_text(query, stop=False))
-        if not words:
+        query = request.values.get('q', u'').strip()
+        if not query:
             content = self.page_index(request)
             title = _(u'Page index')
         else:
+            words = tuple(self.index.split_text(query, stop=False))
+            if not words:
+                words = (query,)
             title = _(u'Searching for "%s"') % u" ".join(words)
             content = self.page_search(request, words)
         page = WikiPage(self, request, '')

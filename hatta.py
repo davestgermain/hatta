@@ -1236,15 +1236,15 @@ without would yet you your yours yourself yourselves""")).split())
             self._con[thread_id] = connection
             return connection
 
-    def split_text(self, text):
+    def split_text(self, text, stop=True):
         """Splits text into words, removing stop words"""
 
         for match in self.word_pattern.finditer(text):
             word = match.group(0)
-            if not self.stop_words_re.match(word):
+            if not (stop and self.stop_words_re.match(word)):
                 yield word.lower()
 
-    def split_japanese_text(self, text):
+    def split_japanese_text(self, text, stop=True):
         """Splits text into words, including rules for Japanese"""
 
         for match in self.word_pattern.finditer(text):
@@ -1254,7 +1254,7 @@ without would yet you your yours yourself yourselves""")).split())
                 got_japanese = True
                 if not self.stop_words_re.match(word):
                     yield w.lower()
-            if not got_japanese and not self.stop_words_re.match(word):
+            if not (got_japanese or stop and self.stop_words_re.match(word)):
                 yield word.lower()
 
     def count_words(self, words):
@@ -2410,7 +2410,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
     def search(self, request):
         query = request.values.get('q', u'')
-        words = tuple(self.index.split_text(query))
+        words = tuple(self.index.split_text(query, stop=False))
         if not words:
             content = self.page_index(request)
             title = _(u'Page index')

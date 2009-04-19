@@ -342,6 +342,9 @@ class WikiStorage(object):
             self.repo = mercurial.hg.repository(self.ui, self.repo_path)
         self.repo_prefix = self.path[len(self.repo_path):].strip('/')
 
+    def reopen(self):
+        self.repo = mercurial.hg.repository(self.ui, self.repo_path)
+
     def _lock(self):
         if self._lockref and self._lockref():
             return self._lockref()
@@ -1867,6 +1870,7 @@ class Wiki(object):
                 parent = int(request.form.get("parent"))
             except (ValueError, TypeError):
                 parent = None
+            self.storage.reopen()
             self.index.update()
             if text is not None:
                 if title == self.config.locked_page:
@@ -2242,6 +2246,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 parent = int(request.form.get("parent"))
             except (ValueError, TypeError):
                 parent = None
+            self.storage.reopen()
             self.index.update()
             if rev == 0:
                 comment = _(u'Delete page %(title)s') % {'title': title}

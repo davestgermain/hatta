@@ -1381,7 +1381,7 @@ without would yet you your yours yourself yourselves""")).split())
         isolation_level = self.con.isolation_level
         self.con.isolation_level = None
         cursor = self.con.cursor()
-        cursor.execute('begin exclusive transaction;')
+        cursor.execute('begin immediate transaction;')
         try:
             for title in pages:
                 self.reindex_page(title, cursor)

@@ -609,6 +609,16 @@ class WikiStorage(object):
                 and not filename.startswith('.')):
                 yield werkzeug.url_unquote(filename)
 
+    def changed_since(self, rev):
+        """Return all pages that changed since specified repository revision."""
+
+        last = self.repo.lookup(int(rev))
+        current = self.repo.lookup('tip')
+        status = self.repo.status(current, last)
+        modified, added, removed, deleted, unknown, ignored, clean = status
+        for filename in modified+added+removed+deleted:
+            return self._file_to_title(filename)
+
 class WikiParser(object):
     r"""
     Responsible for generating HTML markup from the wiki markup.
@@ -1205,8 +1215,9 @@ whence whenever where whereafter whereas whereby wherein whereupon wherever
 whether which while whither who whoever whole whom whose why will with within
 without would yet you your yours yourself yourselves""")).split())
 +ur')$|.*\d.*', re.U|re.I|re.X)
-        if self.empty:
-            self.reindex(self.storage.all_pages())
+
+        changed = self.storage.changed_since(self.get_last_revision())
+        self.reindex(changed)
 
     @property
     def con(self):
@@ -1217,6 +1228,7 @@ without would yet you your yours yourself yourselves""")).split())
             return self._con[thread_id]
         except KeyError:
             connection = sqlite3.connect(self.filename)
+            connection.isolation_level = None
             self._con[thread_id] = connection
             return connection
 
@@ -1347,7 +1359,10 @@ without would yet you your yours yourself yourselves""")).split())
             self.update_words(title, '', cursor=cursor)
             return
         if text is None:
-            text = self.storage.page_text(title)
+            try:
+                text = self.storage.page_text(title)
+            except werkzeug.exceptions.NotFound:
+                text = u''
         if mime == 'text/x-wiki':
             links = []
             def link(addr, label=None, class_=None, image=None, alt=None):
@@ -1370,29 +1385,45 @@ without would yet you your yours yourself yourselves""")).split())
 
         if text is None and data is not None:
             text = unicode(data, self.storage.charset, 'replace')
+        cursor = self.con.cursor()
+        cursor.execute('begin immediate transaction;')
         try:
-            self.reindex_page(title, self.con.cursor(), text)
-        finally:
-            self.con.commit()
+            self.set_last_revision(self.storage.repo_revision())
+            self.reindex_page(title, cursor, text)
+            cursor.execute('commit transaction;')
+        except:
+            cursor.execute('rollback;')
+            raise
 
     def reindex(self, pages):
         """Updates specified pages in bulk."""
 
-        isolation_level = self.con.isolation_level
-        self.con.isolation_level = None
         cursor = self.con.cursor()
         cursor.execute('begin immediate transaction;')
         try:
+            self.set_last_revision(self.storage.repo_revision())
             for title in pages:
                 self.reindex_page(title, cursor)
-            self.empty = False
-        finally:
             cursor.execute('commit transaction;')
-            self.con.isolation_level = isolation_level
+            self.empty = False
+        except:
+            cursor.execute('rollback;')
+            raise
+
+    def set_last_revision(self, rev):
+        # XXX we use % here because the sqlite3's substitiution doesn't work
+        self.con.execute('pragma user_version=%d;' % (int(rev),))
+
+    def get_last_revision(self):
+        con = self.con
+        c = con.execute('pragma user_version;')
+        rev = c.fetchone()[0]
+        return rev
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):
     """A typical HTTP response class made out of Werkzeug's mixins."""
+
 
 class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
     """

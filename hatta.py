@@ -2377,8 +2377,9 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         for old_line, new_line, changed in diff:
             old_no, old_text = old_line
             new_no, new_text = new_line
+            line_no = (new_no or old_no or 1)-1
             if changed:
-                yield u'<div class="change">'
+                yield u'<div class="change" id="line_%d">' % line_no
                 old_iter = infiniter(mark_re.finditer(old_text))
                 new_iter = infiniter(mark_re.finditer(new_text))
                 old = old_iter.next()
@@ -2405,7 +2406,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                     yield werkzeug.escape(buff)
                 yield u'</div>'
             else:
-                yield u'<div class="orig">%s</div>' % werkzeug.escape(old_text)
+                yield u'<div class="orig" id="line_%d">%s</div>' % (
+                    line_no, werkzeug.escape(old_text))
         yield u'</pre>'
 
     def search(self, request):

@@ -2464,6 +2464,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return html
 
     def backlinks(self, request, title):
+        self.storage.reopen()
+        self.index.update()
         content = self.page_backlinks(request, title)
         page = WikiPage(self, request, title)
         html = page.render_content(content, _(u'Links to "%s"') % title)

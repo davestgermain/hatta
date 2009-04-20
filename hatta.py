@@ -2432,6 +2432,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         yield u'</ul>'
 
     def page_search(self, request, words):
+        self.storage.reopen()
+        self.index.update()
         result = sorted(self.index.find(words), key=lambda x:-x[0])
         yield werkzeug.html.p(
             _(u'%d page(s) containing all words:') % len(result))

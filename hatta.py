@@ -343,6 +343,8 @@ class WikiStorage(object):
         self.repo_prefix = self.path[len(self.repo_path):].strip('/')
 
     def reopen(self):
+        """Closes and reopens the repo, to make sure we are up to date."""
+
         self.repo = mercurial.hg.repository(self.ui, self.repo_path)
 
     def _lock(self):
@@ -437,7 +439,8 @@ class WikiStorage(object):
             self.repo.commit(files=[repo_file], text=text, user=user,
                              force=True, empty_ok=True)
         finally:
-            del lock
+            lock.release()
+            # del lock
 
     def save_data(self, title, data, author=u'', comment=u'', parent=None):
         """Save data as specified page."""
@@ -491,7 +494,8 @@ class WikiStorage(object):
             self.repo.commit(files=[repo_file], text=text, user=user,
                              force=True, empty_ok=True)
         finally:
-            del lock
+            lock.release()
+            # del lock
 
     def open_page(self, title):
         try:

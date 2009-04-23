@@ -1454,6 +1454,8 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         self.adapter = adapter
         self.tmpfiles = []
         self.tmppath = wiki.path
+        # Whether to print the css for highlighting
+        self.print_highlight_styles = True
 
     def get_url(self, title=None, view=None, method='GET',
                 external=False, **kw):
@@ -1875,9 +1877,11 @@ if (jumpLine) {
         except pygments.util.ClassNotFound:
             yield werkzeug.html.pre(werkzeug.html(text))
             return
-        css = formatter.get_style_defs('.highlight')
+        if self.request.print_highlight_styles:
+            css = formatter.get_style_defs('.highlight')
+            self.request.print_highlight_styles = False
+            yield werkzeug.html.style(werkzeug.html(css), type="text/css")
         html = pygments.highlight(text, lexer, formatter)
-        yield werkzeug.html.style(werkzeug.html(css), type="text/css")
         yield html
 
     def diff_content(self, from_rev, to_rev):

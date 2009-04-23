@@ -1172,10 +1172,9 @@ class WikiSearch(object):
     word_pattern = re.compile(ur"""\w[-~&\w]+\w""", re.UNICODE)
     _con = {}
 
-    def __init__(self, cache_path, lang, storage, parser):
+    def __init__(self, cache_path, lang, storage):
         self.path = cache_path
         self.storage = storage
-        self.parser = parser
         self.lang = lang
         if lang == "ja" and split_japanese:
             self.split_text = self.split_japanese_text
@@ -1382,7 +1381,7 @@ without would yet you your yours yourself yourselves""")).split())
                 links.append((addr, label))
                 return u''
             lines = text.split('\n')
-            for part in self.parser(lines, link, link):
+            for part in WikiParser(lines, link, link):
                 pass
             self.update_links(title, links, cursor=cursor)
         self.update_words(title, text, cursor=cursor)
@@ -1521,14 +1520,16 @@ class WikiPage(object):
     """Everything needed for rendering a page."""
 
     def __init__(self, wiki, request, title, mime):
-        self.wiki = wiki
         self.request = request
         self.title = title
         self.mime = mime
-        self.storage = self.wiki.storage
-        self.config = self.wiki.config
+        # for now we just use the globals from wiki object
         self.get_url = self.request.get_url
         self.get_download_url = self.request.get_download_url
+        self.wiki = wiki
+        self.storage = self.wiki.storage
+        self.index = self.wiki.index
+        self.config = self.wiki.config
 
     def wiki_link(self, addr, label, class_='wiki', image=None):
         """Create HTML for a wiki link."""
@@ -1554,7 +1555,7 @@ class WikiPage(object):
                 href = self.get_url(addr) + chunk
             if addr in ('history', 'search'):
                 class_ = 'special'
-            elif addr not in self.wiki.storage:
+            elif addr not in self.storage:
                 class_ = 'nonexistent'
         return werkzeug.html.a(image or text, href=href, class_=class_,
                                title=addr)
@@ -1571,8 +1572,8 @@ class WikiPage(object):
             addr, chunk = addr.split('#', 1)
         if addr == '':
             return html.a(name=chunk)
-        if addr in self.wiki.storage:
-            mime = self.wiki.storage.page_mime(addr)
+        if addr in self.storage:
+            mime = self.storage.page_mime(addr)
             if mime.startswith('image/'):
                 return html.img(src=self.get_download_url(addr), class_=class_,
                                 alt=alt)
@@ -1585,7 +1586,7 @@ class WikiPage(object):
         html = werkzeug.html
 
         yield html.title(html(u'%s - %s' % (title, self.config.site_name)))
-        if self.config.style_page in self.wiki.storage:
+        if self.config.style_page in self.storage:
             yield html.link(rel="stylesheet", type_="text/css",
                 href=self.get_download_url(self.config.style_page))
         else:
@@ -1624,11 +1625,11 @@ class WikiPage(object):
 
     def menu(self):
         html = werkzeug.html
-        if self.config.menu_page in self.wiki.storage:
-            items = self.wiki.index.page_links_and_labels(self.config.menu_page)
+        if self.config.menu_page in self.storage:
+            items = self.index.page_links_and_labels(self.config.menu_page)
         else:
             items = [
-                (self.wiki.config.front_page, self.wiki.config.front_page),
+                (self.config.front_page, self.config.front_page),
                 ('history', _(u'Recent changes')),
             ]
         for link, label in items:
@@ -1639,7 +1640,7 @@ class WikiPage(object):
 
     def header(self, special_title):
         html = werkzeug.html
-        if self.config.logo_page in self.wiki.storage:
+        if self.config.logo_page in self.storage:
             yield self.logo()
         yield self.search_form()
         yield html.div(u" ".join(self.menu()), class_="menu")
@@ -1750,7 +1751,7 @@ class WikiPageText(WikiPage):
 
     def view_content(self, lines=None):
         if lines is None:
-            text = self.wiki.storage.page_text(self.title)
+            text = self.storage.page_text(self.title)
         else:
             text = ''.join(lines)
         return self.highlight(text, mime=self.mime)
@@ -1759,10 +1760,10 @@ class WikiPageText(WikiPage):
         author = self.request.get_author()
         lines = []
         try:
-            page_file = self.wiki.storage.open_page(self.title)
-            lines = self.wiki.storage.page_lines(page_file)
+            page_file = self.storage.open_page(self.title)
+            lines = self.storage.page_lines(page_file)
             (rev, old_date, old_author,
-                old_comment) = self.wiki.storage.page_meta(self.title)
+                old_comment) = self.storage.page_meta(self.title)
             comment = _(u'modified')
             if old_author == author:
                 comment = old_comment
@@ -1881,8 +1882,8 @@ class WikiPageWiki(WikiPageText):
 
     def view_content(self, lines=None):
             if lines is None:
-                f = self.wiki.storage.open_page(self.title)
-                lines = self.wiki.storage.page_lines(f)
+                f = self.storage.open_page(self.title)
+                lines = self.storage.page_lines(f)
             content = WikiParser(lines, self.wiki_link, self.wiki_image,
                                  self.highlight, self.wiki_math)
             return content
@@ -1897,7 +1898,7 @@ class WikiPageWiki(WikiPageText):
 
     def dependencies(self):
         dependencies = WikiPage.dependencies(self)
-        for link in self.wiki.index.page_links(self.title):
+        for link in self.index.page_links(self.title):
             if link not in self.storage:
                 dependencies.add(werkzeug.url_quote(link))
         return dependencies
@@ -1959,7 +1960,6 @@ class Wiki(object):
     The main class of the wiki, handling initialization of the whole
     application and most of the logic.
     """
-    parser_class = WikiParser
     storage_class = WikiStorage
     index_class = WikiSearch
     mime_map = {
@@ -1985,14 +1985,12 @@ class Wiki(object):
         self.path = os.path.abspath(config.pages_path)
         self.cache = os.path.abspath(config.cache_path)
         self.storage = self.storage_class(self.path, self.config.page_charset)
-        self.parser = self.parser_class
         if not os.path.isdir(self.cache):
             os.makedirs(self.cache)
             reindex = True
         else:
             reindex = False
-        self.index = self.index_class(self.cache, self.config.language,
-                                      self.storage, self.parser)
+        self.index = self.index_class(self.cache, self.config.language, self.storage)
         R = werkzeug.routing.Rule
         self.url_map = werkzeug.routing.Map([
             R('/', defaults={'title': self.config.front_page},

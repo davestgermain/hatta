@@ -209,7 +209,7 @@ class TestHTML(unittest.TestCase):
     def test_html_page(self):
         content = ["some &lt;content&gt;"]
         title = "page <title>"
-        page = hatta.WikiPage(self.wiki, self.request, title)
+        page = self.wiki.get_page(self.request, title)
         parts = page.render_content(content)
         html = u"".join(parts)
         expect = u"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
@@ -242,7 +242,7 @@ class TestHTML(unittest.TestCase):
 </body></html>"""
         self.html_eq(expect, html)
         page_title = "different <title>"
-        page = hatta.WikiPage(self.wiki, self.request, title)
+        page = self.wiki.get_page(self.request, title)
         parts = page.render_content(content, page_title)
         html = u"".join(parts)
         expect = u"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"

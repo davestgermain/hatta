@@ -1520,10 +1520,12 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
 class WikiPage(object):
     """Everything needed for rendering a page."""
 
-    def __init__(self, wiki, request, title):
+    def __init__(self, wiki, request, title, mime):
         self.wiki = wiki
         self.request = request
         self.title = title
+        self.mime = mime
+        self.storage = self.wiki.storage
         self.config = self.wiki.config
         self.get_url = self.request.get_url
         self.get_download_url = self.request.get_download_url
@@ -1703,6 +1705,248 @@ for (var j = 0; j < tagList.length; ++j) {
                 pass
         yield u'</body></html>'
 
+    def history_list(self):
+        request = self.request
+        title = self.title
+        max_rev = -1;
+        link = werkzeug.html.a(werkzeug.html(title),
+                               href=request.get_url(title))
+        yield werkzeug.html.p(
+            _(u'History of changes for %(link)s.') % {'link': link})
+        url = request.get_url(title, self.wiki.undo, method='POST')
+        yield u'<form action="%s" method="POST"><ul class="history">' % url
+        for rev, date, author, comment in self.storage.page_history(title):
+            if max_rev < 0:
+                max_rev = rev
+            if rev > 0:
+                url = request.adapter.build(self.wiki.diff, {
+                    'title': title, 'from_rev': rev-1, 'to_rev': rev})
+            else:
+                url = request.adapter.build(self.wiki.revision, {
+                    'title': title, 'rev': rev})
+            yield u'<li>'
+            yield werkzeug.html.a(date.strftime('%F %H:%M'), href=url)
+            if not self.config.read_only:
+                yield (u'<input type="submit" name="%d" value="Undo" '
+                       u'class="button">' % rev)
+            yield u' . . . . '
+            yield werkzeug.html.a(werkzeug.html(author),
+                                  href=request.get_url(author))
+            yield u'<div class="comment">%s</div>' % werkzeug.escape(comment)
+            yield u'</li>'
+        yield u'</ul>'
+        yield u'<input type="hidden" name="parent" value="%d">' % max_rev
+        yield u'</form>'
+
+    def dependencies(self):
+        dependencies = set()
+        for link in [self.config.style_page, self.config.logo_page, self.config.menu_page]:
+            if link not in self.storage:
+                dependencies.add(werkzeug.url_quote(link))
+        return dependencies
+
+class WikiPageText(WikiPage):
+    """Pages of mime type text/* use this for display."""
+
+    def view_content(self, lines=None):
+        if lines is None:
+            text = self.wiki.storage.page_text(self.title)
+        else:
+            text = ''.join(lines)
+        return self.highlight(text, mime=self.mime)
+
+    def editor_form(self, preview=None):
+        author = self.request.get_author()
+        lines = []
+        try:
+            page_file = self.wiki.storage.open_page(self.title)
+            lines = self.wiki.storage.page_lines(page_file)
+            (rev, old_date, old_author,
+                old_comment) = self.wiki.storage.page_meta(self.title)
+            comment = _(u'modified')
+            if old_author == author:
+                comment = old_comment
+        except werkzeug.exceptions.NotFound:
+            comment = _(u'created')
+            rev = -1
+        if preview:
+            lines = preview
+            comment = self.request.form.get('comment', comment)
+        html = werkzeug.html
+        yield u'<form action="" method="POST" class="editor"><div>'
+        yield u'<textarea name="text" cols="80" rows="20" id="editortext">'
+        for line in lines:
+            yield werkzeug.escape(line)
+        yield u"""</textarea>"""
+        yield html.input(type_="hidden", name="parent", value=rev)
+        yield html.label(html(_(u'Comment')), html.input(name="comment",
+            value=comment), class_="comment")
+        yield html.label(html(_(u'Author')), html.input(name="author",
+            value=self.request.get_author()), class_="comment")
+        yield html.div(
+                html.input(type_="submit", name="save", value=_(u'Save')),
+                html.input(type_="submit", name="preview", value=_(u'Preview')),
+                html.input(type_="submit", name="cancel", value=_(u'Cancel')),
+                class_="buttons")
+        yield u'</div></form>'
+        if preview:
+            yield html.h1(html(_(u'Preview, not saved')), class_="preview")
+            for part in self.view_content(preview):
+                yield part
+        if self.config.js_editor:
+            # Scroll the textarea to the line specified
+            # Move the cursor to the specified line
+            yield html.script(ur"""
+var jumpLine = 0+document.location.hash.substring(1);
+if (jumpLine) {
+    var textBox = document.getElementById('editortext');
+    var textLines = textBox.textContent.match(/(.*\n)/g);
+    var scrolledText = '';
+    for (var i = 0; i < textLines.length && i < jumpLine; ++i) {
+        scrolledText += textLines[i];
+    }
+    textBox.focus();
+    if (textBox.setSelectionRange) {
+        textBox.setSelectionRange(scrolledText.length, scrolledText.length);
+    } else if (textBox.createTextRange) {
+        var range = textBox.createTextRange();
+        range.collapse(true);
+        range.moveEnd('character', scrolledText.length);
+        range.moveStart('character', scrolledText.length);
+        range.select();
+    }
+    var scrollPre = document.createElement('pre');
+    textBox.parentNode.appendChild(scrollPre);
+    var style = window.getComputedStyle(textBox, '');
+    scrollPre.style.font = style.font;
+    scrollPre.style.border = style.border;
+    scrollPre.style.outline = style.outline;
+    scrollPre.style.lineHeight = style.lineHeight;
+    scrollPre.style.letterSpacing = style.letterSpacing;
+    scrollPre.style.fontFamily = style.fontFamily;
+    scrollPre.style.fontSize = style.fontSize;
+    scrollPre.style.padding = 0;
+    scrollPre.style.overflow = 'scroll';
+    try { scrollPre.style.whiteSpace = "-moz-pre-wrap" } catch(e) {};
+    try { scrollPre.style.whiteSpace = "-o-pre-wrap" } catch(e) {};
+    try { scrollPre.style.whiteSpace = "-pre-wrap" } catch(e) {};
+    try { scrollPre.style.whiteSpace = "pre-wrap" } catch(e) {};
+    scrollPre.textContent = scrolledText;
+    textBox.scrollTop = scrollPre.scrollHeight;
+    scrollPre.parentNode.removeChild(scrollPre);
+}
+""")
+
+    def highlight(self, text, mime=None, syntax=None, line_no=0):
+        try:
+            import pygments
+            import pygments.util
+            import pygments.lexers
+            import pygments.formatters
+            import pygments.styles
+        except ImportError:
+            yield werkzeug.html.pre(werkzeug.html(text))
+            return
+        if 'tango' in pygments.styles.STYLE_MAP:
+            style = 'tango'
+        else:
+            style = 'friendly'
+        formatter = pygments.formatters.HtmlFormatter(style=style)
+        formatter.line_no = line_no
+        def wrapper(source, outfile):
+            yield 0, '<div class="highlight"><pre>'
+            for lineno, line in source:
+                yield lineno, werkzeug.html.div(line.strip('\n'),
+                                                id_="line_%d" % formatter.line_no)
+                formatter.line_no += 1
+            yield 0, '</pre></div>'
+        formatter.wrap = wrapper
+        try:
+            if mime:
+                lexer = pygments.lexers.get_lexer_for_mimetype(mime)
+            elif syntax:
+                lexer = pygments.lexers.get_lexer_by_name(syntax)
+            else:
+                lexer = pygments.lexers.guess_lexer(text)
+        except pygments.util.ClassNotFound:
+            yield werkzeug.html.pre(werkzeug.html(text))
+            return
+        css = formatter.get_style_defs('.highlight')
+        html = pygments.highlight(text, lexer, formatter)
+        yield werkzeug.html.style(werkzeug.html(css), type="text/css")
+        yield html
+
+class WikiPageWiki(WikiPageText):
+    """Pages of with wiki markup use this for display."""
+
+    def view_content(self, lines=None):
+            if lines is None:
+                f = self.wiki.storage.open_page(self.title)
+                lines = self.wiki.storage.page_lines(f)
+            content = WikiParser(lines, self.wiki_link, self.wiki_image,
+                                 self.highlight, self.wiki_math)
+            return content
+
+    def wiki_math(self, math):
+        if '%s' in self.config.math_url:
+            url = self.config.math_url % werkzeug.url_quote(math)
+        else:
+            url = ''.join([self.config.math_url, werkzeug.url_quote(math)])
+        return u'<img src="%s" alt="%s" class="math">' % (url,
+                                             werkzeug.escape(math, quote=True))
+
+    def dependencies(self):
+        dependencies = WikiPage.dependencies(self)
+        for link in self.wiki.index.page_links(self.title):
+            if link not in self.storage:
+                dependencies.add(werkzeug.url_quote(link))
+        return dependencies
+
+class WikiPageFile(WikiPage):
+    """Pages of all other mime types use this for display."""
+
+    def view_content(self, lines=None):
+        if self.title not in self.storage:
+            raise werkzeug.exceptions.NotFound()
+        content = ['<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>'
+               % (self.request.get_download_url(self.title), werkzeug.escape(self.title), self.mime)]
+        return content
+
+    def editor_form(self, preview=None):
+        author = self.request.get_author()
+        if self.title in self.storage:
+            comment = _(u'changed')
+            (rev, old_date, old_author,
+                old_comment) = self.storage.page_meta(self.title)
+            if old_author == author:
+                comment = old_comment
+        else:
+            comment = _(u'uploaded')
+            rev = -1
+        html = werkzeug.html
+        yield html.p(html(
+                _(u"This is a binary file, it can't be edited on a wiki. "
+                  u"Please upload a new version instead.")))
+        yield html.form(html.div(
+            html.div(html.input(type_="file", name="data"), class_="upload"),
+            html.input(type_="hidden", name="parent", value=rev),
+            html.label(html(_(u'Comment')), html.input(name="comment", value=comment)),
+            html.label(html(_(u'Author')), html.input(name="author", value=author)),
+            html.div(
+                html.input(type_="submit", name="save", value=_(u'Save')),
+                html.input(type_="submit", name="cancel", value=_(u'Cancel')),
+                class_="buttons")),
+            action="", method="POST", class_="editor", enctype="multipart/form-data")
+
+class WikiPageImage(WikiPageFile):
+    """Pages of mime type image/* use this for display."""
+
+    def view_content(self, lines=None):
+        if self.title not in self.storage:
+            raise werkzeug.exceptions.NotFound()
+        content = ['<img src="%s" alt="%s">'
+                   % (self.request.get_download_url(self.title), werkzeug.escape(self.title))]
+        return content
 
 class WikiTitleConverter(werkzeug.routing.PathConverter):
     """Behaves like the path converter, except that it escapes slashes."""
@@ -1718,6 +1962,12 @@ class Wiki(object):
     parser_class = WikiParser
     storage_class = WikiStorage
     index_class = WikiSearch
+    mime_map = {
+        'text': WikiPageText,
+        'text/x-wiki': WikiPageWiki,
+        'image': WikiPageImage,
+        '': WikiPageFile,
+    }
 
     def __init__(self, config):
         self.dead = False
@@ -1775,58 +2025,43 @@ class Wiki(object):
 #        page = WikiPage(self, request, title)
 #        return page.render_content(content, page_title)
 
+    def get_page(self, request, title):
+        """Creates a page object based on page's mime type"""
+
+        if title:
+            mime = self.storage.page_mime(title)
+            major, minor = mime.split('/', 1)
+            plus_pos = minor.find('+')
+            if plus_pos>0:
+                minor_base = minor[plus_pos]
+            else:
+                minor_base = ''
+            try:
+                page_class = self.mime_map[mime]
+            except KeyError:
+                try:
+                    page_class = self.mime_map['/'.join([major, minor_base])]
+                except KeyError:
+                    try:
+                        page_class = self.mime_map[major]
+                    except KeyError:
+                        page_class = self.mime_map['']
+        else:
+            page_class = WikiPage
+            mime = ''
+        return page_class(self, request, title, mime)
+
     def view(self, request, title):
-        page = WikiPage(self, request, title)
+        page = self.get_page(request, title)
         try:
-            content = self.view_content(request, title, page)
+            content = page.view_content()
         except werkzeug.exceptions.NotFound:
             url = request.get_url(title, self.edit, external=True)
             return werkzeug.routing.redirect(url, code=303)
         html = page.render_content(content)
-
-        dependencies = []
-        unique_titles = set()
-        config_pages = [
-            self.config.style_page,
-            self.config.logo_page,
-            self.config.menu_page,
-        ]
-        linked_pages = self.index.page_links(title)
-        for link_title in itertools.chain(linked_pages, config_pages):
-            if link_title not in self.storage and title not in unique_titles:
-                unique_titles.add(link_title)
-                dependencies.append(u'%s' % werkzeug.url_quote(link_title))
+        dependencies = page.dependencies()
         etag = '/(%s)' % u','.join(dependencies)
-
         return self.response(request, title, html, etag=etag)
-
-    def view_content(self, request, title, page, lines=None):
-        mime = self.storage.page_mime(title)
-        if mime == 'text/x-wiki':
-            if lines is None:
-                page_file = self.storage.open_page(title)
-                lines = self.storage.page_lines(page_file)
-            content = self.parser(lines, page.wiki_link, page.wiki_image,
-                                  self.highlight, self.wiki_math)
-        elif mime.startswith('image/'):
-            if title not in self.storage:
-                raise werkzeug.exceptions.NotFound()
-            content = ['<img src="%s" alt="%s">'
-                       % (request.get_download_url(title),
-                          werkzeug.escape(title))]
-        elif mime.startswith('text/'):
-            if lines is None:
-                text = self.storage.page_text(title)
-            else:
-                text = ''.join(lines)
-            content = self.highlight(text, mime=mime)
-        else:
-            if title not in self.storage:
-                raise werkzeug.exceptions.NotFound()
-            content = ['<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>'
-                   % (request.get_download_url(title), werkzeug.escape(title),
-                      mime)]
-        return content
 
     def revision(self, request, title, rev):
         text = self.storage.revision_text(title, rev)
@@ -1840,7 +2075,7 @@ class Wiki(object):
             werkzeug.html.pre(werkzeug.html(text)),
         ]
         special_title = _(u'Revision of "%(title)s"') % {'title': title}
-        page = WikiPage(self, request, title)
+        page = self.get_page(request, title)
         html = page.render_content(content, special_title)
         response = self.response(request, title, html, rev=rev, etag='/old')
         return response
@@ -1911,173 +2146,16 @@ class Wiki(object):
 
     def edit(self, request, title, preview=None):
         self.check_lock(title)
-        if self.storage.page_mime(title).startswith('text/'):
-            form = self.editor_form
-        else:
-            form = self.upload_form
-        content = form(request, title, preview)
-        page = WikiPage(self, request, title)
+        page = self.get_page(request, title)
+        content = page.editor_form(preview)
         special_title = _(u'Editing "%(title)s"') % {'title': title}
         html = page.render_content(content, special_title)
         if title not in self.storage:
-            return werkzeug.Response(html, mimetype="text/html",
-                                     status='404 Not found')
+            return werkzeug.Response(html, mimetype="text/html", status='404 Not found')
         elif preview:
             return werkzeug.Response(html, mimetype="text/html")
         else:
             return self.response(request, title, html, '/edit')
-
-    def highlight(self, text, mime=None, syntax=None, line_no=0):
-        try:
-            import pygments
-            import pygments.util
-            import pygments.lexers
-            import pygments.formatters
-            import pygments.styles
-        except ImportError:
-            yield werkzeug.html.pre(werkzeug.html(text))
-            return
-        if 'tango' in pygments.styles.STYLE_MAP:
-            style = 'tango'
-        else:
-            style = 'friendly'
-        formatter = pygments.formatters.HtmlFormatter(style=style)
-        formatter.line_no = line_no
-        def wrapper(source, outfile):
-            yield 0, '<div class="highlight"><pre>'
-            for lineno, line in source:
-                yield lineno, werkzeug.html.div(line.strip('\n'),
-                                                id_="line_%d" % formatter.line_no)
-                formatter.line_no += 1
-            yield 0, '</pre></div>'
-        formatter.wrap = wrapper
-        try:
-            if mime:
-                lexer = pygments.lexers.get_lexer_for_mimetype(mime)
-            elif syntax:
-                lexer = pygments.lexers.get_lexer_by_name(syntax)
-            else:
-                lexer = pygments.lexers.guess_lexer(text)
-        except pygments.util.ClassNotFound:
-            yield werkzeug.html.pre(werkzeug.html(text))
-            return
-        css = formatter.get_style_defs('.highlight')
-        html = pygments.highlight(text, lexer, formatter)
-        yield werkzeug.html.style(werkzeug.html(css), type="text/css")
-        yield html
-
-    def editor_form(self, request, title, preview=None):
-        author = request.get_author()
-        lines = []
-        try:
-            page_file = self.storage.open_page(title)
-            lines = self.storage.page_lines(page_file)
-            (rev, old_date, old_author,
-                old_comment) = self.storage.page_meta(title)
-            comment = _(u'modified')
-            if old_author == author:
-                comment = old_comment
-        except werkzeug.exceptions.NotFound:
-            comment = _(u'created')
-            rev = -1
-        if preview:
-            lines = preview
-            comment = request.form.get('comment', comment)
-        html = werkzeug.html
-        yield u'<form action="" method="POST" class="editor"><div>'
-        yield u'<textarea name="text" cols="80" rows="20" id="editortext">'
-        for line in lines:
-            yield werkzeug.escape(line)
-        yield u"""</textarea>"""
-        yield html.input(type_="hidden", name="parent", value=rev)
-        yield html.label(html(_(u'Comment')), html.input(name="comment",
-            value=comment), class_="comment")
-        yield html.label(html(_(u'Author')), html.input(name="author",
-            value=request.get_author()), class_="comment")
-        yield html.div(
-                html.input(type_="submit", name="save", value=_(u'Save')),
-                html.input(type_="submit", name="preview", value=_(u'Preview')),
-                html.input(type_="submit", name="cancel", value=_(u'Cancel')),
-                class_="buttons")
-        yield u'</div></form>'
-        if preview:
-            yield html.h1(html(_(u'Preview, not saved')), class_="preview")
-            page = WikiPage(self, request, title)
-            for part in self.view_content(request, title, page, preview):
-                yield part
-
-
-        if self.config.js_editor:
-            # Scroll the textarea to the line specified
-            # Move the cursor to the specified line
-            yield html.script(ur"""
-var jumpLine = 0+document.location.hash.substring(1);
-if (jumpLine) {
-    var textBox = document.getElementById('editortext');
-    var textLines = textBox.textContent.match(/(.*\n)/g);
-    var scrolledText = '';
-    for (var i = 0; i < textLines.length && i < jumpLine; ++i) {
-        scrolledText += textLines[i];
-    }
-    textBox.focus();
-    if (textBox.setSelectionRange) {
-        textBox.setSelectionRange(scrolledText.length, scrolledText.length);
-    } else if (textBox.createTextRange) {
-        var range = textBox.createTextRange();
-        range.collapse(true);
-        range.moveEnd('character', scrolledText.length);
-        range.moveStart('character', scrolledText.length);
-        range.select();
-    }
-    var scrollPre = document.createElement('pre');
-    textBox.parentNode.appendChild(scrollPre);
-    var style = window.getComputedStyle(textBox, '');
-    scrollPre.style.font = style.font;
-    scrollPre.style.border = style.border;
-    scrollPre.style.outline = style.outline;
-    scrollPre.style.lineHeight = style.lineHeight;
-    scrollPre.style.letterSpacing = style.letterSpacing;
-    scrollPre.style.fontFamily = style.fontFamily;
-    scrollPre.style.fontSize = style.fontSize;
-    scrollPre.style.padding = 0;
-    scrollPre.style.overflow = 'scroll';
-    try { scrollPre.style.whiteSpace = "-moz-pre-wrap" } catch(e) {};
-    try { scrollPre.style.whiteSpace = "-o-pre-wrap" } catch(e) {};
-    try { scrollPre.style.whiteSpace = "-pre-wrap" } catch(e) {};
-    try { scrollPre.style.whiteSpace = "pre-wrap" } catch(e) {};
-    scrollPre.textContent = scrolledText;
-    textBox.scrollTop = scrollPre.scrollHeight;
-    scrollPre.parentNode.removeChild(scrollPre);
-}
-""")
-
-    def upload_form(self, request, title, preview=None):
-        author = request.get_author()
-        if title in self.storage:
-            comment = _(u'changed')
-            (rev, old_date, old_author,
-                old_comment) = self.storage.page_meta(title)
-            if old_author == author:
-                comment = old_comment
-        else:
-            comment = _(u'uploaded')
-            rev = -1
-        html = werkzeug.html
-        yield html.p(html(
-                _(u"This is a binary file, it can't be edited on a wiki. "
-                  u"Please upload a new version instead.")))
-        yield html.form(html.div(
-            html.div(html.input(type_="file", name="data"), class_="upload"),
-            html.input(type_="hidden", name="parent", value=rev),
-            html.label(html(_(u'Comment')),
-                       html.input(name="comment", value=comment)),
-            html.label(html(_(u'Author')),
-                       html.input(name="author", value=author)),
-            html.div(
-                html.input(type_="submit", name="save", value=_(u'Save')),
-                html.input(type_="submit", name="cancel", value=_(u'Cancel')),
-                class_="buttons")), action="", method="POST", class_="editor",
-                                    enctype="multipart/form-data")
 
     def atom(self, request):
         date_format = "%Y-%m-%dT%H:%M:%SZ"
@@ -2147,7 +2225,6 @@ if (jumpLine) {
         response.set_etag('/atom/%d' % self.storage.repo_revision())
         response.make_conditional(request)
         return response
-
 
     def rss(self, request):
         first_date = datetime.datetime.now()
@@ -2267,49 +2344,18 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return werkzeug.redirect(url, 303)
 
     def history(self, request, title):
-        page = WikiPage(self, request, title)
-        content = page.render_content(self.history_list(request, title),
+        page = self.get_page(request, title)
+        content = page.render_content(page.history_list(),
             _(u'History of "%(title)s"') % {'title': title})
         response = self.response(request, title, content, '/history')
         return response
 
-    def history_list(self, request, title):
-        max_rev = -1;
-        link = werkzeug.html.a(werkzeug.html(title),
-                               href=request.get_url(title))
-        yield werkzeug.html.p(
-            _(u'History of changes for %(link)s.') % {'link': link})
-        url = request.adapter.build(self.undo, {'title': title}, method='POST')
-        yield u'<form action="%s" method="POST"><ul class="history">' % url
-        for rev, date, author, comment in self.storage.page_history(title):
-            if max_rev < 0:
-                max_rev = rev
-            if rev > 0:
-                url = request.adapter.build(self.diff, {
-                    'title': title, 'from_rev': rev-1, 'to_rev': rev})
-            else:
-                url = request.adapter.build(self.revision, {
-                    'title': title, 'rev': rev})
-            yield u'<li>'
-            yield werkzeug.html.a(date.strftime('%F %H:%M'), href=url)
-            if not self.config.read_only:
-                yield (u'<input type="submit" name="%d" value="Undo" '
-                       u'class="button">' % rev)
-            yield u' . . . . '
-            yield werkzeug.html.a(werkzeug.html(author),
-                                  href=request.get_url(author))
-            yield u'<div class="comment">%s</div>' % werkzeug.escape(comment)
-            yield u'</li>'
-        yield u'</ul>'
-        yield u'<input type="hidden" name="parent" value="%d">' % max_rev
-        yield u'</form>'
-
     def recent_changes(self, request):
-        page = WikiPage(self, request, u'history')
+        page = self.get_page(request, u'history')
         content = page.render_content(self.changes_list(request),
             _(u'Recent changes'))
         response = werkzeug.Response(content, mimetype='text/html')
-        response.set_etag('/recentchanges/%d' % self.storage.repo_revision())
+        response.set_etag('/history/%d' % self.storage.repo_revision())
         response.make_conditional(request)
         return response
 
@@ -2362,7 +2408,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 'link': werkzeug.html.a(werkzeug.html(title), href=request.get_url(title))
             })],
             self.diff_content(from_page, to_page))
-        page = WikiPage(self, request, title)
+        page = self.get_page(request, title)
         special_title=_(u'Diff for "%(title)s"') % {'title': title}
         html = page.render_content(content, special_title)
         response = werkzeug.Response(html, mimetype='text/html')
@@ -2425,7 +2471,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 words = (query,)
             title = _(u'Searching for "%s"') % u" ".join(words)
             content = self.page_search(request, words)
-        page = WikiPage(self, request, '')
+        page = self.get_page(request, '')
         html = page.render_content(content, title)
         return WikiResponse(html, mimetype='text/html')
 
@@ -2473,10 +2519,10 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         self.storage.reopen()
         self.index.update()
         content = self.page_backlinks(request, title)
-        page = WikiPage(self, request, title)
+        page = self.get_page(request, title)
         html = page.render_content(content, _(u'Links to "%s"') % title)
         response = werkzeug.Response(html, mimetype='text/html')
-        response.set_etag('/backlinks/%d' % self.storage.repo_revision())
+        response.set_etag('/search/%d' % self.storage.repo_revision())
         response.make_conditional(request)
         return response
 
@@ -2490,7 +2536,6 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                                                   href=request.get_url(link))
         yield u'</ul>'
 
-
     def favicon(self, request):
         return werkzeug.Response(self.config.icon, mimetype='image/x-icon')
 
@@ -2503,13 +2548,6 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                  )
         return werkzeug.Response(robots, mimetype='text/plain')
 
-    def wiki_math(self, math):
-        if '%s' in self.config.math_url:
-            url = self.config.math_url % werkzeug.url_quote(math)
-        else:
-            url = ''.join([self.config.math_url, werkzeug.url_quote(math)])
-        return u'<img src="%s" alt="%s" class="math">' % (url,
-                                             werkzeug.escape(math, quote=True))
     def die(self, request):
         if not request.remote_addr.startswith('127.'):
             raise werkzeug.exceptions.Forbidden()

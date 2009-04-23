@@ -1746,6 +1746,9 @@ for (var j = 0; j < tagList.length; ++j) {
                 dependencies.add(werkzeug.url_quote(link))
         return dependencies
 
+    def diff_content(self, from_rev, to_rev):
+        return []
+
 class WikiPageText(WikiPage):
     """Pages of mime type text/* use this for display."""
 
@@ -1876,6 +1879,58 @@ if (jumpLine) {
         html = pygments.highlight(text, lexer, formatter)
         yield werkzeug.html.style(werkzeug.html(css), type="text/css")
         yield html
+
+    def diff_content(self, from_rev, to_rev):
+        title = self.title
+        text = self.storage.revision_text(title, from_rev)
+        other_text = self.storage.revision_text(title, to_rev)
+        return self.differences(text, other_text)
+
+    def differences(self, text, other_text):
+        diff = difflib._mdiff(text.split('\n'), other_text.split('\n'))
+        stack = []
+        def infiniter(iterator):
+            for i in iterator:
+                yield i
+            while True:
+                yield None
+        mark_re = re.compile('\0[-+^]([^\1\0]*)\1|([^\0\1])')
+        yield u'<pre class="diff">'
+        for old_line, new_line, changed in diff:
+            old_no, old_text = old_line
+            new_no, new_text = new_line
+            line_no = (new_no or old_no or 1)-1
+            if changed:
+                yield u'<div class="change" id="line_%d">' % line_no
+                old_iter = infiniter(mark_re.finditer(old_text))
+                new_iter = infiniter(mark_re.finditer(new_text))
+                old = old_iter.next()
+                new = new_iter.next()
+                buff = u''
+                while old or new:
+                    while old and old.group(1):
+                        if buff:
+                            yield werkzeug.escape(buff)
+                            buff = u''
+                        yield u'<del>%s</del>' % werkzeug.escape(old.group(1))
+                        old = old_iter.next()
+                    while new and new.group(1):
+                        if buff:
+                            yield werkzeug.escape(buff)
+                            buff = u''
+                        yield u'<ins>%s</ins>' % werkzeug.escape(new.group(1))
+                        new = new_iter.next()
+                    if new:
+                        buff += new.group(2)
+                    old = old_iter.next()
+                    new = new_iter.next()
+                if buff:
+                    yield werkzeug.escape(buff)
+                yield u'</div>'
+            else:
+                yield u'<div class="orig" id="line_%d">%s</div>' % (
+                    line_no, werkzeug.escape(old_text))
+        yield u'</pre>'
 
 class WikiPageWiki(WikiPageText):
     """Pages of with wiki markup use this for display."""
@@ -2392,8 +2447,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         yield u'</ul>'
 
     def diff(self, request, title, from_rev, to_rev):
-        from_page = self.storage.revision_text(title, from_rev)
-        to_page = self.storage.revision_text(title, to_rev)
+        page = self.get_page(request, title)
+        diff = page.diff_content(from_rev, to_rev)
         from_url = request.adapter.build(self.revision,
                                          {'title': title, 'rev': from_rev})
         to_url = request.adapter.build(self.revision,
@@ -2404,59 +2459,12 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 'link1': werkzeug.html.a(str(from_rev), href=from_url),
                 'link2': werkzeug.html.a(str(to_rev), href=to_url),
                 'link': werkzeug.html.a(werkzeug.html(title), href=request.get_url(title))
-            })],
-            self.diff_content(from_page, to_page))
-        page = self.get_page(request, title)
+            })], diff)
         special_title=_(u'Diff for "%(title)s"') % {'title': title}
         html = page.render_content(content, special_title)
         response = werkzeug.Response(html, mimetype='text/html')
         return response
 
-    def diff_content(self, text, other_text):
-        diff = difflib._mdiff(text.split('\n'), other_text.split('\n'))
-        stack = []
-        def infiniter(iterator):
-            for i in iterator:
-                yield i
-            while True:
-                yield None
-        mark_re = re.compile('\0[-+^]([^\1\0]*)\1|([^\0\1])')
-        yield u'<pre class="diff">'
-        for old_line, new_line, changed in diff:
-            old_no, old_text = old_line
-            new_no, new_text = new_line
-            line_no = (new_no or old_no or 1)-1
-            if changed:
-                yield u'<div class="change" id="line_%d">' % line_no
-                old_iter = infiniter(mark_re.finditer(old_text))
-                new_iter = infiniter(mark_re.finditer(new_text))
-                old = old_iter.next()
-                new = new_iter.next()
-                buff = u''
-                while old or new:
-                    while old and old.group(1):
-                        if buff:
-                            yield werkzeug.escape(buff)
-                            buff = u''
-                        yield u'<del>%s</del>' % werkzeug.escape(old.group(1))
-                        old = old_iter.next()
-                    while new and new.group(1):
-                        if buff:
-                            yield werkzeug.escape(buff)
-                            buff = u''
-                        yield u'<ins>%s</ins>' % werkzeug.escape(new.group(1))
-                        new = new_iter.next()
-                    if new:
-                        buff += new.group(2)
-                    old = old_iter.next()
-                    new = new_iter.next()
-                if buff:
-                    yield werkzeug.escape(buff)
-                yield u'</div>'
-            else:
-                yield u'<div class="orig" id="line_%d">%s</div>' % (
-                    line_no, werkzeug.escape(old_text))
-        yield u'</pre>'
 
     def search(self, request):
         query = request.values.get('q', u'').strip()

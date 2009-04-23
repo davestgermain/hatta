@@ -1862,7 +1862,11 @@ if (jumpLine) {
         def wrapper(source, outfile):
             yield 0, '<div class="highlight"><pre>'
             for lineno, line in source:
-                yield lineno, werkzeug.html.div(line.strip('\n'),
+                if line.strip():
+                    yield lineno, werkzeug.html.div(line.strip('\n'),
+                                                id_="line_%d" % formatter.line_no)
+                else:
+                    yield lineno, werkzeug.html.div('&nbsp;',
                                                 id_="line_%d" % formatter.line_no)
                 formatter.line_no += 1
             yield 0, '</pre></div>'

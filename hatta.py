@@ -2082,10 +2082,6 @@ class Wiki(object):
             R('/off-with-his-head', endpoint=self.die, methods=['GET']),
         ], converters={'title':WikiTitleConverter})
 
-#    def html_page(self, request, title, content, page_title=u''):
-#        page = WikiPage(self, request, title)
-#        return page.render_content(content, page_title)
-
     def get_page(self, request, title):
         """Creates a page object based on page's mime type"""
 
@@ -2472,7 +2468,6 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         html = page.render_content(content, special_title)
         response = werkzeug.Response(html, mimetype='text/html')
         return response
-
 
     def search(self, request):
         query = request.values.get('q', u'').strip()

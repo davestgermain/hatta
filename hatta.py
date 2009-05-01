@@ -64,12 +64,6 @@ import mercurial.ui
 import mercurial.revlog
 import mercurial.util
 
-# Use word splitter for Japanese if it's available
-try:
-    from hatta_jp import split_japanese
-except ImportError:
-    split_japanese = None
-
 __version__ = '1.3.1-dev'
 
 def external_link(addr):
@@ -783,11 +777,8 @@ class WikiParser(object):
     """
 
     bullets_pat = ur"^\s*[*]+\s+"
-    bullets_re = re.compile(bullets_pat, re.U)
     heading_pat = ur"^\s*=+"
-    heading_re = re.compile(heading_pat, re.U)
     quote_pat = ur"^[>]+\s+"
-    quote_re = re.compile(quote_pat, re.U)
     block = {
         "bullets": bullets_pat,
         "code": ur"^[{][{][{]+\s*$",
@@ -801,15 +792,8 @@ class WikiParser(object):
         "syntax": ur"^\{\{\{\#!\w+\s*$",
         "table": ur"^\|",
     } # note that the priority is alphabetical
-    block_re = re.compile(ur"|".join("(?P<%s>%s)" % kv
-                          for kv in sorted(block.iteritems())))
-    code_close_re = re.compile(ur"^\}\}\}\s*$", re.U)
-    macro_close_re = re.compile(ur"^>>\s*$", re.U)
-    conflict_close_re = re.compile(ur"^>>>>>>> other\s*$", re.U)
-    conflict_sep_re = re.compile(ur"^=======\s*$", re.U)
     image_pat = (ur"\{\{(?P<image_target>([^|}]|}[^|}])*)"
                  ur"(\|(?P<image_text>([^}]|}[^}])*))?}}")
-    image_re = re.compile(image_pat, re.U)
     smilies = {
         r':)': "smile.png",
         r':(': "frown.png",
@@ -854,8 +838,6 @@ class WikiParser(object):
                   % ur"|".join(re.escape(k) for k in smilies),
         "text": ur".+?",
     } # note that the priority is alphabetical
-    markup_re = re.compile(ur"|".join("(?P<%s>%s)" % kv
-                           for kv in sorted(markup.iteritems())))
 
 
     def __init__(self, lines, wiki_link, wiki_image,
@@ -864,17 +846,35 @@ class WikiParser(object):
         self.wiki_image = wiki_image
         self.wiki_syntax = wiki_syntax
         self.wiki_math = wiki_math
+        self.enumerated_lines = enumerate(lines)
+        self.compile_patterns()
         self.headings = {}
         self.stack = []
-        # self.lines = iter(lines)
         self.line_no = 0
-        self.enumerated_lines = enumerate(lines)
+
+    def compile_patterns(self):
+        self.quote_re = re.compile(self.quote_pat, re.U)
+        self.heading_re = re.compile(self.heading_pat, re.U)
+        self.bullets_re = re.compile(self.bullets_pat, re.U)
+        self.block_re = re.compile(ur"|".join("(?P<%s>%s)" % kv
+                                   for kv in sorted(self.block.iteritems())))
+        self.code_close_re = re.compile(ur"^\}\}\}\s*$", re.U)
+        self.macro_close_re = re.compile(ur"^>>\s*$", re.U)
+        self.conflict_close_re = re.compile(ur"^>>>>>>> other\s*$", re.U)
+        self.conflict_sep_re = re.compile(ur"^=======\s*$", re.U)
+        self.image_re = re.compile(self.image_pat, re.U)
+        self.markup_re = re.compile(ur"|".join("(?P<%s>%s)" % kv
+                                    for kv in sorted(self.markup.iteritems())))
 
     def __iter__(self):
         return self.parse()
 
     def parse(self):
         """Parse a list of lines of wiki markup, yielding HTML for it."""
+
+        self.headings = {}
+        self.stack = []
+        self.line_no = 0
 
         def key(enumerated_line):
             line_no, line = enumerated_line
@@ -1170,13 +1170,14 @@ class WikiSearch(object):
     """
 
     word_pattern = re.compile(ur"""\w[-~&\w]+\w""", re.UNICODE)
+    jword_pattern = re.compile(ur"""[ｦ-ﾟ]+|[ぁ-ん～ー]+|[ァ-ヶ～ー]+|[0-9A-Za-z]+|[０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+|[^- !"#$%&'()*+,./:;<=>?@\[\\\]^_`{|}‾｡｢｣､･　、。，．・：；？！゛゜´｀¨＾￣＿／〜‖｜…‥‘’“”（）〔〕［］｛｝〈〉《》「」『』【】＋−±×÷＝≠＜＞≦≧∞∴♂♀°′″℃￥＄¢£％＃＆＊＠§☆★○●◎◇◆□■△▲▽▼※〒→←↑↓〓∈∋⊆⊇⊂⊃∪∩∧∨¬⇒⇔∠∃∠⊥⌒∂∇≡≒≪≫√∽∝∵∫∬Å‰♯♭♪†‡¶◾─│┌┐┘└├┬┤┴┼━┃┏┓┛┗┣┫┻╋┠┯┨┷┿┝┰┥┸╂ｦ-ﾟぁ-ん～ーァ-ヶ0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
     _con = {}
 
     def __init__(self, cache_path, lang, storage):
         self.path = cache_path
         self.storage = storage
         self.lang = lang
-        if lang == "ja" and split_japanese:
+        if lang == "ja":
             self.split_text = self.split_japanese_text
         self.filename = os.path.join(cache_path, 'index.sqlite3')
         if not os.path.isdir(self.path):
@@ -1253,9 +1254,10 @@ without would yet you your yours yourself yourselves""")).split())
         for match in self.word_pattern.finditer(text):
             word = match.group(0)
             got_japanese = False
-            for w in split_japanese(word, False):
+            for m in self.jword_pattern.finditer(word):
+                w = m.group(0)
                 got_japanese = True
-                if not self.stop_words_re.match(word):
+                if not (stop and self.stop_words_re.match(w)):
                     yield w.lower()
             if not (got_japanese or stop and self.stop_words_re.match(word)):
                 yield word.lower()

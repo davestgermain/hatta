@@ -31,6 +31,13 @@ class HattaStandalone(unittest.TestCase):
     def tearDown(self):
         clear_directory(self.basedir)
 
+    def test_japanese_splitting(self):
+        text=u"ルビハイパンツアクセシウェブ内容アテストスイトどらプロセスドクリック」インタラクションディア,情報セットセシビリティングシステムをマその他リア式会を始めてみようサイトをアクセシブ内准剛のな,健二仕ルビの再形式化セシビリテのためらすかるコンテンウェブ内容アネッユザエクアップテキストマでの,ネックセスふべからずビリティにるその他クアップコンテンツアクセネッ"
+        after = [u'ルビハイパンツアクセシウェブ', u'内容', u'アテストスイト', u'どら', u'プロセスドクリック', u'インタラクションディア', u'情報', u'セットセシビリティングシステム', u'を', u'マ', u'その', u'他', u'リア', u'式会', u'を', u'始', u'めてみよう', u'サイト', u'を', u'アクセシブ', u'内准剛', u'のな', u'健二仕', u'ルビ', u'の', u'再形式化', u'セシビリテ', u'のためらすかる', u'コンテンウェブ', u'内容', u'アネッユザエクアップテキストマ', u'での', u'ネックセス', u'ふべからず', u'ビリティ', u'にるその', u'他', u'クアップコンテンツアクセネッ']
+        result = list(self.wiki.index.split_japanese_text(text))
+        for got, expected in zip(result, after):
+            self.assertEqual(got, expected)
+
     def test_front_page(self):
         """Check that Home page doesn't exist and redirects to editor."""
 

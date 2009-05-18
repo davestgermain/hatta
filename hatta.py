@@ -1359,6 +1359,22 @@ without would yet you your yours yourself yourselves""")).split())
         finally:
             con.commit()
 
+    def extract_links(self, text):
+        links = []
+        def link(addr, label=None, class_=None, image=None, alt=None):
+            if external_link(addr):
+                return u''
+            if '#' in addr:
+                addr, chunk = addr.split('#', 1)
+            if addr == u'':
+                return u''
+            links.append((addr, label))
+            return u''
+        lines = text.split('\n')
+        for part in WikiParser(lines, link, link):
+            pass
+        return links
+
     def reindex_page(self, title, cursor, text=None):
         """Updates the content of the database, needs locks around."""
 
@@ -1372,19 +1388,7 @@ without would yet you your yours yourself yourselves""")).split())
             except werkzeug.exceptions.NotFound:
                 text = u''
         if mime == 'text/x-wiki':
-            links = []
-            def link(addr, label=None, class_=None, image=None, alt=None):
-                if external_link(addr):
-                    return u''
-                if '#' in addr:
-                    addr, chunk = addr.split('#', 1)
-                if addr == u'':
-                    return u''
-                links.append((addr, label))
-                return u''
-            lines = text.split('\n')
-            for part in WikiParser(lines, link, link):
-                pass
+            links = self.extract_links(text)
             self.update_links(title, links, cursor=cursor)
         self.update_words(title, text, cursor=cursor)
 
@@ -2172,7 +2176,7 @@ class Wiki(object):
             self.index.update()
             if text is not None:
                 if title == self.config.locked_page:
-                    for link, label in self.extract_links(text):
+                    for link, label in self.index.extract_links(text):
                         if title == link:
                             raise werkzeug.exceptions.Forbidden()
                 if u'href="' in comment or u'http:' in comment:

@@ -1455,7 +1455,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
     encoding_errors = 'ignore'
 
     def __init__(self, wiki, adapter, environ, **kw):
-        werkzeug.BaseRequest.__init__(self, environ, **kw)
+        werkzeug.BaseRequest.__init__(self, environ, shallow=False, **kw)
         self.wiki = wiki
         self.adapter = adapter
         self.tmpfiles = []
@@ -1484,15 +1484,19 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
                   or self.remote_addr)
         return author
 
-    def _get_file_stream(self):
+    def _get_file_stream(self, total_content_length=None, content_type=None,
+                         filename=None, content_length=None):
         """Save all the POSTs to temporary files."""
 
-        class FileWrapper(file):
+        class FileWrapper(object):
             def __init__(self, f):
                 self.f = f
 
             def read(self, *args, **kw):
                 return self.f.read(*args, **kw)
+
+            def readlines(self, *args, **kw):
+                return self.f.readlines(*args, **kw)
 
             def write(self, *args, **kw):
                 return self.f.write(*args, **kw)
@@ -1502,6 +1506,9 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
 
             def close(self, *args, **kw):
                 return self.f.close(*args, **kw)
+
+            def truncate(self, *args, **kw):
+                return self.f.truncate(*args, **kw)
 
         temp_path = tempfile.mkdtemp(dir=self.tmppath)
         file_path = os.path.join(temp_path, 'saved')
@@ -2631,7 +2638,6 @@ def main():
     apps = [('', wiki.application)]
     name = config.site_name
     server = wsgiserver.CherryPyWSGIServer((host, port), apps, server_name=name)
-    print "foo"
     try:
         server.start()
     except KeyboardInterrupt:

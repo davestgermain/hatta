@@ -2526,8 +2526,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         min_pos = max(position - 60, 0)
         max_pos = min(position + 60, len(text))
         snippet = werkzeug.escape(text[min_pos:max_pos])
-        html = regexp.sub(lambda m:u'<b class="highlight">%s</b>'
-                          % werkzeug.escape(m.group(0)), snippet)
+        highlighted = werkzeug.html.b(match.group(0), _class="highlight")
+        html = regexp.sub(highlighted, snippet)
         return html
 
     def backlinks(self, request, title):
@@ -2615,11 +2615,27 @@ def main():
     config.sanitize()
     host, port = config.interface, int(config.port)
     wiki = Wiki(config)
-    server = wsgiref.simple_server.make_server(host, port, wiki.application)
     try:
-        server.serve_forever()
+        from cherrypy import wsgiserver
+    except ImportError:
+        try:
+            from cherrypy import _cpwsgiserver as wsgiserver
+        except ImportError:
+            server = wsgiref.simple_server.make_server(host, port,
+                                                       wiki.application)
+            try:
+                server.serve_forever()
+            except KeyboardInterrupt:
+                pass
+            return
+    apps = [('', wiki.application)]
+    name = config.site_name
+    server = wsgiserver.CherryPyWSGIServer((host, port), apps, server_name=name)
+    print "foo"
+    try:
+        server.start()
     except KeyboardInterrupt:
-        pass
+        server.stop()
 
 if __name__ == "__main__":
     main()

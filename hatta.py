@@ -1439,10 +1439,45 @@ without would yet you your yours yourself yourselves""")).split())
         self.reindex(changed)
 
 
-
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):
     """A typical HTTP response class made out of Werkzeug's mixins."""
+
+
+class WikiTempFile(object):
+    """Wrap a file for uploading content."""
+
+    def __init__(self, tmppath):
+        self.tmppath = tempfile.mkdtemp(dir=tmppath)
+        self.tmpname = os.path.join(self.tmppath, 'saved')
+        self.f = open(self.tmpname, "wb")
+
+    def read(self, *args, **kw):
+        return self.f.read(*args, **kw)
+
+    def readlines(self, *args, **kw):
+        return self.f.readlines(*args, **kw)
+
+    def write(self, *args, **kw):
+        return self.f.write(*args, **kw)
+
+    def seek(self, *args, **kw):
+        return self.f.seek(*args, **kw)
+
+    def truncate(self, *args, **kw):
+        return self.f.truncate(*args, **kw)
+
+    def close(self, *args, **kw):
+        ret = self.f.close(*args, **kw)
+        try:
+            os.unlink(self.tmpname)
+        except OSError:
+            pass
+        try:
+            os.rmdir(self.tmppath)
+        except OSError:
+            pass
+        return ret
 
 
 class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
@@ -1488,48 +1523,16 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
                          filename=None, content_length=None):
         """Save all the POSTs to temporary files."""
 
-        class FileWrapper(object):
-            def __init__(self, f):
-                self.f = f
-
-            def read(self, *args, **kw):
-                return self.f.read(*args, **kw)
-
-            def readlines(self, *args, **kw):
-                return self.f.readlines(*args, **kw)
-
-            def write(self, *args, **kw):
-                return self.f.write(*args, **kw)
-
-            def seek(self, *args, **kw):
-                return self.f.seek(*args, **kw)
-
-            def close(self, *args, **kw):
-                return self.f.close(*args, **kw)
-
-            def truncate(self, *args, **kw):
-                return self.f.truncate(*args, **kw)
-
-        temp_path = tempfile.mkdtemp(dir=self.tmppath)
-        file_path = os.path.join(temp_path, 'saved')
-        self.tmpfiles.append(temp_path)
-        # We need to wrap the file object in order to add an attribute
-        tmpfile = FileWrapper(open(file_path, "wb"))
-        tmpfile.tmpname = file_path
-        return tmpfile
+        temp_file = WikiTempFile(self.tmppath)
+        self.tmpfiles.append(temp_file)
+        return temp_file
 
     def cleanup(self):
         """Clean up the temporary files created by POSTs."""
 
-        for temp_path in self.tmpfiles:
-            try:
-                os.unlink(os.path.join(temp_path, 'saved'))
-            except OSError:
-                pass
-            try:
-                os.rmdir(temp_path)
-            except OSError:
-                pass
+        for temp_file in self.tmpfiles:
+            temp_file.close()
+        self.tmpfiles = []
 
 class WikiPage(object):
     """Everything needed for rendering a page."""

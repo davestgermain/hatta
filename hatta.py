@@ -320,7 +320,7 @@ class WikiStorage(object):
         a new repository will be created in it.
         """
 
-        self.charset = 'utf-8' or None
+        self.charset = charset or 'utf-8'
         self.path = path
         self._lockref = None
         if not os.path.exists(self.path):
@@ -754,7 +754,7 @@ class WikiParser(object):
     <p id="line_0">
         (<a href="http://example.com/test">http://example.com/test</a>)</p>
 
-    XXX This might be considered a bug, but impossible to detect in general.
+    This might be considered a bug, but impossible to detect in general.
     >>> parse(u'http://example.com/(test)')
     <p id="line_0">
         <a href="http://example.com/(test">http://example.com/(test</a>)</p>
@@ -833,7 +833,8 @@ class WikiParser(object):
         "mail": ur"""(mailto:)?\S+@\S+(\.[^\s.,:;!?()'"/=+<>-]+)+""",
         "math": ur"\$\$(?P<math_text>[^$]+)\$\$",
         "newline": ur"\n",
-        "punct": ur'(^|\b|(?<=\s))('+ur"|".join(re.escape(k) for k in punct)+ur')((?=[\s.,:;!?)/&=+])|\b|$)',
+        "punct": (ur'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+])|\b|$)' %
+                  ur"|".join(re.escape(k) for k in punct)),
         "smiley": ur"(^|\b|(?<=\s))(?P<smiley_face>%s)((?=[\s.,:;!?)/&=+-])|$)"
                   % ur"|".join(re.escape(k) for k in smilies),
         "text": ur".+?",
@@ -900,9 +901,9 @@ class WikiParser(object):
         some <b>bold words
         """
 
-        for m in self.markup_re.finditer(line):
-            func = getattr(self, "_line_%s" % m.lastgroup)
-            yield func(m.groupdict())
+        for match in self.markup_re.finditer(line):
+            func = getattr(self, "_line_%s" % match.lastgroup)
+            yield func(match.groupdict())
 
     def pop_to(self, stop):
         """
@@ -1170,7 +1171,22 @@ class WikiSearch(object):
     """
 
     word_pattern = re.compile(ur"""\w[-~&\w]+\w""", re.UNICODE)
-    jword_pattern = re.compile(ur"""[ｦ-ﾟ]+|[ぁ-ん～ー]+|[ァ-ヶ～ー]+|[0-9A-Za-z]+|[０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+|[^- !"#$%&'()*+,./:;<=>?@\[\\\]^_`{|}‾｡｢｣､･　、。，．・：；？！゛゜´｀¨＾￣＿／〜‖｜…‥‘’“”（）〔〕［］｛｝〈〉《》「」『』【】＋−±×÷＝≠＜＞≦≧∞∴♂♀°′″℃￥＄¢£％＃＆＊＠§☆★○●◎◇◆□■△▲▽▼※〒→←↑↓〓∈∋⊆⊇⊂⊃∪∩∧∨¬⇒⇔∠∃∠⊥⌒∂∇≡≒≪≫√∽∝∵∫∬Å‰♯♭♪†‡¶◾─│┌┐┘└├┬┤┴┼━┃┏┓┛┗┣┫┻╋┠┯┨┷┿┝┰┥┸╂ｦ-ﾟぁ-ん～ーァ-ヶ0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
+    jword_pattern = re.compile(
+ur"""[ｦ-ﾟ]+|[ぁ-ん～ー]+|[ァ-ヶ～ー]+|[0-9A-Za-z]+|"""
+ur"""[０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+|"""
+ur"""[^- !"#$%&'()*+,./:;<=>?@\[\\\]^_`{|}"""
+ur"""‾｡｢｣､･　、。，．・：；？！゛゜´｀¨"""
+ur"""＾￣＿／〜‖｜…‥‘’“”"""
+ur"""（）〔〕［］｛｝〈〉《》「」『』【】＋−±×÷"""
+ur"""＝≠＜＞≦≧∞∴♂♀°′″℃￥＄¢£"""
+ur"""％＃＆＊＠§☆★○●◎◇◆□■△▲▽▼※〒"""
+ur"""→←↑↓〓∈∋⊆⊇⊂⊃∪∩∧∨¬⇒⇔∠∃∠⊥"""
+ur"""⌒∂∇≡≒≪≫√∽∝∵∫∬Å‰♯♭♪†‡¶◾"""
+ur"""─│┌┐┘└├┬┤┴┼"""
+ur"""━┃┏┓┛┗┣┫┻╋"""
+ur"""┠┯┨┷┿┝┰┥┸╂"""
+ur"""ｦ-ﾟぁ-ん～ーァ-ヶ"""
+ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
     _con = {}
 
     def __init__(self, cache_path, lang, storage):
@@ -1278,8 +1294,8 @@ without would yet you your yours yourself yourselves""")).split())
         return idents[0]
 
     def id_title(self, ident, con):
-            c = con.execute('select title from titles where id=?;', (ident,))
-            return c.fetchone()[0]
+        c = con.execute('select title from titles where id=?;', (ident,))
+        return c.fetchone()[0]
 
     def update_words(self, title, text, cursor):
         title_id = self.title_id(title, cursor)
@@ -1759,7 +1775,8 @@ for (var j = 0; j < tagList.length; ++j) {
 
     def dependencies(self):
         dependencies = set()
-        for link in [self.config.style_page, self.config.logo_page, self.config.menu_page]:
+        for link in [self.config.style_page, self.config.logo_page,
+                     self.config.menu_page]:
             if link not in self.storage:
                 dependencies.add(werkzeug.url_quote(link))
         return dependencies
@@ -1879,11 +1896,13 @@ if (jumpLine) {
             yield 0, '<div class="highlight"><pre>'
             for lineno, line in source:
                 if line.strip():
-                    yield lineno, werkzeug.html.div(line.strip('\n'),
-                                                id_="line_%d" % formatter.line_no)
+                    yield (lineno,
+                           werkzeug.html.div(line.strip('\n'), id_="line_%d" %
+                                             formatter.line_no))
                 else:
-                    yield lineno, werkzeug.html.div('&nbsp;',
-                                                id_="line_%d" % formatter.line_no)
+                    yield (lineno,
+                           werkzeug.html.div('&nbsp;', id_="line_%d" %
+                                             formatter.line_no))
                 formatter.line_no += 1
             yield 0, '</pre></div>'
         formatter.wrap = wrapper
@@ -1960,12 +1979,12 @@ class WikiPageWiki(WikiPageText):
     """Pages of with wiki markup use this for display."""
 
     def view_content(self, lines=None):
-            if lines is None:
-                f = self.storage.open_page(self.title)
-                lines = self.storage.page_lines(f)
-            content = WikiParser(lines, self.wiki_link, self.wiki_image,
-                                 self.highlight, self.wiki_math)
-            return content
+        if lines is None:
+            f = self.storage.open_page(self.title)
+            lines = self.storage.page_lines(f)
+        content = WikiParser(lines, self.wiki_link, self.wiki_image,
+                             self.highlight, self.wiki_math)
+        return content
 
     def wiki_math(self, math):
         if '%s' in self.config.math_url:
@@ -1988,8 +2007,9 @@ class WikiPageFile(WikiPage):
     def view_content(self, lines=None):
         if self.title not in self.storage:
             raise werkzeug.exceptions.NotFound()
-        content = ['<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>'
-               % (self.request.get_download_url(self.title), werkzeug.escape(self.title), self.mime)]
+        content = ['<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>' %
+                   (self.request.get_download_url(self.title),
+                    werkzeug.escape(self.title), self.mime)]
         return content
 
     def editor_form(self, preview=None):
@@ -2010,13 +2030,15 @@ class WikiPageFile(WikiPage):
         yield html.form(html.div(
             html.div(html.input(type_="file", name="data"), class_="upload"),
             html.input(type_="hidden", name="parent", value=rev),
-            html.label(html(_(u'Comment')), html.input(name="comment", value=comment)),
-            html.label(html(_(u'Author')), html.input(name="author", value=author)),
-            html.div(
-                html.input(type_="submit", name="save", value=_(u'Save')),
-                html.input(type_="submit", name="cancel", value=_(u'Cancel')),
-                class_="buttons")),
-            action="", method="POST", class_="editor", enctype="multipart/form-data")
+            html.label(html(_(u'Comment')), html.input(name="comment",
+                       value=comment)),
+            html.label(html(_(u'Author')), html.input(name="author",
+                       value=author)),
+            html.div(html.input(type_="submit", name="save", value=_(u'Save')),
+                     html.input(type_="submit", name="cancel",
+                                value=_(u'Cancel')),
+            class_="buttons")), action="", method="POST", class_="editor",
+                                enctype="multipart/form-data")
 
 class WikiPageImage(WikiPageFile):
     """Pages of mime type image/* use this for display."""
@@ -2025,7 +2047,8 @@ class WikiPageImage(WikiPageFile):
         if self.title not in self.storage:
             raise werkzeug.exceptions.NotFound()
         content = ['<img src="%s" alt="%s">'
-                   % (self.request.get_download_url(self.title), werkzeug.escape(self.title))]
+                   % (self.request.get_download_url(self.title),
+                      werkzeug.escape(self.title))]
         return content
 
 class WikiTitleConverter(werkzeug.routing.PathConverter):
@@ -2069,7 +2092,8 @@ class Wiki(object):
             reindex = True
         else:
             reindex = False
-        self.index = self.index_class(self.cache, self.config.language, self.storage)
+        self.index = self.index_class(self.cache, self.config.language,
+                                      self.storage)
         R = werkzeug.routing.Rule
         self.url_map = werkzeug.routing.Map([
             R('/', defaults={'title': self.config.front_page},
@@ -2224,7 +2248,8 @@ class Wiki(object):
         special_title = _(u'Editing "%(title)s"') % {'title': title}
         html = page.render_content(content, special_title)
         if title not in self.storage:
-            return werkzeug.Response(html, mimetype="text/html", status='404 Not found')
+            return werkzeug.Response(html, mimetype="text/html",
+                                     status='404 Not found')
         elif preview:
             return werkzeug.Response(html, mimetype="text/html")
         else:
@@ -2459,9 +2484,11 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             lastrev[title] = rev
             yield u'<li>'
             yield u'<a href="%s">%s</a> ' % (url, date.strftime('%F %H:%M'))
-            yield werkzeug.html.a(werkzeug.html(title), href=request.get_url(title))
+            yield werkzeug.html.a(werkzeug.html(title),
+                                  href=request.get_url(title))
             yield u' . . . . '
-            yield werkzeug.html.a(werkzeug.html(author), href=request.get_url(author))
+            yield werkzeug.html.a(werkzeug.html(author),
+                                  href=request.get_url(author))
             yield u'<div class="comment">%s</div>' % werkzeug.escape(comment)
             yield u'</li>'
         yield u'</ul>'
@@ -2478,7 +2505,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 u'%(link1)s and %(link2)s of page %(link)s.')) % {
                 'link1': werkzeug.html.a(str(from_rev), href=from_url),
                 'link2': werkzeug.html.a(str(to_rev), href=to_url),
-                'link': werkzeug.html.a(werkzeug.html(title), href=request.get_url(title))
+                'link': werkzeug.html.a(werkzeug.html(title),
+                                        href=request.get_url(title))
             })], diff)
         special_title=_(u'Diff for "%(title)s"') % {'title': title}
         html = page.render_content(content, special_title)

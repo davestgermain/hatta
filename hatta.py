@@ -322,7 +322,6 @@ class WikiStorage(object):
 
         self.charset = charset or 'utf-8'
         self.path = path
-        self._lockref = None
         if not os.path.exists(self.path):
             os.makedirs(self.path)
         self.repo_path = self._find_repo_path(self.path)
@@ -341,13 +340,6 @@ class WikiStorage(object):
 
         self.repo = mercurial.hg.repository(self.ui, self.repo_path)
 
-    def _lock(self):
-        if self._lockref and self._lockref():
-            return self._lockref()
-        lock = self.repo._lock(os.path.join(self.path, "wikilock"),
-                               True, None, None, "Main wiki lock")
-        self._lockref = weakref.ref(lock)
-        return lock
 
     def _find_repo_path(self, path):
         """Go up the directory tree looking for a repository."""
@@ -378,63 +370,70 @@ class WikiStorage(object):
     def save_file(self, title, file_name, author=u'', comment=u'', parent=None):
         """Save an existing file as specified page."""
 
+        wlock = lock = None
+        wlock = self.repo.wlock()
+        lock = self.repo.lock()
+        try:
+            self.save_file_locked(title, file_name, author, comment, parent)
+        finally:
+            for L in (lock, wlock):
+                if L is not None:
+                    L.release()
+            #mercurial.lock.release(lock, wlock)
+
+    def merge_changes(self, changectx, repo_file, text, user, parent):
+        tip_node = changectx.node()
+        filectx = changectx[repo_file].filectx(parent)
+        parent_node = filectx.changectx().node()
+        self.repo.dirstate.setparents(parent_node)
+        node = self.repo.commit(files=[repo_file], text=text, user=user,
+                                force=True, empty_ok=True)
+        def partial(filename):
+            return repo_file == filename
+        try:
+            unresolved = mercurial.merge.update(self.repo, tip_node,
+                                                True, False, partial)
+        except mercurial.util.Abort:
+            unresolved = 1, 1, 1, 1
+        msg = _(u'merge of edit conflict')
+        if unresolved[3]:
+            msg = _(u'forced merge of edit conflict')
+            try:
+                mercurial.merge.update(self.repo, tip_node, True, True,
+                                       partial)
+            except mercurial.util.Abort:
+                msg = _(u'failed merge of edit conflict')
+        user = '<wiki>'
+        text = msg.encode('utf-8')
+        self.repo.dirstate.setparents(tip_node, node)
+        # Mercurial 1.1 and later need updating the merge state
+        try:
+            mercurial.merge.mergestate(self.repo).mark(repo_file, "r")
+        except (AttributeError, KeyError):
+            pass
+
+    def save_file_locked(self, title, file_name, author=u'', comment=u'',
+                         parent=None):
+        """Locked save an existing file as specified page."""
+
         user = author.encode('utf-8') or _(u'anon').encode('utf-8')
         text = comment.encode('utf-8') or _(u'comment').encode('utf-8')
         repo_file = self._title_to_file(title)
         file_path = self._file_path(title)
-        lock = self._lock()
+        mercurial.util.rename(file_name, file_path)
+        changectx = self.repo.changectx('tip')
         try:
-            mercurial.util.rename(file_name, file_path)
-            changectx = self.repo.changectx('tip')
-            tip_node = changectx.node()
-            try:
-                filectx_tip = changectx[repo_file]
-                current_page_rev = filectx_tip.filerev()
-            except mercurial.revlog.LookupError:
-                self.repo.add([repo_file])
-                current_page_rev = -1
-            if current_page_rev != parent:
-                filectx = changectx[repo_file].filectx(parent)
-                parent_node = filectx.changectx().node()
-                wlock = self.repo.wlock()
-                try:
-                    self.repo.dirstate.setparents(parent_node)
-                finally:
-                    del wlock
-                node = self.repo.commit(files=[repo_file], text=text, user=user,
-                                 force=True, empty_ok=True)
-                def partial(filename):
-                    return repo_file == filename
-                try:
-                    unresolved = mercurial.merge.update(self.repo, tip_node,
-                                                        True, False, partial)
-                except mercurial.util.Abort:
-                    unresolved = 1, 1, 1, 1
-                msg = _(u'merge of edit conflict')
-                if unresolved[3]:
-                    msg = _(u'forced merge of edit conflict')
-                    try:
-                        mercurial.merge.update(self.repo, tip_node, True, True,
-                                               partial)
-                    except mercurial.util.Abort:
-                        msg = _(u'failed merge of edit conflict')
-                user = '<wiki>'
-                text = msg.encode('utf-8')
-                wlock = self.repo.wlock()
-                try:
-                    self.repo.dirstate.setparents(tip_node, node)
-                finally:
-                    del wlock
-                # Mercurial 1.1 and later need updating the merge state
-                try:
-                    mercurial.merge.mergestate(self.repo).mark(repo_file, "r")
-                except (AttributeError, KeyError):
-                    pass
-            self.repo.commit(files=[repo_file], text=text, user=user,
-                             force=True, empty_ok=True)
-        finally:
-            lock.release()
-            # del lock
+            filectx_tip = changectx[repo_file]
+            current_page_rev = filectx_tip.filerev()
+        except mercurial.revlog.LookupError:
+            self.repo.add([repo_file])
+            current_page_rev = -1
+        if current_page_rev != parent:
+            #self.merge_changes(changectx, current_page_rev, file_path)
+            self.merge_changes(changectx, repo_file, text, user, parent)
+        self.repo.commit(files=[repo_file], text=text, user=user,
+                         force=True, empty_ok=True)
+
 
     def save_data(self, title, data, author=u'', comment=u'', parent=None):
         """Save data as specified page."""

@@ -1,2 +1,4 @@
 zzzz
-y
+<<<<<<< local
+x=======
+y>>>>>>> other

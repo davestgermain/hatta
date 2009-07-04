@@ -125,164 +125,104 @@ class WikiConfig(object):
     2080
     """
 
-    default_style = u"""html { background: #fff; color: #2e3436;
-    font-family: sans-serif; font-size: 96% }
-body { margin: 1em auto; line-height: 1.3; width: 40em }
-a { color: #3465a4; text-decoration: none }
-a:hover { text-decoration: underline }
-a.wiki:visited { color: #204a87 }
-a.nonexistent { color: #a40000; }
-a.external { color: #3465a4; text-decoration: underline }
-a.external:visited { color: #75507b }
-a img { border: none }
-img.math, img.smiley { vertical-align: middle }
-pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word;
-    white-space: -moz-pre-wrap; white-space: -pre-wrap;
-    white-space: -o-pre-wrap; line-height: 1.2; color: #555753 }
-div.conflict pre.local { background: #fcaf3e; margin-bottom: 0; color: 000}
-div.conflict pre.other { background: #ffdd66; margin-top: 0; color: 000; border-top: #d80 dashed 1px; }
-pre.diff div.orig { font-size: 75%; color: #babdb6 }
-b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e;
-color: #ce5c00; text-decoration: none }
-pre.diff del { background: #eeeeec; color: #888a85; text-decoration: none }
-pre.diff div.change { border-left: 2px solid #fcaf3e }
-div.footer { border-top: solid 1px #babdb6; text-align: right }
-h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
-div.buttons { text-align: center }
-input.button, div.buttons input { font-weight: bold; font-size: 100%;
-    background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
-.history input.button { font-size: 75% }
-.editor textarea { width: 100%; display: block; font-size: 100%;
-    border: solid 1px #babdb6; }
-.editor label { display:block; text-align: right }
-.editor .upload { margin: 2em auto; text-align: center }
-form.search input.search, .editor label input { font-size: 100%;
-    border: solid 1px #babdb6; margin: 0.125em 0 }
-.editor label.comment input  { width: 32em }
-a.logo { float: left; display: block; margin: 0.25em }
-div.header h1 { margin: 0; }
-div.content { clear: left }
-form.search { margin:0; text-align: right; font-size: 80% }
-div.snippet { font-size: 80%; color: #888a85 }
-div.header div.menu { float: right; margin-top: 1.25em }
-div.header div.menu a.current { color: #000 }
-hr { background: transparent; border:none; height: 0;
-     border-bottom: 1px solid #babdb6; clear: both }
-blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}"""
 
     # Please see the bottom of the script for modifying these values.
 
-    def __init__(self, **keywords):
-        self.__dict__.update(dict(
-            interface='',
-            port=8080,
-            language=None,
-            read_only=False,
-            js_editor=False,
-            pages_path='docs',
-            cache_path='cache',
-            site_name=u'Hatta Wiki',
-            front_page=u'Home',
-            style_page=u'style.css',
-            logo_page=u'logo.png',
-            menu_page=u'Menu',
-            locked_page=u'Locked',
-            alias_page=u'Alias',
-            math_url='http://www.mathtran.org/cgi-bin/mathtran?tex=',
-            script_name=None,
-            page_charset='utf-8',
-            config_file=None,
-            html_head=u'',
-        ))
+    def __init__(self, **kw):
+        self.config = kw
         self.parse_environ()
-        self.__dict__.update(keywords)
-        self.sanitize()
 
     def sanitize(self):
         """
         Convert options to their required types.
         """
-
-        if self.read_only in (True, 'True', 'true', 'TRUE',
-                              '1', 'on', 'On', 'ON'):
-            self.read_only = True
-        else:
-            self.read_only = False
-        self.port = int(self.port)
+        return # XXX
+        try:
+            if self.read_only in (True, 'True', 'true', 'TRUE',
+                                  '1', 'on', 'On', 'ON'):
+                self.read_only = True
+            else:
+                self.read_only = False
+        except AttributeError:
+            pass
+        try:
+            self.port = int(self.port or 0)
+        except AttributeError:
+            pass
 
     def parse_environ(self):
         """Check the environment variables for options."""
 
         prefix = 'HATTA_'
-        settings = {}
         for key, value in os.environ.iteritems():
             if key.startswith(prefix):
                 name = key[len(prefix):].lower()
-                settings[name] = value
-        self.__dict__.update(settings)
+                self.config[name] = value
 
     def parse_args(self):
         """Check the commandline arguments for options."""
 
         import optparse
+        self.options = []
         parser = optparse.OptionParser()
-        parser.add_option('-d', '--pages-dir', dest='pages_path',
-                          help='Store pages in DIR', metavar='DIR')
-        parser.add_option('-t', '--cache-dir', dest='cache_path',
-                          help='Store cache in DIR', metavar='DIR')
-        parser.add_option('-i', '--interface', dest='interface',
-                          help='Listen on interface INT', metavar='INT')
-        parser.add_option('-p', '--port', dest='port', type='int',
-                          help='Listen on port PORT', metavar='PORT')
-        parser.add_option('-s', '--script-name', dest='script_name',
-                          help='Override SCRIPT_NAME to NAME', metavar='NAME')
-        parser.add_option('-n', '--site-name', dest='site_name',
-                          help='Set the name of the site to NAME',
-                          metavar='NAME')
-        parser.add_option('-m', '--front-page', dest='front_page',
-                          help='Use PAGE as the front page', metavar='PAGE')
-        parser.add_option('-e', '--encoding', dest='page_charset',
-                          help='Use encoding ENS to read and write pages',
-                          metavar='ENC')
-        parser.add_option('-c', '--config-file', dest='config_file',
-                          help='Read configuration from FILE', metavar='FILE')
-        parser.add_option('-l', '--language', dest='language',
-                          help='Translate interface to LANG', metavar='LANG')
-        parser.add_option('-r', '--read-only', dest='read_only', default=False,
-                          help='Whether the wiki should be read-only',
-                          action="store_true")
-        parser.add_option('-j', '--js-editor', dest='js_editor',
-                          help='Enable JavaScript in the editor.',
-                          default=False, action="store_true")
+
+        def add(*args, **kw):
+            self.options.append(kw['dest'])
+            parser.add_option(*args, **kw)
+
+        add('-d', '--pages-dir', dest='pages_path',
+            help='Store pages in DIR', metavar='DIR')
+        add('-t', '--cache-dir', dest='cache_path',
+            help='Store cache in DIR', metavar='DIR')
+        add('-i', '--interface', dest='interface',
+            help='Listen on interface INT', metavar='INT')
+        add('-p', '--port', dest='port', type='int',
+            help='Listen on port PORT', metavar='PORT')
+        add('-s', '--script-name', dest='script_name',
+            help='Override SCRIPT_NAME to NAME', metavar='NAME')
+        add('-n', '--site-name', dest='site_name',
+            help='Set the name of the site to NAME', metavar='NAME')
+        add('-m', '--front-page', dest='front_page',
+            help='Use PAGE as the front page', metavar='PAGE')
+        add('-e', '--encoding', dest='page_charset',
+            help='Use encoding ENS to read and write pages', metavar='ENC')
+        add('-c', '--config-file', dest='config_file',
+            help='Read configuration from FILE', metavar='FILE')
+        add('-l', '--language', dest='language',
+            help='Translate interface to LANG', metavar='LANG')
+        add('-r', '--read-only', dest='read_only', default=False,
+            help='Whether the wiki should be read-only', action="store_true")
+        add('-j', '--js-editor', dest='js_editor', default=False,
+            help='Enable JavaScript in the editor.', action="store_true")
+
         options, args = parser.parse_args()
-        self.pages_path = options.pages_path or self.pages_path
-        self.cache_path = options.cache_path or self.cache_path
-        self.interface = options.interface or self.interface
-        self.port = options.port or self.port
-        self.script_name = options.script_name or self.script_name
-        self.site_name = options.site_name or self.site_name
-        self.page_charset = options.page_charset or self.page_charset
-        self.front_page = options.front_page or self.front_page
-        self.config_file = options.config_file or self.config_file
-        self.language = options.language or self.language
-        self.read_only = options.read_only or self.read_only
-        self.js_editor = options.js_editor or self.js_editor
+        for option, value in options.__dict__.iteritems():
+            if option in self.options:
+                if value is not None:
+                    self.config[option] = value
 
     def parse_files(self, files=None):
         """Check the config files for options."""
 
         import ConfigParser
+
         if files is None:
-            if self.config_file is None:
-                self.config_file = 'hatta.conf'
-            files = [self.config_file]
+            files = [self.get('config_file', u'hatta.conf')]
         parser = ConfigParser.SafeConfigParser()
         parser.read(files)
-        settings = {}
         for section in parser.sections():
             for option, value in parser.items(section):
-                settings[option] = value
-        self.__dict__.update(settings)
+                self.config[option] = value
+
+    def get(self, option, default=None):
+        """Get the value of a config option or default if not set."""
+
+        try:
+            return self.config[option]
+        except KeyError:
+            #if option not in self.options:
+            #    raise
+            return default
 
 class WikiStorage(object):
     """
@@ -1574,6 +1514,52 @@ class WikiPage(object):
         self.index = self.wiki.index
         self.config = self.wiki.config
 
+        self.default_style = self.config.get('default_style',
+u"""html { background: #fff; color: #2e3436;
+    font-family: sans-serif; font-size: 96% }
+body { margin: 1em auto; line-height: 1.3; width: 40em }
+a { color: #3465a4; text-decoration: none }
+a:hover { text-decoration: underline }
+a.wiki:visited { color: #204a87 }
+a.nonexistent { color: #a40000; }
+a.external { color: #3465a4; text-decoration: underline }
+a.external:visited { color: #75507b }
+a img { border: none }
+img.math, img.smiley { vertical-align: middle }
+pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word;
+    white-space: -moz-pre-wrap; white-space: -pre-wrap;
+    white-space: -o-pre-wrap; line-height: 1.2; color: #555753 }
+div.conflict pre.local { background: #fcaf3e; margin-bottom: 0; color: 000}
+div.conflict pre.other { background: #ffdd66; margin-top: 0; color: 000; border-top: #d80 dashed 1px; }
+pre.diff div.orig { font-size: 75%; color: #babdb6 }
+b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e;
+color: #ce5c00; text-decoration: none }
+pre.diff del { background: #eeeeec; color: #888a85; text-decoration: none }
+pre.diff div.change { border-left: 2px solid #fcaf3e }
+div.footer { border-top: solid 1px #babdb6; text-align: right }
+h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
+div.buttons { text-align: center }
+input.button, div.buttons input { font-weight: bold; font-size: 100%;
+    background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
+.history input.button { font-size: 75% }
+.editor textarea { width: 100%; display: block; font-size: 100%;
+    border: solid 1px #babdb6; }
+.editor label { display:block; text-align: right }
+.editor .upload { margin: 2em auto; text-align: center }
+form.search input.search, .editor label input { font-size: 100%;
+    border: solid 1px #babdb6; margin: 0.125em 0 }
+.editor label.comment input  { width: 32em }
+a.logo { float: left; display: block; margin: 0.25em }
+div.header h1 { margin: 0; }
+div.content { clear: left }
+form.search { margin:0; text-align: right; font-size: 80% }
+div.snippet { font-size: 80%; color: #888a85 }
+div.header div.menu { float: right; margin-top: 1.25em }
+div.header div.menu a.current { color: #000 }
+hr { background: transparent; border:none; height: 0;
+     border-bottom: 1px solid #babdb6; clear: both }
+blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}""")
+
     def wiki_link(self, addr, label, class_='wiki', image=None, lineno=0):
         """Create HTML for a wiki link."""
 
@@ -1628,13 +1614,12 @@ class WikiPage(object):
     def html_head(self, title, robots=False, edit_button=False):
         html = werkzeug.html
 
-        yield html.title(html(u'%s - %s' % (title, self.config.site_name)))
-        if self.config.style_page in self.storage:
+        yield html.title(html(u'%s - %s' % (title, self.wiki.site_name)))
+        if self.wiki.style_page in self.storage:
             yield html.link(rel="stylesheet", type_="text/css",
-                href=self.get_download_url(self.config.style_page))
+                href=self.get_download_url(self.wiki.style_page))
         else:
-            yield html.style(html(self.config.default_style),
-                             type_="text/css")
+            yield html.style(html(self.default_style), type_="text/css")
 
         if not robots:
             yield html.meta(name="robots", content="NOINDEX,NOFOLLOW")
@@ -1646,12 +1631,12 @@ class WikiPage(object):
         yield html.link(rel="shortcut icon", type_="image/x-icon",
                         href=self.get_url(None, self.wiki.favicon))
         yield html.link(rel="alternate", type_="application/rss+xml",
-                        title=u"%s (RSS)" % self.config.site_name,
+                        title=u"%s (RSS)" % self.wiki.site_name,
                         href=self.get_url(None, self.wiki.rss))
         yield html.link(rel="alternate", type_="application/rss+xml",
-                        title="%s (ATOM)" % self.config.site_name,
+                        title="%s (ATOM)" % self.wiki.site_name,
                          href=self.get_url(None, self.wiki.atom))
-        yield self.config.html_head
+#        yield self.html_head
 
     def search_form(self):
         html = werkzeug.html
@@ -1662,28 +1647,29 @@ class WikiPage(object):
 
     def logo(self):
         html = werkzeug.html
-        return html.a(html.img(alt=u"[%s]" % self.config.front_page,
-            src=self.get_download_url(self.config.logo_page)),
-            class_='logo', href=self.get_url(self.config.front_page))
+        img = html.img(alt=u"[%s]" % self.wiki.front_page,
+                       src=self.get_download_url(self.wiki.logo_page))
+        return html.a(img, class_='logo', href=self.get_url(self.wiki.front_page))
 
     def menu(self):
         html = werkzeug.html
-        if self.config.menu_page in self.storage:
-            items = self.index.page_links_and_labels(self.config.menu_page)
+        if self.wiki.menu_page in self.storage:
+            items = self.index.page_links_and_labels(self.wiki.menu_page)
         else:
             items = [
-                (self.config.front_page, self.config.front_page),
+                (self.wiki.front_page, self.wiki.front_page),
                 ('history', _(u'Recent changes')),
             ]
         for link, label in items:
+            url = self.get_url(link)
             if link == self.title:
-                yield html.a(label, href=self.get_url(link), class_="current")
+                yield html.a(label, href=url, class_="current")
             else:
-                yield html.a(label, href=self.get_url(link))
+                yield html.a(label, href=url)
 
     def header(self, special_title):
         html = werkzeug.html
-        if self.config.logo_page in self.storage:
+        if self.wiki.logo_page in self.storage:
             yield self.logo()
         yield self.search_form()
         yield html.div(u" ".join(self.menu()), class_="menu")
@@ -1726,7 +1712,7 @@ class WikiPage(object):
         yield u'<body>'
         for part in self.page(content, special_title):
             yield part
-        if self.config.js_editor:
+        if self.config.get('js_editor', False):
             try:
                 self.wiki.check_lock(self.title)
                 yield html.script(u"""
@@ -1770,7 +1756,7 @@ for (var j = 0; j < tagList.length; ++j) {
                     'title': title, 'rev': rev})
             yield u'<li>'
             yield werkzeug.html.a(date.strftime('%F %H:%M'), href=url)
-            if not self.config.read_only:
+            if not self.config.get('read_only', False):
                 yield (u'<input type="submit" name="%d" value="Undo" '
                        u'class="button">' % rev)
             yield u' . . . . '
@@ -1784,8 +1770,8 @@ for (var j = 0; j < tagList.length; ++j) {
 
     def dependencies(self):
         dependencies = set()
-        for link in [self.config.style_page, self.config.logo_page,
-                     self.config.menu_page]:
+        for link in [self.wiki.style_page, self.wiki.logo_page,
+                     self.wiki.menu_page]:
             if link not in self.storage:
                 dependencies.add(werkzeug.url_quote(link))
         return dependencies
@@ -1841,7 +1827,7 @@ class WikiPageText(WikiPage):
             yield html.h1(html(_(u'Preview, not saved')), class_="preview")
             for part in self.view_content(preview):
                 yield part
-        if self.config.js_editor:
+        if self.config.get('js_editor', False):
             # Scroll the textarea to the line specified
             # Move the cursor to the specified line
             yield html.script(ur"""
@@ -1996,12 +1982,14 @@ class WikiPageWiki(WikiPageText):
         return content
 
     def wiki_math(self, math):
-        if '%s' in self.config.math_url:
-            url = self.config.math_url % werkzeug.url_quote(math)
+        math_url = self.config.get('math_url',
+                                   'http://www.mathtran.org/cgi-bin/mathtran?tex=')
+        if '%s' in math_url:
+            url = math_url % werkzeug.url_quote(math)
         else:
-            url = ''.join([self.config.math_url, werkzeug.url_quote(math)])
-        return u'<img src="%s" alt="%s" class="math">' % (url,
-                                             werkzeug.escape(math, quote=True))
+            url = '%s%s' % (math_url, werkzeug.url_quote(math))
+        label = werkzeug.escape(math, quote=True)
+        return werkzeug.html.img(src=url, alt=label, class_="math")
 
     def dependencies(self):
         dependencies = WikiPage.dependencies(self)
@@ -2083,29 +2071,38 @@ class Wiki(object):
     def __init__(self, config):
         self.dead = False
         self.config = config
+        self.language = config.get('language', None)
         global _
-        if config.language is not None:
+        if self.language is not None:
             try:
                 _ = gettext.translation('hatta', 'locale',
-                                        languages=[config.language]).ugettext
+                                        languages=[self.language]).ugettext
             except IOError:
                 _ = gettext.translation('hatta', fallback=True,
-                                        languages=[config.language]).ugettext
+                                        languages=[self.language]).ugettext
         else:
             _ = gettext.translation('hatta', fallback=True).ugettext
-        self.path = os.path.abspath(config.pages_path)
-        self.cache = os.path.abspath(config.cache_path)
-        self.storage = self.storage_class(self.path, self.config.page_charset)
+        self.path = os.path.abspath(config.get('pages_path', 'docs'))
+        self.cache = os.path.abspath(config.get('cache_path', 'cache'))
+        self.page_charset = config.get('page_charset', 'utf-8')
+        self.menu_page = self.config.get('menu_page', u'Menu')
+        self.front_page = self.config.get('front_page', u'Home')
+        self.logo_page = self.config.get('logo_page', u'logo.png')
+        self.locked_page = self.config.get('locked_page', u'Locked')
+        self.site_name = self.config.get('site_name', u'Hatta Wiki')
+        self.style_page = self.config.get('style_page', u'style.css')
+        self.read_only = self.config.get('read_only', False)
+
+        self.storage = self.storage_class(self.path, self.page_charset)
         if not os.path.isdir(self.cache):
             os.makedirs(self.cache)
             reindex = True
         else:
             reindex = False
-        self.index = self.index_class(self.cache, self.config.language,
-                                      self.storage)
+        self.index = self.index_class(self.cache, self.language, self.storage)
         R = werkzeug.routing.Rule
         self.url_map = werkzeug.routing.Map([
-            R('/', defaults={'title': self.config.front_page},
+            R('/', defaults={'title': self.front_page},
               endpoint=self.view, methods=['GET', 'HEAD']),
             R('/edit/<title:title>', endpoint=self.edit, methods=['GET']),
             R('/edit/<title:title>', endpoint=self.save, methods=['POST']),
@@ -2187,10 +2184,10 @@ class Wiki(object):
         return response
 
     def check_lock(self, title):
-        if self.config.read_only:
+        if self.read_only:
             raise werkzeug.exceptions.Forbidden()
-        if self.config.locked_page in self.storage:
-            if title in self.index.page_links(self.config.locked_page):
+        if self.locked_page in self.storage:
+            if title in self.index.page_links(self.locked_page):
                 raise werkzeug.exceptions.Forbidden()
 
     def save(self, request, title):
@@ -2198,7 +2195,7 @@ class Wiki(object):
         url = request.get_url(title)
         if request.form.get('cancel'):
             if title not in self.storage:
-                url = request.get_url(self.config.front_page)
+                url = request.get_url(self.front_page)
         if request.form.get('preview'):
             text = request.form.get("text")
             if text is not None:
@@ -2218,7 +2215,7 @@ class Wiki(object):
             self.storage.reopen()
             self.index.update()
             if text is not None:
-                if title == self.config.locked_page:
+                if title == self.locked_page:
                     for link, label in WikiParser.extract_links(text):
                         if title == link:
                             raise werkzeug.exceptions.Forbidden()
@@ -2226,7 +2223,7 @@ class Wiki(object):
                     raise werkzeug.exceptions.Forbidden()
                 if text.strip() == '':
                     self.storage.delete_page(title, author, comment)
-                    url = request.get_url(self.config.front_page)
+                    url = request.get_url(self.front_page)
                 else:
                     self.storage.save_text(title, text, author, comment, parent)
             else:
@@ -2242,7 +2239,7 @@ class Wiki(object):
                                                comment, parent)
                 else:
                     self.storage.delete_page(title, author, comment)
-                    url = request.get_url(self.config.front_page)
+                    url = request.get_url(self.front_page)
             self.index.update_page(title, text=text)
         response = werkzeug.routing.redirect(url, code=303)
         response.set_cookie('author',
@@ -2318,12 +2315,12 @@ class Wiki(object):
   <logo>%(logo)s</logo>
 %(body)s
 </feed>""" % {
-            'title': self.config.site_name,
+            'title': self.site_name,
             'home': request.adapter.build(self.view, force_external=True),
             'atom': request.adapter.build(self.atom, force_external=True),
             'date': first_date.strftime(date_format),
             'logo': request.adapter.build(self.download,
-                                          {'title': self.config.logo_page},
+                                          {'title': self.logo_page},
                                           force_external=True),
             'body': u''.join(body),
         }
@@ -2379,7 +2376,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
     <lastBuildDate>%s</lastBuildDate>
 
 """ % (
-            werkzeug.escape(self.config.site_name),
+            werkzeug.escape(self.site_name),
             request.adapter.build(self.rss),
             request.adapter.build(self.recent_changes),
             werkzeug.escape(_(u'Track the most recent changes to the wiki '
@@ -2638,8 +2635,6 @@ xmlns:atom="http://www.w3.org/2005/Atom"
     def application(self, environ, start):
         """The main application loop."""
 
-        if self.config.script_name is not None:
-            environ['SCRIPT_NAME'] = self.config.script_name
         adapter = self.url_map.bind_to_environ(environ)
         request = WikiRequest(self, adapter, environ)
         try:
@@ -2675,8 +2670,8 @@ def main():
     )
     config.parse_args()
     config.parse_files()
-    config.sanitize()
-    host, port = config.interface, int(config.port)
+    # config.sanitize()
+    host, port = config.get('interface', ''), int(config.get('port', 8080))
     wiki = Wiki(config)
     try:
         from cherrypy import wsgiserver

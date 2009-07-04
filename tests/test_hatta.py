@@ -107,7 +107,7 @@ class TestHattaStandalone(object):
 
     def test_read_only_edit(self, wiki):
         client = werkzeug.Client(wiki.application, hatta.WikiResponse)
-        wiki.config.read_only = True
+        wiki.read_only = True
         data = 'text=test&parent=-1&comment=created&author=test&save=Save'
         response = client.post('/edit/readonly', data=data,
                             content_type='application/x-www-form-urlencoded')
@@ -115,7 +115,7 @@ class TestHattaStandalone(object):
 
     def test_read_only_undo(self, wiki):
         client = werkzeug.Client(wiki.application, hatta.WikiResponse)
-        wiki.config.read_only = True
+        wiki.read_only = True
         data = '52=Undo'
         response = client.post('/undo/readonly', data=data,
                             content_type='application/x-www-form-urlencoded')

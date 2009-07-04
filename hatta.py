@@ -640,7 +640,7 @@ class WikiParser(object):
     though.
 
     >>> import lxml.html.usedoctest
-    >>> def link(addr, label, class_=None, image=None):
+    >>> def link(addr, label, class_=None, image=None, lineno=0):
     ...     href = werkzeug.escape(addr, quote=True)
     ...     text = image or werkzeug.escape(label or addr)
     ...     return u'<a href="%s">%s</a>' % (href, text)
@@ -899,7 +899,7 @@ class WikiParser(object):
     @classmethod
     def extract_links(cls, text):
         links = []
-        def link(addr, label=None, class_=None, image=None, alt=None):
+        def link(addr, label=None, class_=None, image=None, alt=None, lineno=0):
             if external_link(addr):
                 return u''
             if '#' in addr:
@@ -910,8 +910,9 @@ class WikiParser(object):
             return u''
         lines = text.split('\n')
         for part in cls(lines, link, link):
-            pass
-        return links
+            for ret in links:
+                yield ret
+            links[:] = []
 
     def parse(self):
         """Parse a list of lines of wiki markup, yielding HTML for it."""
@@ -1592,7 +1593,7 @@ class WikiPage(object):
         self.index = self.wiki.index
         self.config = self.wiki.config
 
-    def wiki_link(self, addr, label, class_='wiki', image=None):
+    def wiki_link(self, addr, label, class_='wiki', image=None, lineno=0):
         """Create HTML for a wiki link."""
 
         text = werkzeug.escape(label)
@@ -1621,7 +1622,7 @@ class WikiPage(object):
         return werkzeug.html.a(image or text, href=href, class_=class_,
                                title=addr)
 
-    def wiki_image(self, addr, alt, class_='wiki'):
+    def wiki_image(self, addr, alt, class_='wiki', lineno=0):
         """Create HTML for a wiki image."""
 
         html = werkzeug.html

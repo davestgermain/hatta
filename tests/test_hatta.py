@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import hatta
-import unittest
 import werkzeug
 import os
 import lxml.doctestcompare
@@ -13,110 +12,117 @@ def clear_directory(top):
             os.remove(os.path.join(root, name))
         for name in dirs:
             os.rmdir(os.path.join(root, name))
-    os.removedirs(top)
+    try:
+        os.removedirs(top)
+    except OSError:
+        pass
 
-class HattaStandalone(unittest.TestCase):
+def pytest_funcarg__wiki(request):
+    basedir = str(request.config.ensuretemp('repo'))
+    config = hatta.WikiConfig(
+        pages_path=os.path.join(basedir, 'pages'),
+        cache_path=os.path.join(basedir, 'cache'),
+    )
+    request.addfinalizer(lambda: clear_directory(basedir))
+    return hatta.Wiki(config)
+
+
+class TestHattaStandalone(object):
     docstring = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">'
-    basedir = '/tmp/hatta-test'
 
-    def setUp(self):
-        self.config = hatta.WikiConfig(
-            pages_path=os.path.join(self.basedir, 'pages'),
-            cache_path=os.path.join(self.basedir, 'cache'),
-        )
-        self.wiki = hatta.Wiki(self.config)
-        self.app = self.wiki.application
-        self.client = werkzeug.Client(self.app, hatta.WikiResponse)
 
-    def tearDown(self):
-        clear_directory(self.basedir)
-
-    def test_japanese_splitting(self):
-        text=u"ルビハイパンツアクセシウェブ内容アテストスイトどらプロセスドクリック」インタラクションディア,情報セットセシビリティングシステムをマその他リア式会を始めてみようサイトをアクセシブ内准剛のな,健二仕ルビの再形式化セシビリテのためらすかるコンテンウェブ内容アネッユザエクアップテキストマでの,ネックセスふべからずビリティにるその他クアップコンテンツアクセネッ"
+    def test_japanese_splitting(self, wiki):
+        text = u"ルビハイパンツアクセシウェブ内容アテストスイトどらプロセスドクリック」インタラクションディア,情報セットセシビリティングシステムをマその他リア式会を始めてみようサイトをアクセシブ内准剛のな,健二仕ルビの再形式化セシビリテのためらすかるコンテンウェブ内容アネッユザエクアップテキストマでの,ネックセスふべからずビリティにるその他クアップコンテンツアクセネッ"
         after = [u'ルビハイパンツアクセシウェブ', u'内容', u'アテストスイト', u'どら', u'プロセスドクリック', u'インタラクションディア', u'情報', u'セットセシビリティングシステム', u'を', u'マ', u'その', u'他', u'リア', u'式会', u'を', u'始', u'めてみよう', u'サイト', u'を', u'アクセシブ', u'内准剛', u'のな', u'健二仕', u'ルビ', u'の', u'再形式化', u'セシビリテ', u'のためらすかる', u'コンテンウェブ', u'内容', u'アネッユザエクアップテキストマ', u'での', u'ネックセス', u'ふべからず', u'ビリティ', u'にるその', u'他', u'クアップコンテンツアクセネッ']
-        result = list(self.wiki.index.split_japanese_text(text))
+        result = list(wiki.index.split_japanese_text(text))
         for got, expected in zip(result, after):
-            self.assertEqual(got, expected)
+            assert got == expected
 
-    def test_front_page(self):
+    def test_front_page(self, wiki):
         """Check that Home page doesn't exist and redirects to editor."""
 
-        response = self.client.get('')
-        self.assertEqual(response.status_code, 303)
-        self.assertEqual(response.headers['Location'],
-                         'http://localhost/edit/Home')
-        response = self.client.get('/edit/Home')
-        self.assertEqual(response.status_code, 404)
+        client = werkzeug.Client(wiki.application, hatta.WikiResponse)
+        response = client.get('')
+        assert response.status_code == 303
+        assert response.headers['Location'] == 'http://localhost/edit/Home'
+        response = client.get('/edit/Home')
+        assert response.status_code == 404
 
-    def test_create_front_page(self):
+    def test_create_front_page(self, wiki):
         """Create a Home page and make sure it's created propely."""
 
+        client = werkzeug.Client(wiki.application, hatta.WikiResponse)
         data = 'text=test&parent=-1&comment=created&author=test&save=Save'
-        response = self.client.post('/edit/Home', data=data, content_type='application/x-www-form-urlencoded')
-        self.assertEqual(response.status_code, 303)
-        response = self.client.get('')
-        self.assertEqual(response.status_code, 200)
+        response = client.post('/edit/Home', data=data, content_type='application/x-www-form-urlencoded')
+        assert response.status_code == 303
+        response = client.get('')
+        assert response.status_code == 200
 
-    def test_page_docstring(self):
+    def test_page_docstring(self, wiki):
         """Check the page's docstring."""
 
+        client = werkzeug.Client(wiki.application, hatta.WikiResponse)
         data = 'text=test&parent=-1&comment=created&author=test&save=Save'
-        response = self.client.post('/edit/Home', data=data,
+        response = client.post('/edit/Home', data=data,
                             content_type='application/x-www-form-urlencoded')
-        self.assertEqual(response.status_code, 303)
-        response = self.client.get('')
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 303
+        response = client.get('')
+        assert response.status_code == 200
         data = ''.join(response.data)
-        self.assert_(data.startswith(self.docstring))
+        assert data.startswith(self.docstring)
 
-    def test_editor_docstring(self):
+    def test_editor_docstring(self, wiki):
         """Check the editor's docstring."""
 
-        response = self.client.get('/edit/Home')
+        client = werkzeug.Client(wiki.application, hatta.WikiResponse)
+        response = client.get('/edit/Home')
         data = ''.join(response.data)
-        self.assert_(data.startswith(self.docstring))
+        assert data.startswith(self.docstring)
 
-    def test_create_slash_page(self):
+    def test_create_slash_page(self, wiki):
         """Create a page with slash in name."""
 
+        client = werkzeug.Client(wiki.application, hatta.WikiResponse)
         data = 'text=test&parent=-1&comment=created&author=test&save=Save'
-        response = self.client.post('/edit/1/2', data=data,
+        response = client.post('/edit/1/2', data=data,
                             content_type='application/x-www-form-urlencoded')
-        self.assertEqual(response.status_code, 303)
-        response = self.client.get('/1/2')
-        self.assertEqual(response.status_code, 200)
-        response = self.client.get('/history/1/2/0')
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 303
+        response = client.get('/1/2')
+        assert response.status_code == 200
+        response = client.get('/history/1/2/0')
+        assert response.status_code == 200
 
-    def test_search(self):
+    def test_search(self, wiki):
         """Test simple searching."""
 
+        client = werkzeug.Client(wiki.application, hatta.WikiResponse)
         data = 'text=test&parent=-1&comment=created&author=test&save=Save'
-        response = self.client.post('/edit/searching', data=data,
+        response = client.post('/edit/searching', data=data,
                             content_type='application/x-www-form-urlencoded')
-        self.assertEqual(response.status_code, 303)
-        response = self.client.get('/search?q=test')
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 303
+        response = client.get('/search?q=test')
+        assert response.status_code == 200
         data = ''.join(response.data)
-        self.assert_('>searching</a>' in data)
+        assert '>searching</a>' in data
 
-    def test_read_only_edit(self):
-        self.config.read_only = True
+    def test_read_only_edit(self, wiki):
+        client = werkzeug.Client(wiki.application, hatta.WikiResponse)
+        wiki.config.read_only = True
         data = 'text=test&parent=-1&comment=created&author=test&save=Save'
-        response = self.client.post('/edit/readonly', data=data,
+        response = client.post('/edit/readonly', data=data,
                             content_type='application/x-www-form-urlencoded')
-        self.assertEqual(response.status_code, 403)
+        assert response.status_code == 403
 
-    def test_read_only_undo(self):
-        self.config.read_only = True
+    def test_read_only_undo(self, wiki):
+        client = werkzeug.Client(wiki.application, hatta.WikiResponse)
+        wiki.config.read_only = True
         data = '52=Undo'
-        response = self.client.post('/undo/readonly', data=data,
+        response = client.post('/undo/readonly', data=data,
                             content_type='application/x-www-form-urlencoded')
-        self.assertEqual(response.status_code, 403)
+        assert response.status_code == 403
 
 
-
-class HattaParser(unittest.TestCase):
+class TestHattaParser(object):
 
     def parse_text(self, text):
         parser = hatta.WikiParser
@@ -167,56 +173,51 @@ u"""* sample list
 
     def test_test_cases(self):
         for text, expect in self.test_cases.iteritems():
-            self.assertEqual(expect, self.parse_text(text))
+            assert expect == self.parse_text(text)
 
 class Example(object):
     def __init__(self, want):
         self.want = want
 
-class TestHTML(unittest.TestCase):
-    basedir = '/tmp/hatta-test'
+
+def pytest_funcarg__req(request):
+    basedir = str(request.config.ensuretemp('repo'))
+    request.addfinalizer(lambda: clear_directory(basedir))
+    config = hatta.WikiConfig(
+        pages_path=os.path.join(basedir, 'pages'),
+        cache_path=os.path.join(basedir, 'cache'),
+        default_style="...",
+    )
+    wiki = hatta.Wiki(config)
+    environ = {
+        'SERVER_NAME': 'hatta',
+        'wsgi.url_scheme': 'http',
+        'SERVER_PORT': '80',
+        'REQUEST_METHOD': 'GET',
+        'PATH_INFO': '/',
+        'SCRIPT_NAME': '',
+    }
+    adapter = wiki.url_map.bind_to_environ(environ)
+    return wiki, hatta.WikiRequest(wiki, adapter, environ)
+
+def html_eq(want, got):
     checker = lxml.doctestcompare.LHTMLOutputChecker()
+    if not checker.check_output(want, got, 0):
+        raise Exception(checker.output_difference(Example(want), got, 0))
 
-    def html_eq(self, want, got):
-        if not self.checker.check_output(want, got, 0):
-            raise Exception(self.checker.output_difference(Example(want), got, 0))
+class TestHTML(object):
+    def test_wiki_request_get_url(self, req):
+        wiki, request = req
+        assert request.get_url('title') == u'/title'
+        assert request.get_download_url('title') == u'/download/title'
+        assert request.get_url('title', wiki.edit) == u'/edit/title'
+        assert request.get_url(None, wiki.favicon) == u'/favicon.ico'
 
-    def setUp(self):
-        self.config = hatta.WikiConfig(
-            pages_path=os.path.join(self.basedir, 'pages'),
-            cache_path=os.path.join(self.basedir, 'cache'),
-        )
-        self.config.default_style = "..."
-        self.wiki = hatta.Wiki(self.config)
-        environ = {
-            'SERVER_NAME': 'hatta',
-            'wsgi.url_scheme': 'http',
-            'SERVER_PORT': '80',
-            'REQUEST_METHOD': 'GET',
-            'PATH_INFO': '/',
-            'SCRIPT_NAME': '',
-        }
-        adapter = self.wiki.url_map.bind_to_environ(environ)
-        self.request = hatta.WikiRequest(self.wiki, adapter, environ)
-
-    def tearDown(self):
-        clear_directory(self.basedir)
-
-    def test_wiki_request_get_url(self):
-        self.assertEqual(self.request.get_url('title'),
-                         u'/title')
-        self.assertEqual(self.request.get_download_url('title'),
-                         u'/download/title')
-        self.assertEqual(self.request.get_url('title', self.wiki.edit),
-                         u'/edit/title')
-        self.assertEqual(self.request.get_url(None, self.wiki.favicon),
-                         u'/favicon.ico')
-
-
-    def test_html_page(self):
+    def test_html_page(self, req):
+        wiki, request = req
         content = ["some &lt;content&gt;"]
         title = "page <title>"
-        page = self.wiki.get_page(self.request, title)
+        page = wiki.get_page(request, title)
         parts = page.render_content(content)
         html = u"".join(parts)
         expect = u"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
@@ -247,9 +248,9 @@ class TestHTML(unittest.TestCase):
         <a href="/search/page%20%3Ctitle%3E" class="backlinks">Backlinks</a>
     </div></div>
 </body></html>"""
-        self.html_eq(expect, html)
+        html_eq(expect, html)
         page_title = "different <title>"
-        page = self.wiki.get_page(self.request, title)
+        page = wiki.get_page(request, title)
         parts = page.render_content(content, page_title)
         html = u"".join(parts)
         expect = u"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
@@ -275,8 +276,5 @@ class TestHTML(unittest.TestCase):
     </div>
     <div class="content">some &lt;content&gt;</div>
 </body></html>"""
-        self.html_eq(expect, html)
-
-if __name__ == '__main__':
-    unittest.main()
+        html_eq(expect, html)
 

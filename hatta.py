@@ -725,17 +725,41 @@ class WikiParser(object):
 
     >>> parse(u'|x|y|z|\n|a|b|c|\n|d|e|f|\ntest')
     <table id="line_0">
-        <tr><td>x</td><td>y</td><td>z</td></tr>
-        <tr><td>a</td><td>b</td><td>c</td></tr>
-        <tr><td>d</td><td>e</td><td>f</td></tr>
+        <tr>
+            <td>x</td>
+            <td>y</td>
+            <td>z</td>
+        </tr>
+        <tr>
+            <td>a</td>
+            <td>b</td>
+            <td>c</td>
+        </tr>
+        <tr>
+            <td>d</td>
+            <td>e</td>
+            <td>f</td>
+        </tr>
     </table>
     <p id="line_3">test</p>
 
     >>> parse(u'|=x|y|=z=|\n|a|b|c|\n|d|e|=f=|')
     <table id="line_0">
-        <thead><tr><th>x</th><td>y</td><th>z</th></tr></thead>
-        <tr><td>a</td><td>b</td><td>c</td></tr>
-        <tr><td>d</td><td>e</td><th>f</th></tr>
+        <thead><tr>
+            <th>x</th>
+            <td>y</td>
+            <th>z</th>
+        </tr></thead>
+        <tr>
+            <td>a</td>
+            <td>b</td>
+            <td>c</td>
+        </tr>
+        <tr>
+            <td>d</td>
+            <td>e</td>
+            <th>f</th>
+        </tr>
     </table>
 
     >>> parse(u'test http://example.com/test test')

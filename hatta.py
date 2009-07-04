@@ -325,8 +325,11 @@ class WikiStorage(object):
         if not os.path.exists(self.path):
             os.makedirs(self.path)
         self.repo_path = self._find_repo_path(self.path)
-        self.ui = mercurial.ui.ui(report_untrusted=False, interactive=False,
-                                  quiet=True)
+        try:
+            self.ui = mercurial.ui.ui(report_untrusted=False,
+                                      interactive=False, quiet=True)
+        except TypeError:
+            self.ui = mercurial.ui.ui()
         if self.repo_path is None:
             self.repo_path = self.path
             self.repo = mercurial.hg.repository(self.ui, self.repo_path,

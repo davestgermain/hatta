@@ -411,6 +411,7 @@ class WikiStorage(object):
             mercurial.merge.mergestate(self.repo).mark(repo_file, "r")
         except (AttributeError, KeyError):
             pass
+        return msg
 
     def save_file_locked(self, title, file_name, author=u'', comment=u'',
                          parent=None):

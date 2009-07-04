@@ -382,6 +382,8 @@ class WikiStorage(object):
             #mercurial.lock.release(lock, wlock)
 
     def merge_changes(self, changectx, repo_file, text, user, parent):
+        """Commits and merges conflicting changes in the repository."""
+
         tip_node = changectx.node()
         filectx = changectx[repo_file].filectx(parent)
         parent_node = filectx.changectx().node()
@@ -403,8 +405,6 @@ class WikiStorage(object):
                                        partial)
             except mercurial.util.Abort:
                 msg = _(u'failed merge of edit conflict')
-        user = '<wiki>'
-        text = msg.encode('utf-8')
         self.repo.dirstate.setparents(tip_node, node)
         # Mercurial 1.1 and later need updating the merge state
         try:
@@ -430,7 +430,9 @@ class WikiStorage(object):
             current_page_rev = -1
         if current_page_rev != parent:
             #self.merge_changes(changectx, current_page_rev, file_path)
-            self.merge_changes(changectx, repo_file, text, user, parent)
+            msg = self.merge_changes(changectx, repo_file, text, user, parent)
+            user = '<wiki>'
+            text = msg.encode('utf-8')
         self.repo.commit(files=[repo_file], text=text, user=user,
                          force=True, empty_ok=True)
 

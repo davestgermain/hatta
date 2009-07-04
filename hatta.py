@@ -56,9 +56,9 @@ import weakref
 
 import werkzeug
 
-# Note: we have to set these before importing mercurial
+# Note: we have to set these before importing Mercurial
 os.environ['HGENCODING'] = 'utf-8'
-os.environ["HGMERGE"] = "internal:merge"
+os.environ['HGMERGE'] = "internal:merge"
 import mercurial.hg
 import mercurial.ui
 import mercurial.revlog
@@ -125,26 +125,6 @@ class WikiConfig(object):
     2080
     """
 
-    # Please see the bottom of the script for modifying these values.
-    interface = ''
-    port = 8080
-    language = None
-    read_only = False
-    js_editor = False
-    pages_path = 'docs'
-    cache_path = 'cache'
-    site_name = u'Hatta Wiki'
-    front_page = u'Home'
-    style_page = u'style.css'
-    logo_page = u'logo.png'
-    menu_page = u'Menu'
-    locked_page = u'Locked'
-    alias_page = u'Alias'
-    math_url = 'http://www.mathtran.org/cgi-bin/mathtran?tex='
-    script_name = None
-    page_charset = 'utf-8'
-    config_file = None
-    html_head = u''
     default_style = u"""html { background: #fff; color: #2e3436;
     font-family: sans-serif; font-size: 96% }
 body { margin: 1em auto; line-height: 1.3; width: 40em }
@@ -189,24 +169,31 @@ div.header div.menu a.current { color: #000 }
 hr { background: transparent; border:none; height: 0;
      border-bottom: 1px solid #babdb6; clear: both }
 blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}"""
-    icon = base64.b64decode(
-'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhki'
-'AAAAAlwSFlzAAAEnQAABJ0BfDRroQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBo'
-'AAALWSURBVDiNbdNLaFxlFMDx//fd19x5JdNJm0lIImPaYm2MfSUggrssXBVaChUfi1JwpQtxK7gqu'
-'LMbQQQ3bipU0G3Rgg98DBpraWob00kzM6Z5TF7tdObm3vvd46K0TBo/OLtzfnychxIRut+Zo2/19vT'
-'kLxXze6biONbGJMRipL39MJyt33rvp+rVT7rzVTfw2vFzLxwcLf/V7oSq1W4hACIkIigUtnaoNecXG'
-'2u14T8blQRAd2v7yyN/RLFR6IRM1iedSeFnUvhpDydlI9ow0lcedG3348c1djeQz+WcThjgYZMgGBG'
-'SJMEYgzGGODLEoTBYGH4DeHcXoDSSzaRVogQjyaMwhtgYcoUco+Nl5qbnubFw7fr//uB2tXp78uj4c'
-'0YJsSTESUxsDCemjjH6YhnbtbA8xaVv7n/0uGZHDx48aH8+17iLJQrf9vCdFL7tkcn7/Pb7r8zdmWP'
-'2zqwopa7sAl4/cV4NlvrPbgch7aBN1vUIOw9ZWmmw2dqkb18fQSegOrOgfD9zahfQ37/3su+ljj1T6'
-'uCnAyxtoZVGa41tWSilULWfCZdaPD986MsjQxOHdwC9PdmT2tLk0oozpxfYf2SZwp4Iz1X4UZWBe1+'
-'z9+5X+OkiruWpYr744ZMmvjn5dvrwoVHLdRzWtobY2Kwx9soyz5ZXuV9fQ5pXCBabXKuXcBwbYwxYe'
-'kIppTXAF5VP2xutrVYmm8bzM1z9foSZik1z1SWMNLW1AtMrB/gnnMJxbSxbUV2a/QHQT8Y4c+vvC8V'
-'C74VCoZcodvnxux5Msg+THCSKHy2R48YgIb/crITrreZlEYl33MKrYycvvnx88p2BUkkpRyGSEBmDi'
-'WI6QcC95UUqM9PBzdqN99fbzc9EJNwBKKUoFw+8NDY8/sFQ/8CE57l5pZRdX6kHqxurW43mv98urM9'
-'fjJPouohE8NQ1dkEayAJ5wAe2gRawJSKmO/c/aERMn5m9/ksAAAAASUVORK5CYII=')
+
+    # Please see the bottom of the script for modifying these values.
 
     def __init__(self, **keywords):
+        self.__dict__.update(dict(
+            interface='',
+            port=8080,
+            language=None,
+            read_only=False,
+            js_editor=False,
+            pages_path='docs',
+            cache_path='cache',
+            site_name=u'Hatta Wiki',
+            front_page=u'Home',
+            style_page=u'style.css',
+            logo_page=u'logo.png',
+            menu_page=u'Menu',
+            locked_page=u'Locked',
+            alias_page=u'Alias',
+            math_url='http://www.mathtran.org/cgi-bin/mathtran?tex=',
+            script_name=None,
+            page_charset='utf-8',
+            config_file=None,
+            html_head=u'',
+        ))
         self.parse_environ()
         self.__dict__.update(keywords)
         self.sanitize()
@@ -214,15 +201,6 @@ blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}"""
     def sanitize(self):
         """
         Convert options to their required types.
-
-        >>> config = WikiConfig()
-        >>> config.read_only = 'on'
-        >>> config.port = '2080'
-        >>> config.sanitize()
-        >>> config.port
-        2080
-        >>> config.read_only
-        True
         """
 
         if self.read_only in (True, 'True', 'true', 'TRUE',
@@ -2621,7 +2599,23 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         yield u'</ul>'
 
     def favicon(self, request):
-        return werkzeug.Response(self.config.icon, mimetype='image/x-icon')
+        icon = base64.b64decode(
+'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhki'
+'AAAAAlwSFlzAAAEnQAABJ0BfDRroQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBo'
+'AAALWSURBVDiNbdNLaFxlFMDx//fd19x5JdNJm0lIImPaYm2MfSUggrssXBVaChUfi1JwpQtxK7gqu'
+'LMbQQQ3bipU0G3Rgg98DBpraWob00kzM6Z5TF7tdObm3vvd46K0TBo/OLtzfnychxIRut+Zo2/19vT'
+'kLxXze6biONbGJMRipL39MJyt33rvp+rVT7rzVTfw2vFzLxwcLf/V7oSq1W4hACIkIigUtnaoNecXG'
+'2u14T8blQRAd2v7yyN/RLFR6IRM1iedSeFnUvhpDydlI9ow0lcedG3348c1djeQz+WcThjgYZMgGBG'
+'SJMEYgzGGODLEoTBYGH4DeHcXoDSSzaRVogQjyaMwhtgYcoUco+Nl5qbnubFw7fr//uB2tXp78uj4c'
+'0YJsSTESUxsDCemjjH6YhnbtbA8xaVv7n/0uGZHDx48aH8+17iLJQrf9vCdFL7tkcn7/Pb7r8zdmWP'
+'2zqwopa7sAl4/cV4NlvrPbgch7aBN1vUIOw9ZWmmw2dqkb18fQSegOrOgfD9zahfQ37/3su+ljj1T6'
+'uCnAyxtoZVGa41tWSilULWfCZdaPD986MsjQxOHdwC9PdmT2tLk0oozpxfYf2SZwp4Iz1X4UZWBe1+'
+'z9+5X+OkiruWpYr744ZMmvjn5dvrwoVHLdRzWtobY2Kwx9soyz5ZXuV9fQ5pXCBabXKuXcBwbYwxYe'
+'kIppTXAF5VP2xutrVYmm8bzM1z9foSZik1z1SWMNLW1AtMrB/gnnMJxbSxbUV2a/QHQT8Y4c+vvC8V'
+'C74VCoZcodvnxux5Msg+THCSKHy2R48YgIb/crITrreZlEYl33MKrYycvvnx88p2BUkkpRyGSEBmDi'
+'WI6QcC95UUqM9PBzdqN99fbzc9EJNwBKKUoFw+8NDY8/sFQ/8CE57l5pZRdX6kHqxurW43mv98urM9'
+'fjJPouohE8NQ1dkEayAJ5wAe2gRawJSKmO/c/aERMn5m9/ksAAAAASUVORK5CYII=')
+        return werkzeug.Response(icon, mimetype='image/x-icon')
 
     def robots(self, request):
         robots = ('User-agent: *\r\n'

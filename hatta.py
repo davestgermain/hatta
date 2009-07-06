@@ -2455,49 +2455,48 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return response
 
     def recent_changes(self, request):
+        def changes_list():
+            yield u'<ul>'
+            last = {}
+            lastrev = {}
+            count = 0
+            for title, rev, date, author, comment in self.storage.history():
+                if (author, comment) == last.get(title, (None, None)):
+                    continue
+                count += 1
+                if count > 100:
+                    break
+                if rev > 0:
+                    url = request.adapter.build(self.diff, {
+                        'title': title,
+                        'from_rev': rev-1,
+                        'to_rev': lastrev.get(title, rev)
+                    })
+                elif rev == 0:
+                    url = request.adapter.build(self.revision, {
+                        'title': title, 'rev': rev})
+                else:
+                    url = request.adapter.build(self.history, {
+                        'title': title})
+                last[title] = author, comment
+                lastrev[title] = rev
+                yield u'<li>'
+                yield u'<a href="%s">%s</a> ' % (url, date.strftime('%F %H:%M'))
+                yield werkzeug.html.a(werkzeug.html(title),
+                                      href=request.get_url(title))
+                yield u' . . . . '
+                yield werkzeug.html.a(werkzeug.html(author),
+                                      href=request.get_url(author))
+                yield u'<div class="comment">%s</div>' % werkzeug.escape(comment)
+                yield u'</li>'
+            yield u'</ul>'
+
         page = self.get_page(request, u'history')
-        content = page.render_content(self.changes_list(request),
-            _(u'Recent changes'))
+        content = page.render_content(changes_list(), _(u'Recent changes'))
         response = werkzeug.Response(content, mimetype='text/html')
         response.set_etag('/history/%d' % self.storage.repo_revision())
         response.make_conditional(request)
         return response
-
-    def changes_list(self, request):
-        yield u'<ul>'
-        last = {}
-        lastrev = {}
-        count = 0
-        for title, rev, date, author, comment in self.storage.history():
-            if (author, comment) == last.get(title, (None, None)):
-                continue
-            count += 1
-            if count > 100:
-                break
-            if rev > 0:
-                url = request.adapter.build(self.diff, {
-                    'title': title,
-                    'from_rev': rev-1,
-                    'to_rev': lastrev.get(title, rev)
-                })
-            elif rev == 0:
-                url = request.adapter.build(self.revision, {
-                    'title': title, 'rev': rev})
-            else:
-                url = request.adapter.build(self.history, {
-                    'title': title})
-            last[title] = author, comment
-            lastrev[title] = rev
-            yield u'<li>'
-            yield u'<a href="%s">%s</a> ' % (url, date.strftime('%F %H:%M'))
-            yield werkzeug.html.a(werkzeug.html(title),
-                                  href=request.get_url(title))
-            yield u' . . . . '
-            yield werkzeug.html.a(werkzeug.html(author),
-                                  href=request.get_url(author))
-            yield u'<div class="comment">%s</div>' % werkzeug.escape(comment)
-            yield u'</li>'
-        yield u'</ul>'
 
     def diff(self, request, title, from_rev, to_rev):
         page = self.get_page(request, title)
@@ -2514,72 +2513,75 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 'link': werkzeug.html.a(werkzeug.html(title),
                                         href=request.get_url(title))
             })], diff)
-        special_title=_(u'Diff for "%(title)s"') % {'title': title}
+        special_title = _(u'Diff for "%(title)s"') % {'title': title}
         html = page.render_content(content, special_title)
         response = werkzeug.Response(html, mimetype='text/html')
         return response
 
     def search(self, request):
+        def page_index():
+            yield u'<p>%s</p>' % werkzeug.escape(_(u'Index of all pages.'))
+            yield u'<ul>'
+            for title in sorted(self.storage.all_pages()):
+                link = werkzeug.html.a(werkzeug.html(title),
+                                       href=request.get_url(title))
+                yield werkzeug.html.li(link)
+            yield u'</ul>'
+
+        def search_snippet(title, words):
+            """Extract a snippet of text for search results."""
+
+            text = unicode(self.storage.open_page(title).read(), "utf-8",
+                           "replace")
+            regexp = re.compile(u"|".join(re.escape(w) for w in words), re.U|re.I)
+            match = regexp.search(text)
+            if match is None:
+                return u""
+            position = match.start()
+            min_pos = max(position - 60, 0)
+            max_pos = min(position + 60, len(text))
+            snippet = werkzeug.escape(text[min_pos:max_pos])
+            highlighted = werkzeug.html.b(match.group(0), _class="highlight")
+            html = regexp.sub(highlighted, snippet)
+            return html
+
+        def page_search(words):
+            self.storage.reopen()
+            self.index.update()
+            result = sorted(self.index.find(words), key=lambda x:-x[0])
+            yield werkzeug.html.p(
+                _(u'%d page(s) containing all words:') % len(result))
+            yield u'<ul>'
+            for score, title in result:
+                try:
+                    snippet = search_snippet(title, words)
+                    link = werkzeug.html.a(werkzeug.html(title),
+                                           href=request.get_url(title))
+                    yield ('<li><b>%s</b> (%d)<div class="snippet">%s</div></li>'
+                           % (link, score, snippet))
+                except werkzeug.exceptions.NotFound:
+                    pass
+            yield u'</ul>'
+
         query = request.values.get('q', u'').strip()
         if not query:
-            content = self.page_index(request)
+            content = page_index()
             title = _(u'Page index')
         else:
             words = tuple(self.index.split_text(query, stop=False))
             if not words:
                 words = (query,)
             title = _(u'Searching for "%s"') % u" ".join(words)
-            content = self.page_search(request, words)
+            content = page_search(words)
         page = self.get_page(request, '')
         html = page.render_content(content, title)
         return WikiResponse(html, mimetype='text/html')
 
-    def page_index(self, request):
-        yield u'<p>%s</p>' % werkzeug.escape(_(u'Index of all pages.'))
-        yield u'<ul>'
-        for title in sorted(self.storage.all_pages()):
-            yield werkzeug.html.li(werkzeug.html.a(werkzeug.html(title),
-                                                   href=request.get_url(title)))
-        yield u'</ul>'
-
-    def page_search(self, request, words):
-        self.storage.reopen()
-        self.index.update()
-        result = sorted(self.index.find(words), key=lambda x:-x[0])
-        yield werkzeug.html.p(
-            _(u'%d page(s) containing all words:') % len(result))
-        yield u'<ul>'
-        for score, title in result:
-            try:
-                snippet = self.search_snippet(title, words)
-                link = werkzeug.html.a(werkzeug.html(title),
-                                       href=request.get_url(title))
-                yield ('<li><b>%s</b> (%d)<div class="snippet">%s</div></li>'
-                       % (link, score, snippet))
-            except werkzeug.exceptions.NotFound:
-                pass
-        yield u'</ul>'
-
-    def search_snippet(self, title, words):
-        """Extract a snippet of text for search results."""
-
-        text = unicode(self.storage.open_page(title).read(), "utf-8", "replace")
-        regexp = re.compile(u"|".join(re.escape(w) for w in words), re.U|re.I)
-        match = regexp.search(text)
-        if match is None:
-            return u""
-        position = match.start()
-        min_pos = max(position - 60, 0)
-        max_pos = min(position + 60, len(text))
-        snippet = werkzeug.escape(text[min_pos:max_pos])
-        highlighted = werkzeug.html.b(match.group(0), _class="highlight")
-        html = regexp.sub(highlighted, snippet)
-        return html
 
     def backlinks(self, request, title):
         """Serve the page with backlinks."""
 
-        def page_backlinks():
+        def content():
             yield u'<p>%s</p>' % (_(u'Pages that contain a link to %s.')
                 % werkzeug.html.a(werkzeug.html(title),
                                   href=request.get_url(title)))
@@ -2590,9 +2592,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             yield u'</ul>'
         self.storage.reopen()
         self.index.update()
-        content = page_backlinks()
         page = self.get_page(request, title)
-        html = page.render_content(content, _(u'Links to "%s"') % title)
+        html = page.render_content(content(), _(u'Links to "%s"') % title)
         response = werkzeug.Response(html, mimetype='text/html')
         response.set_etag('/search/%d' % self.storage.repo_revision())
         response.make_conditional(request)

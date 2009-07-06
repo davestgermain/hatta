@@ -52,7 +52,7 @@ import re
 import sqlite3
 import tempfile
 import thread
-import weakref
+# import weakref
 
 import werkzeug
 
@@ -2561,6 +2561,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         yield u'</ul>'
 
     def search_snippet(self, title, words):
+        """Extract a snippet of text for search results."""
+
         text = unicode(self.storage.open_page(title).read(), "utf-8", "replace")
         regexp = re.compile(u"|".join(re.escape(w) for w in words), re.U|re.I)
         match = regexp.search(text)
@@ -2575,9 +2577,20 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return html
 
     def backlinks(self, request, title):
+        """Serve the page with backlinks."""
+
+        def page_backlinks():
+            yield u'<p>%s</p>' % (_(u'Pages that contain a link to %s.')
+                % werkzeug.html.a(werkzeug.html(title),
+                                  href=request.get_url(title)))
+            yield u'<ul>'
+            for link in self.index.page_backlinks(title):
+                yield '<li>%s</li>' % werkzeug.html.a(werkzeug.html(link),
+                                                      href=request.get_url(link))
+            yield u'</ul>'
         self.storage.reopen()
         self.index.update()
-        content = self.page_backlinks(request, title)
+        content = page_backlinks()
         page = self.get_page(request, title)
         html = page.render_content(content, _(u'Links to "%s"') % title)
         response = werkzeug.Response(html, mimetype='text/html')
@@ -2585,17 +2598,9 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response.make_conditional(request)
         return response
 
-    def page_backlinks(self, request, title):
-        yield u'<p>%s</p>' % (_(u'Pages that contain a link to %s.')
-            % werkzeug.html.a(werkzeug.html(title),
-                              href=request.get_url(title)))
-        yield u'<ul>'
-        for link in self.index.page_backlinks(title):
-            yield '<li>%s</li>' % werkzeug.html.a(werkzeug.html(link),
-                                                  href=request.get_url(link))
-        yield u'</ul>'
-
     def favicon(self, request):
+        """Serve the default favicon."""
+
         icon = base64.b64decode(
 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhki'
 'AAAAAlwSFlzAAAEnQAABJ0BfDRroQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBo'
@@ -2687,7 +2692,7 @@ def main():
                 pass
             return
     apps = [('', wiki.application)]
-    name = config.site_name
+    name = wiki.site_name
     server = wsgiserver.CherryPyWSGIServer((host, port), apps, server_name=name)
     try:
         server.start()

@@ -2071,8 +2071,6 @@ class WikiPageCSV(WikiPageFile):
             for row in reader:
                 yield u'<tr>%s</tr>' % u''.join(u'<td>%s</td>' % cell 
                         for cell in row)
-                if reader.line_num == 2:
-                    raise csv.Error
         except csv.Error, e:
             yield u'</table>'
             yield _(u'<p>Error parsing csv file %s on line %d: %s'

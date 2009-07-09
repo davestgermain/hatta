@@ -260,7 +260,7 @@ class WikiStorage(object):
         self.repo_prefix = self.path[len(self.repo_path):].strip('/')
 
     def reopen(self):
-        """Closes and reopens the repo, to make sure we are up to date."""
+        """Close and reopen the repo, to make sure we are up to date."""
 
         self.repo = mercurial.hg.repository(self.ui, self.repo_path)
 
@@ -1414,6 +1414,8 @@ without would yet you your yours yourself yourselves""")).split())
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):
     """A typical HTTP response class made out of Werkzeug's mixins."""
+
+    pass
 
 
 class WikiTempFile(object):

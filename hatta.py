@@ -60,6 +60,7 @@ import werkzeug
 os.environ['HGENCODING'] = 'utf-8'
 os.environ['HGMERGE'] = "internal:merge"
 import mercurial.hg
+import mercurial.match
 import mercurial.ui
 import mercurial.revlog
 import mercurial.util
@@ -309,8 +310,9 @@ class WikiStorage(object):
         filectx = changectx[repo_file].filectx(parent)
         parent_node = filectx.changectx().node()
         self.repo.dirstate.setparents(parent_node)
-        node = self.repo.commit(files=[repo_file], text=text, user=user,
-                                force=True, empty_ok=True)
+        m = mercurial.match.exact(
+                root=self.path, cwd='', files=[repo_file])
+        node = self.repo.commit(text=text, user=user, match=m, force=True)
         def partial(filename):
             return repo_file == filename
         try:
@@ -355,9 +357,9 @@ class WikiStorage(object):
             msg = self.merge_changes(changectx, repo_file, text, user, parent)
             user = '<wiki>'
             text = msg.encode('utf-8')
-        self.repo.commit(files=[repo_file], text=text, user=user,
-                         force=True, empty_ok=True)
-
+        m = mercurial.match.exact(
+                root=self.path, cwd='', files=[repo_file])
+        self.repo.commit(text=text, user=user, match=m, force=True)
 
     def save_data(self, title, data, author=u'', comment=u'', parent=None):
         """Save data as specified page."""
@@ -397,22 +399,25 @@ class WikiStorage(object):
             yield unicode(data, self.charset, 'replace')
 
     def delete_page(self, title, author=u'', comment=u''):
+        """ TODO: fix locks """
         user = author.encode('utf-8') or 'anon'
         text = comment.encode('utf-8') or 'deleted'
         repo_file = self._title_to_file(title)
         file_path = self._file_path(title)
-        lock = self._lock()
-        try:
-            try:
-                os.unlink(file_path)
-            except OSError:
-                pass
-            self.repo.remove([repo_file])
-            self.repo.commit(files=[repo_file], text=text, user=user,
-                             force=True, empty_ok=True)
-        finally:
-            lock.release()
-            # del lock
+#        lock = self._lock()
+#        try:
+#            try:
+#                os.unlink(file_path)
+#            except OSError:
+#                pass
+        self.repo.remove([repo_file], unlink=True)
+        m = mercurial.match.exact(
+                root=self.path, cwd='', files=[repo_file])
+        self.repo.commit(text=text, user=user, match=m, force=True)
+#        finally:
+#            pass
+##            lock.release()
+#            # del lock
 
     def open_page(self, title):
         try:

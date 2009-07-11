@@ -233,16 +233,13 @@ def locked_repo(func):
 
         """Wrap the original function in locks."""
 
-        wlock = lock = None
         wlock = self.repo.wlock()
         lock = self.repo.lock()
         try:
             func(self, *args, **kwargs)
         finally:
-            for L in (lock, wlock):
-                if L is not None:
-                    L.release()
-            #mercurial.lock.release(lock, wlock)
+            lock.release()
+            wlock.release()
 
     return new_func
 

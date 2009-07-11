@@ -247,6 +247,7 @@ class WikiStorage(object):
             self.ui = mercurial.ui.ui(report_untrusted=False,
                                       interactive=False, quiet=True)
         except TypeError:
+            # Mercurial 1.3 changed the way we setup the ui object.
             self.ui = mercurial.ui.ui()
             self.ui.quiet = True
             self.ui._report_untrusted = False
@@ -363,11 +364,11 @@ class WikiStorage(object):
 
     def _commit(self, files, text, user):
         match = mercurial.match.exact(self.repo_path, '', list(files))
-        # Mercurial 1.3 doesn't accept empty_ok parameter
         try:
             return self.repo.commit(match=match, text=text, user=user,
                                     force=True, empty_ok=True)
         except TypeError:
+            # Mercurial 1.3 doesn't accept empty_ok parameter
             return self.repo.commit(match=match, text=text, user=user,
                                     force=True)
 

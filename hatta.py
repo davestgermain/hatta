@@ -254,11 +254,12 @@ class WikiStorage(object):
             self.ui.setconfig('ui', 'interactive', False)
         if self.repo_path is None:
             self.repo_path = self.path
-            self.repo = mercurial.hg.repository(self.ui, self.repo_path,
-                                                create=True)
+            create = True
         else:
-            self.repo = mercurial.hg.repository(self.ui, self.repo_path)
+            create = False
         self.repo_prefix = self.path[len(self.repo_path):].strip('/')
+        self.repo = mercurial.hg.repository(self.ui, self.repo_path,
+                                            create=create)
 
     def reopen(self):
         """Close and reopen the repo, to make sure we are up to date."""
@@ -415,18 +416,21 @@ class WikiStorage(object):
         text = comment.encode('utf-8') or 'deleted'
         repo_file = self._title_to_file(title)
         file_path = self._file_path(title)
-        lock = self._lock()
+        wlock = lock = None
+        wlock = self.repo.wlock()
+        lock = self.repo.lock()
         try:
             try:
                 os.unlink(file_path)
             except OSError:
                 pass
             self.repo.remove([repo_file])
-            self.repo.commit(files=[repo_file], text=text, user=user,
-                             force=True, empty_ok=True)
+            self._commit([repo_file], text, user)
         finally:
-            lock.release()
-            # del lock
+            for L in (lock, wlock):
+                if L is not None:
+                    L.release()
+            #mercurial.lock.release(lock, wlock)
 
     def open_page(self, title):
         try:

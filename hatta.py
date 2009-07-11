@@ -224,6 +224,28 @@ class WikiConfig(object):
             #    raise
             return default
 
+
+def locked_repo(func):
+    """A decorator for locking the repository when calling a method."""
+
+    def new_func(self, *args, **kwargs):
+        """Wrap the original function in locks."""
+
+        """Wrap the original function in locks."""
+
+        wlock = lock = None
+        wlock = self.repo.wlock()
+        lock = self.repo.lock()
+        try:
+            func(self, *args, **kwargs)
+        finally:
+            for L in (lock, wlock):
+                if L is not None:
+                    L.release()
+            #mercurial.lock.release(lock, wlock)
+
+    return new_func
+
 class WikiStorage(object):
     """
     Provides means of storing wiki pages and keeping track of their
@@ -293,20 +315,6 @@ class WikiStorage(object):
     def __iter__(self):
         return self.all_pages()
 
-    def save_file(self, title, file_name, author=u'', comment=u'', parent=None):
-        """Save an existing file as specified page."""
-
-        wlock = lock = None
-        wlock = self.repo.wlock()
-        lock = self.repo.lock()
-        try:
-            self.save_file_locked(title, file_name, author, comment, parent)
-        finally:
-            for L in (lock, wlock):
-                if L is not None:
-                    L.release()
-            #mercurial.lock.release(lock, wlock)
-
     def merge_changes(self, changectx, repo_file, text, user, parent):
         """Commits and merges conflicting changes in the repository."""
 
@@ -339,9 +347,9 @@ class WikiStorage(object):
             pass
         return msg
 
-    def save_file_locked(self, title, file_name, author=u'', comment=u'',
-                         parent=None):
-        """Locked save an existing file as specified page."""
+    @locked_repo
+    def save_file(self, title, file_name, author=u'', comment=u'', parent=None):
+        """Save an existing file as specified page."""
 
         user = author.encode('utf-8') or _(u'anon').encode('utf-8')
         text = comment.encode('utf-8') or _(u'comment').encode('utf-8')
@@ -411,26 +419,18 @@ class WikiStorage(object):
         for data in page:
             yield unicode(data, self.charset, 'replace')
 
+    @locked_repo
     def delete_page(self, title, author=u'', comment=u''):
         user = author.encode('utf-8') or 'anon'
         text = comment.encode('utf-8') or 'deleted'
         repo_file = self._title_to_file(title)
         file_path = self._file_path(title)
-        wlock = lock = None
-        wlock = self.repo.wlock()
-        lock = self.repo.lock()
         try:
-            try:
-                os.unlink(file_path)
-            except OSError:
-                pass
-            self.repo.remove([repo_file])
-            self._commit([repo_file], text, user)
-        finally:
-            for L in (lock, wlock):
-                if L is not None:
-                    L.release()
-            #mercurial.lock.release(lock, wlock)
+            os.unlink(file_path)
+        except OSError:
+            pass
+        self.repo.remove([repo_file])
+        self._commit([repo_file], text, user)
 
     def open_page(self, title):
         try:

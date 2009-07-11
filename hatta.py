@@ -309,8 +309,9 @@ class WikiStorage(object):
         filectx = changectx[repo_file].filectx(parent)
         parent_node = filectx.changectx().node()
         self.repo.dirstate.setparents(parent_node)
-        node = self.repo.commit(files=[repo_file], text=text, user=user,
-                                force=True, empty_ok=True)
+        node = self._commit([repo_file], text, user)
+#self.repo.commit(files=[repo_file], text=text, user=user,
+#                                force=True, empty_ok=True)
         def partial(filename):
             return repo_file == filename
         try:
@@ -355,8 +356,18 @@ class WikiStorage(object):
             msg = self.merge_changes(changectx, repo_file, text, user, parent)
             user = '<wiki>'
             text = msg.encode('utf-8')
-        self.repo.commit(files=[repo_file], text=text, user=user,
-                         force=True, empty_ok=True)
+        self._commit([repo_file], text, user)
+
+
+    def _commit(self, files, text, user):
+        match = mercurial.match.exact(self.repo_path, '', list(files))
+        # Mercurial 1.3 doesn't accept empty_ok parameter
+        try:
+            return self.repo.commit(match=match, text=text, user=user,
+                                    force=True, empty_ok=True)
+        except TypeError:
+            return self.repo.commit(match=match, text=text, user=user,
+                                    force=True)
 
 
     def save_data(self, title, data, author=u'', comment=u'', parent=None):
@@ -2333,6 +2344,8 @@ class Wiki(object):
         return response
 
     def rss(self, request):
+        """Serve an RSS feed of recent changes."""
+
         first_date = datetime.datetime.now()
         now = first_date.strftime("%a, %d %b %Y %H:%M:%S GMT")
         rss_body = []
@@ -2394,6 +2407,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
     def response(self, request, title, content, etag='', mime='text/html',
                  rev=None, date=None, set_size=False):
+        """Create a WikiResponse for a page."""
+
         response = WikiResponse(content, mimetype=mime)
         if rev is None:
             inode, size, mtime = self.storage.page_file_meta(title)
@@ -2410,6 +2425,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return response
 
     def download(self, request, title):
+        """Serve the raw content of a page."""
+
         mime = self.storage.page_mime(title)
         if mime == 'text/x-wiki':
             mime = 'text/plain'
@@ -2420,6 +2437,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return response
 
     def undo(self, request, title):
+        """Revert a change to a page."""
+
         self.check_lock(title)
         rev = None
         for key in request.form:
@@ -2450,6 +2469,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return werkzeug.redirect(url, 303)
 
     def history(self, request, title):
+        """Display history of changes of a page."""
+
         page = self.get_page(request, title)
         content = page.render_content(page.history_list(),
             _(u'History of "%(title)s"') % {'title': title})
@@ -2457,6 +2478,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return response
 
     def recent_changes(self, request):
+        """Serve the recent changes page."""
+
         def changes_list():
             yield u'<ul>'
             last = {}
@@ -2501,6 +2524,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return response
 
     def diff(self, request, title, from_rev, to_rev):
+        """Serve the differences between specified revisions."""
+
         page = self.get_page(request, title)
         diff = page.diff_content(from_rev, to_rev)
         from_url = request.adapter.build(self.revision,
@@ -2521,6 +2546,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return response
 
     def search(self, request):
+        """Serve the search results page."""
+
         def page_index():
             yield u'<p>%s</p>' % werkzeug.escape(_(u'Index of all pages.'))
             yield u'<ul>'
@@ -2623,15 +2650,20 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return werkzeug.Response(icon, mimetype='image/x-icon')
 
     def robots(self, request):
+        """Serve the robots directives."""
+
         robots = ('User-agent: *\r\n'
                   'Disallow: /edit\r\n'
                   'Disallow: /rss\r\n'
+                  'Disallow: /feed\r\n'
                   'Disallow: /history\r\n'
                   'Disallow: /search\r\n'
                  )
         return werkzeug.Response(robots, mimetype='text/plain')
 
     def die(self, request):
+        """Terminate the standalone server if invoked from localhost."""
+
         if not request.remote_addr.startswith('127.'):
             raise werkzeug.exceptions.Forbidden()
         def agony():
@@ -2657,9 +2689,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             del adapter
 
 def main():
-    """
-    Starts a standalone WSGI server.
-    """
+    """Start a standalone WSGI server."""
 
     import wsgiref.simple_server
 

@@ -248,6 +248,9 @@ class WikiStorage(object):
                                       interactive=False, quiet=True)
         except TypeError:
             self.ui = mercurial.ui.ui()
+            self.ui.quiet = True
+            self.ui._report_untrusted = False
+            self.ui.setconfig('ui', 'interactive', False)
         if self.repo_path is None:
             self.repo_path = self.path
             self.repo = mercurial.hg.repository(self.ui, self.repo_path,
@@ -310,8 +313,7 @@ class WikiStorage(object):
         parent_node = filectx.changectx().node()
         self.repo.dirstate.setparents(parent_node)
         node = self._commit([repo_file], text, user)
-#self.repo.commit(files=[repo_file], text=text, user=user,
-#                                force=True, empty_ok=True)
+
         def partial(filename):
             return repo_file == filename
         try:

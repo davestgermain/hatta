@@ -67,3 +67,13 @@ class TestMercurialStorage(object):
         repo.save_text(title, text2, author, comment, parent=0)
         saved = repo.open_page(title).read()
         assert saved == u'text\ntext'
+
+    def test_delete(self, repo):
+        text = u"text test"
+        title = u"test title"
+        author = u"test author"
+        comment = u"test comment"
+        repo.save_text(title, text, author, comment, parent=-1)
+        assert title in repo
+        repo.delete_page(title, author, comment)
+        assert title not in repo

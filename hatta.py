@@ -1770,7 +1770,7 @@ for (var j = 0; j < tagList.length; ++j) {
                 url = request.adapter.build(self.wiki.revision, {
                     'title': title, 'rev': rev})
             yield u'<li>'
-            yield werkzeug.html.a(date.strftime('%F %H:%M'), href=url)
+            yield werkzeug.html.a(date.strftime('%Y-%m-%d %H:%M'), href=url)
             if not self.config.get('read_only', False):
                 yield (u'<input type="submit" name="%d" value="Undo" '
                        u'class="button">' % rev)
@@ -2508,7 +2508,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 last[title] = author, comment
                 lastrev[title] = rev
                 yield u'<li>'
-                yield u'<a href="%s">%s</a> ' % (url, date.strftime('%F %H:%M'))
+                yield u'<a href="%s">%s</a> ' % (url, date.strftime('%Y-%m-%d %H:%M'))
                 yield werkzeug.html.a(werkzeug.html(title),
                                       href=request.get_url(title))
                 yield u' . . . . '

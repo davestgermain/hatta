@@ -301,6 +301,7 @@ class WikiStorage(object):
                             werkzeug.url_quote(title, safe=''))
 
     def _file_to_title(self, filename):
+        assert filename.startswith(self.repo_prefix)
         name = filename[len(self.repo_prefix):].strip('/')
         return werkzeug.url_unquote(name)
 

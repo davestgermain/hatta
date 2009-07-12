@@ -64,7 +64,7 @@ import mercurial.ui
 import mercurial.revlog
 import mercurial.util
 
-__version__ = '1.3.1-dev'
+__version__ = '1.3.2'
 
 def external_link(addr):
     """

@@ -317,11 +317,11 @@ class WikiStorage(object):
         tip_node = changectx.node()
         filectx = changectx[repo_file].filectx(parent)
         parent_node = filectx.changectx().node()
+
         self.repo.dirstate.setparents(parent_node)
         node = self._commit([repo_file], text, user)
 
-        def partial(filename):
-            return repo_file == filename
+        partial = lambda filename: repo_file == filename
         try:
             unresolved = mercurial.merge.update(self.repo, tip_node,
                                                 True, False, partial)
@@ -359,8 +359,7 @@ class WikiStorage(object):
         except mercurial.revlog.LookupError:
             self.repo.add([repo_file])
             current_page_rev = -1
-        if current_page_rev != parent:
-            #self.merge_changes(changectx, current_page_rev, file_path)
+        if parent is not None and current_page_rev != parent:
             msg = self.merge_changes(changectx, repo_file, text, user, parent)
             user = '<wiki>'
             text = msg.encode('utf-8')

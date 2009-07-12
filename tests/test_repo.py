@@ -34,7 +34,6 @@ class TestMercurialStorage(object):
         saved = repo.open_page(title).read()
         assert saved == text
 
-    @py.test.mark.xfail
     def test_save_text_noparent(self, repo):
         text = u"test text"
         title = u"test title"

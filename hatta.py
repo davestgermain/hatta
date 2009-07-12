@@ -231,8 +231,6 @@ def locked_repo(func):
     def new_func(self, *args, **kwargs):
         """Wrap the original function in locks."""
 
-        """Wrap the original function in locks."""
-
         wlock = self.repo.wlock()
         lock = self.repo.lock()
         try:

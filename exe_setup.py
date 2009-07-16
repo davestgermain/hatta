@@ -141,7 +141,7 @@ setup(
     description='Wiki engine that lives in Mercurial repository.',
     long_description=hatta.__doc__,
     keywords='wiki wsgi web mercurial repository',
-    py_modules=['hatta', 'hatta_jp'],
+    py_modules=['hatta'],
     data_files=[
         ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
         ('share/locale/ar/LC_MESSAGES', ['locale/ar/LC_MESSAGES/hatta.mo']),

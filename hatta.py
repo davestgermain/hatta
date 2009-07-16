@@ -136,19 +136,15 @@ class WikiConfig(object):
         """
         Convert options to their required types.
         """
-        return # XXX
+        if self.get('read_only', False) in (True, 'True', 'true', 'TRUE',
+                                            '1', 'on', 'On', 'ON'):
+            self.config['read_only'] = True
+        else:
+            self.config['read_only'] = False
         try:
-            if self.read_only in (True, 'True', 'true', 'TRUE',
-                                  '1', 'on', 'On', 'ON'):
-                self.read_only = True
-            else:
-                self.read_only = False
-        except AttributeError:
-            pass
-        try:
-            self.port = int(self.port or 0)
-        except AttributeError:
-            pass
+            self.config['port'] = int(self.get('port', 0))
+        except ValueError:
+            self.config['port'] = 8080
 
     def parse_environ(self):
         """Check the environment variables for options."""

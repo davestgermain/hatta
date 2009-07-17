@@ -50,9 +50,13 @@ import mimetypes
 import os
 import re
 import sqlite3
+import sys
 import tempfile
 import thread
-# import weakref
+
+# Avoid WSGI errors, see http://mercurial.selenic.com/bts/issue1095
+sys.stdout = sys.__stdout__
+sys.stderr = sys.__stderr__
 
 import werkzeug
 

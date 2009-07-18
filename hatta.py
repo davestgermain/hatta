@@ -352,7 +352,7 @@ class WikiStorage(object):
         repo_file = self._title_to_file(title)
         file_path = self._file_path(title)
         mercurial.util.rename(file_name, file_path)
-        changectx = self.repo.changectx('tip')
+        changectx = self._changectx()
         try:
             filectx_tip = changectx[repo_file]
             current_page_rev = filectx_tip.filerev()
@@ -367,12 +367,12 @@ class WikiStorage(object):
 
 
     def _commit(self, files, text, user):
-        match = mercurial.match.exact(self.repo_path, '', list(files))
         try:
-            return self.repo.commit(match=match, text=text, user=user,
+            return self.repo.commit(files=files, text=text, user=user,
                                     force=True, empty_ok=True)
         except TypeError:
-            # Mercurial 1.3 doesn't accept empty_ok parameter
+            # Mercurial 1.3 doesn't accept empty_ok or files parameter
+            match = mercurial.match.exact(self.repo_path, '', list(files))
             return self.repo.commit(match=match, text=text, user=user,
                                     force=True)
 
@@ -456,12 +456,10 @@ class WikiStorage(object):
         author = unicode(filectx.user(), "utf-8",
                          'replace').split('<')[0].strip()
         comment = unicode(filectx.description(), "utf-8", 'replace')
-        del filectx_tip
-        del filectx
         return rev, date, author, comment
 
     def repo_revision(self):
-        return self.repo.changectx('tip').rev()
+        return self._changectx().rev()
 
     def page_mime(self, title):
         """Guess page's mime type ased on corresponding file name."""
@@ -469,11 +467,21 @@ class WikiStorage(object):
         file_path = self._file_path(title)
         return page_mime(file_path)
 
+
+    def _changectx(self):
+        """Get the changectx of the tip."""
+        try:
+            # This is for Mercurial 1.0
+            return self.repo.changectx()
+        except TypeError:
+            # Mercurial 1.3 (and possibly earlier) needs an argument
+            return self.repo.changectx('tip')
+
     def _find_filectx(self, title):
         """Find the last revision in which the file existed."""
 
         repo_file = self._title_to_file(title)
-        changectx = self.repo.changectx('tip')
+        changectx = self._changectx()
         stack = [changectx]
         while repo_file not in changectx:
             if not stack:
@@ -520,7 +528,7 @@ class WikiStorage(object):
     def history(self):
         """Iterate over the history of entire wiki."""
 
-        changectx = self.repo.changectx('tip')
+        changectx = self._changectx()
         maxrev = changectx.rev()
         minrev = 0
         for wiki_rev in range(maxrev, minrev-1, -1):
@@ -1761,7 +1769,7 @@ for (var j = 0; j < tagList.length; ++j) {
         url = request.get_url(title, self.wiki.undo, method='POST')
         yield u'<form action="%s" method="POST"><ul class="history">' % url
         for rev, date, author, comment in self.storage.page_history(title):
-            if max_rev < 0:
+            if max_rev < rev:
                 max_rev = rev
             if rev > 0:
                 url = request.adapter.build(self.wiki.diff, {

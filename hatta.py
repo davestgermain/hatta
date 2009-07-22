@@ -1279,10 +1279,6 @@ without would yet you your yours yourself yourselves""")).split())
             idents = c.fetchone()
         return idents[0]
 
-    def id_title(self, ident, con):
-        c = con.execute('select title from titles where id=?;', (ident,))
-        return c.fetchone()[0]
-
     def update_words(self, title, text, cursor):
         title_id = self.title_id(title, cursor)
         words = self.count_words(self.split_text(text))
@@ -1304,9 +1300,11 @@ without would yet you your yours yourself yourselves""")).split())
     def page_backlinks(self, title):
         con = self.con # sqlite3.connect(self.filename)
         try:
-            sql = 'select distinct(src) from links where target=? order by number;'
-            for (ident,) in con.execute(sql, (title,)):
-                yield self.id_title(ident, con)
+            sql = ('SELECT distinct(titles.title) FROM links, titles '
+                   'WHERE links.target=? AND titles.id=links.src '
+                   'ORDER BY links.number;')
+            for (backlink,) in con.execute(sql, (title,)):
+                yield backlink
         finally:
             con.commit()
 
@@ -1339,13 +1337,15 @@ without would yet you your yours yourself yourselves""")).split())
             first = words[0]
             rest = words[1:]
             pattern = '%%%s%%' % first
-            first_counts = con.execute('select page, count from words '
-                                        'where word like ?;', (pattern,))
+            sql = ('SELECT words.page, words.count, titles.title '
+                   'FROM words, titles WHERE word LIKE ? '
+                   'AND titles.id=words.page;')
+            first_counts = con.execute(sql, (pattern,))
             first_hits = {}
-            for title_id, count in first_counts:
-                first_hits[title_id] = first_hits.get(title_id, 0)+count
+            for title_id, count, title in first_counts:
+                first_hits[(title, title_id)] = first_hits.get(title, 0)+count
 
-            for title_id, score in first_hits.iteritems():
+            for (title, title_id), score in first_hits.iteritems():
                 got = True
                 for word in rest:
                     pattern = '%%%s%%' % word
@@ -1357,7 +1357,7 @@ without would yet you your yours yourself yourselves""")).split())
                         score += count[0]
                         got = True
                 if got and score > 0:
-                    yield score, self.id_title(title_id, con)
+                    yield score, title
         finally:
             con.commit()
 

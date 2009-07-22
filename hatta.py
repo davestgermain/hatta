@@ -1304,7 +1304,7 @@ without would yet you your yours yourself yourselves""")).split())
     def page_backlinks(self, title):
         con = self.con # sqlite3.connect(self.filename)
         try:
-            sql = 'select src from links where target=? order by number;'
+            sql = 'select distinct(src) from links where target=? order by number;'
             for (ident,) in con.execute(sql, (title,)):
                 yield self.id_title(ident, con)
         finally:

@@ -6,7 +6,6 @@ An example of how you can extend Hatta's parser without touching the
 original code.
 """
 import hatta
-import wsgiref.simple_server
 import re
 
 class MyWikiParser(hatta.WikiParser):
@@ -38,24 +37,7 @@ class MyWikiParser(hatta.WikiParser):
                   % ur"|".join(re.escape(k) for k in smilies),
         "text": ur".+?",
     } # note that the priority is alphabetical
-    markup_re = re.compile(ur"|".join("(?P<%s>%s)" % kv
-                           for kv in sorted(markup.iteritems())))
 
-
-class MyWiki(hatta.Wiki):
-    parser_class = MyWikiParser
-
-
-config = hatta.WikiConfig()
-config.parse_args()
-config.parse_files()
-config.sanitize()
-host, port = config.interface, int(config.port)
-wiki = MyWiki(config)
-server = wsgiref.simple_server.make_server(host, port, wiki.application)
-try:
-    server.serve_forever()
-except KeyboardInterrupt:
-    pass
-
+hatta.WikiParser = MyWikiParser
+hatta.main()
 

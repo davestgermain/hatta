@@ -125,7 +125,8 @@ class WikiConfig(object):
     default settings.
 
     >>> config = WikiConfig(port='2080')
-    >>> config.port
+    >>> config.sanitize()
+    >>> config.get('port')
     2080
     """
 
@@ -133,7 +134,7 @@ class WikiConfig(object):
     # Please see the bottom of the script for modifying these values.
 
     def __init__(self, **kw):
-        self.config = kw
+        self.config = dict(kw)
         self.parse_environ()
 
     def sanitize(self):
@@ -214,15 +215,21 @@ class WikiConfig(object):
             for option, value in parser.items(section):
                 self.config[option] = value
 
-    def get(self, option, default=None):
-        """Get the value of a config option or default if not set."""
+    def get(self, opt, default_value=None):
+        """
+        Get the value of a config option or default if not set.
 
-        try:
-            return self.config[option]
-        except KeyError:
-            #if option not in self.options:
-            #    raise
-            return default
+        >>> config = WikiConfig(option=4)
+        >>> config.get("ziew", 3)
+        3
+        >>> config.get("ziew")
+        >>> config.get("ziew", "ziew")
+        'ziew'
+        >>> config.get("option")
+        4
+        """
+
+        return self.config.get(opt, default_value)
 
 
 def locked_repo(func):

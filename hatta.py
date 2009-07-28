@@ -1339,7 +1339,14 @@ without would yet you your yours yourself yourselves""")).split())
         """Returns an iterator of all pages containing the words, and their
             scores."""
 
+
         con = self.con # sqlite3.connect(self.filename)
+
+        def word_rank(word):
+            sql = 'SELECT SUM(words.count) FROM words WHERE word LIKE ?;'
+            rank = float(con.execute(sql, ('%%%s%%' % word,)).fetchone()[0])
+            return rank
+
         try:
             first = words[0]
             rest = words[1:]
@@ -1350,21 +1357,24 @@ without would yet you your yours yourself yourselves""")).split())
             first_counts = con.execute(sql, (pattern,))
             first_hits = {}
             for title_id, count, title in first_counts:
-                first_hits[(title, title_id)] = first_hits.get(title, 0)+count
+                first_hits[(title, title_id)] = first_hits.get((title, title_id), 0)+count
+            first_rank = word_rank(first)
 
-            for (title, title_id), score in first_hits.iteritems():
+            for (title, title_id), first_count in first_hits.iteritems():
+                score = first_count/first_rank
                 got = True
                 for word in rest:
-                    pattern = '%%%s%%' % word
-                    counts = con.execute('select count from words '
-                                         'where word like ? and page=?;',
-                                         (pattern, title_id))
+                    counts = con.execute('SELECT count FROM words '
+                                         'WHERE word LIKE ? AND page=?;',
+                                         ('%%%s%%' % word, title_id))
                     got = False
+                    word_score = 0.0
                     for count in counts:
-                        score += count[0]
+                        word_score += float(count[0])
                         got = True
+                    score += word_score/word_rank(word)
                 if got and score > 0:
-                    yield score, title
+                    yield int(100*score), title
         finally:
             con.commit()
 
@@ -2603,7 +2613,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                     snippet = search_snippet(title, words)
                     link = werkzeug.html.a(werkzeug.html(title),
                                            href=request.get_url(title))
-                    yield ('<li><b>%s</b> (%d)<div class="snippet">%s</div></li>'
+                    yield ('<li><b>%s</b> <i>(%d)</i><div class="snippet">%s</div></li>'
                            % (link, score, snippet))
                 except werkzeug.exceptions.NotFound:
                     pass

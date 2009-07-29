@@ -1370,8 +1370,6 @@ without would yet you your yours yourself yourselves""")).split())
             for title_id, title, first_count in first_counts:
                 # Score for the first word
                 score = float(first_count)/first_rank
-                print repr(title)
-                print " * ", first, first_rank, first_count
                 for rank, word in rest:
                     sql = ('SELECT SUM(count) FROM words '
                            'WHERE page=? AND word LIKE ?;')
@@ -1381,7 +1379,6 @@ without would yet you your yours yourself yourselves""")).split())
                         # If page misses any of the words, its score is 0
                         score = 0
                         break
-                    print " * ", word, rank, count
                     score += float(count)/rank
                 if score > 0:
                     yield int(100*score), title

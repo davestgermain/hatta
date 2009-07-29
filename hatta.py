@@ -1205,8 +1205,6 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
                          'ON words (page);')
         self.con.execute('CREATE INDEX IF NOT EXISTS index2 '
                          'ON words (word);')
-#        self.con.execute('CREATE INDEX IF NOT EXISTS index3 '
-#                         'ON words (word, count);')
         self.con.execute('CREATE TABLE IF NOT EXISTS links '
                 '(src INTEGER, target INTEGER, label VARCHAR, number INTEGER);')
         self.con.commit()
@@ -1288,7 +1286,7 @@ without would yet you your yours yourself yourselves""")).split())
         idents = c.fetchone()
         if idents is None:
             con.execute('INSERT INTO titles (title) VALUES (?);', (title,))
-            c = con.execute('SELECT last_insert_rowid();')
+            c = con.execute('SELECT LAST_INSERT_ROWID();')
             idents = c.fetchone()
         return idents[0]
 
@@ -1313,7 +1311,7 @@ without would yet you your yours yourself yourselves""")).split())
     def page_backlinks(self, title):
         con = self.con # sqlite3.connect(self.filename)
         try:
-            sql = ('SELECT distinct(titles.title) '
+            sql = ('SELECT DISTINCT(titles.title) '
                    'FROM links, titles '
                    'WHERE links.target=? AND titles.id=links.src '
                    'ORDER BY titles.title;')
@@ -1408,37 +1406,43 @@ without would yet you your yours yourself yourselves""")).split())
         if text is None and data is not None:
             text = unicode(data, self.storage.charset, 'replace')
         cursor = self.con.cursor()
-        cursor.execute('begin immediate transaction;')
+        cursor.execute('BEGIN IMMEDIATE TRANSACTION;')
         try:
             self.set_last_revision(self.storage.repo_revision())
             self.reindex_page(title, cursor, text)
-            cursor.execute('commit transaction;')
+            cursor.execute('COMMIT TRANSACTION;')
         except:
-            cursor.execute('rollback;')
+            cursor.execute('ROLLBACK;')
             raise
 
     def reindex(self, pages):
         """Updates specified pages in bulk."""
 
         cursor = self.con.cursor()
-        cursor.execute('begin immediate transaction;')
+        cursor.execute('BEGIN IMMEDIATE TRANSACTION;')
         try:
             for title in pages:
                 self.reindex_page(title, cursor)
-            cursor.execute('commit transaction;')
+            cursor.execute('COMMIT TRANSACTION;')
             self.empty = False
         except:
-            cursor.execute('rollback;')
+            cursor.execute('ROLLBACK;')
             raise
 
     def set_last_revision(self, rev):
-        # XXX we use % here because the sqlite3's substitiution doesn't work
-        self.con.execute('pragma user_version=%d;' % (int(rev+1),))
+        """Store the last indexed repository revision."""
+
+        # We use % here because the sqlite3's substitiution doesn't work
+        # We store revision 0 as 1, 1 as 2, etc. because 0 means "no revision"
+        self.con.execute('PRAGMA USER_VERSION=%d;' % (int(rev+1),))
 
     def get_last_revision(self):
+        """Retrieve the last indexed repository revision."""
+
         con = self.con
-        c = con.execute('pragma user_version;')
+        c = con.execute('PRAGMA USER_VERSION;')
         rev = c.fetchone()[0]
+        # -1 means "no revision", 1 means revision 0, 2 means revision 1, etc.
         return rev-1
 
     def update(self):

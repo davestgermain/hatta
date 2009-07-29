@@ -1344,8 +1344,8 @@ without would yet you your yours yourself yourselves""")).split())
 
         def word_rank(word):
             sql = 'SELECT SUM(words.count) FROM words WHERE word LIKE ?;'
-            rank = float(con.execute(sql, ('%%%s%%' % word,)).fetchone()[0])
-            return rank
+            rank = con.execute(sql, ('%%%s%%' % word,)).fetchone()[0] or 0
+            return float(rank)
 
         try:
             first = words[0]
@@ -1356,14 +1356,24 @@ without would yet you your yours yourself yourselves""")).split())
                    'AND titles.id=words.page;')
             first_counts = con.execute(sql, (pattern,))
             first_hits = {}
+            got = False
             for title_id, count, title in first_counts:
-                first_hits[(title, title_id)] = first_hits.get((title, title_id), 0)+count
+                if count>0:
+                    first_hits[(title,
+                                title_id)] = first_hits.get((title,
+                                                             title_id), 0)+count
+                    got = True
             first_rank = word_rank(first)
+            if not got or first_rank==0:
+                return
 
             for (title, title_id), first_count in first_hits.iteritems():
                 score = first_count/first_rank
                 got = True
                 for word in rest:
+                    rank = word_rank(word)
+                    if rank == 0:
+                        return
                     counts = con.execute('SELECT count FROM words '
                                          'WHERE word LIKE ? AND page=?;',
                                          ('%%%s%%' % word, title_id))
@@ -1372,7 +1382,7 @@ without would yet you your yours yourself yourselves""")).split())
                     for count in counts:
                         word_score += float(count[0])
                         got = True
-                    score += word_score/word_rank(word)
+                    score += word_score/rank
                 if got and score > 0:
                     yield int(100*score), title
         finally:

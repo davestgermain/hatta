@@ -1197,12 +1197,18 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         else:
             self.empty = False
         con = self.con # sqlite3.connect(self.filename)
-        self.con.execute('create table if not exists titles '
-                '(id integer primary key, title varchar);')
-        self.con.execute('create table if not exists words '
-                '(word varchar, page integer, count integer);')
-        self.con.execute('create table if not exists links '
-                '(src integer, target integer, label varchar, number integer);')
+        self.con.execute('CREATE TABLE IF NOT EXISTS titles '
+                '(id INTEGER PRIMARY KEY, title VARCHAR);')
+        self.con.execute('CREATE TABLE IF NOT EXISTS words '
+                '(word VARCHAR, page INTEGER, count INTEGER);')
+        self.con.execute('CREATE INDEX IF NOT EXISTS index1 '
+                         'ON words (page);')
+        self.con.execute('CREATE INDEX IF NOT EXISTS index2 '
+                         'ON words (word);')
+#        self.con.execute('CREATE INDEX IF NOT EXISTS index3 '
+#                         'ON words (word, count);')
+        self.con.execute('CREATE TABLE IF NOT EXISTS links '
+                '(src INTEGER, target INTEGER, label VARCHAR, number INTEGER);')
         self.con.commit()
         self.stop_words_re = re.compile(u'^('+u'|'.join(re.escape(_(
 u"""am ii iii per po re a about above
@@ -1299,17 +1305,18 @@ without would yet you your yours yourself yourselves""")).split())
 
     def update_links(self, title, links_and_labels, cursor):
         title_id = self.title_id(title, cursor)
-        cursor.execute('delete from links where src=?;', (title_id,))
+        cursor.execute('DELETE FROM links WHERE src=?;', (title_id,))
         for number, (link, label) in enumerate(links_and_labels):
-            cursor.execute('insert into links values (?, ?, ?, ?);',
+            cursor.execute('INSERT INTO links VALUES (?, ?, ?, ?);',
                              (title_id, link, label, number))
 
     def page_backlinks(self, title):
         con = self.con # sqlite3.connect(self.filename)
         try:
-            sql = ('SELECT distinct(titles.title) FROM links, titles '
+            sql = ('SELECT distinct(titles.title) '
+                   'FROM links, titles '
                    'WHERE links.target=? AND titles.id=links.src '
-                   'ORDER BY links.number;')
+                   'ORDER BY titles.title;')
             for (backlink,) in con.execute(sql, (title,)):
                 yield backlink
         finally:
@@ -1319,7 +1326,7 @@ without would yet you your yours yourself yourselves""")).split())
         con = self.con # sqlite3.connect(self.filename)
         try:
             title_id = self.title_id(title, con)
-            sql = 'select target from links where src=? order by number;'
+            sql = 'SELECT TARGET from links where src=? ORDER BY number;'
             for (link,) in con.execute(sql, (title_id,)):
                 yield link
         finally:
@@ -1329,7 +1336,7 @@ without would yet you your yours yourself yourselves""")).split())
         con = self.con # sqlite3.connect(self.filename)
         try:
             title_id = self.title_id(title, con)
-            sql = 'select target, label from links where src=? order by number;'
+            sql = 'SELECT target, label FROM links WHERE src=? ORDER BY number;'
             for link_and_label in con.execute(sql, (title_id,)):
                 yield link_and_label
         finally:
@@ -1353,11 +1360,11 @@ without would yet you your yours yourself yourselves""")).split())
                 ranks.append((word_rank(word), word))
             ranks.sort()
             first_rank, first = ranks[0]
-            rest = [w for (r, w) in ranks[1:]]
+            rest = ranks[1:]
             pattern = '%%%s%%' % first
             sql = ('SELECT words.page, words.count, titles.title '
-                   'FROM words, titles WHERE word LIKE ? '
-                   'AND titles.id=words.page;')
+                   'FROM words, titles '
+                   'WHERE word LIKE ? AND titles.id=words.page;')
             first_counts = con.execute(sql, (pattern,))
             first_hits = {}
             got = False
@@ -1374,13 +1381,13 @@ without would yet you your yours yourself yourselves""")).split())
             for (title, title_id), first_count in first_hits.iteritems():
                 score = first_count/first_rank
                 got = True
-                #print repr(title)
-                #print " * ", first, first_rank, first_count
-                for word in rest:
-                    rank = word_rank(word)
+                # print repr(title)
+                # print " * ", first, first_rank, first_count
+                for rank, word in rest:
                     if rank == 0:
                         return
-                    sql = ('SELECT SUM(count) FROM words '
+                    sql = ('SELECT SUM(count) '
+                           'FROM words '
                            'WHERE page=? AND word LIKE ?;')
                     count = con.execute(sql, (title_id,
                                               '%%%s%%' % word)).fetchone()[0]
@@ -1432,7 +1439,6 @@ without would yet you your yours yourself yourselves""")).split())
         cursor = self.con.cursor()
         cursor.execute('begin immediate transaction;')
         try:
-            self.set_last_revision(self.storage.repo_revision())
             for title in pages:
                 self.reindex_page(title, cursor)
             cursor.execute('commit transaction;')
@@ -1443,19 +1449,25 @@ without would yet you your yours yourself yourselves""")).split())
 
     def set_last_revision(self, rev):
         # XXX we use % here because the sqlite3's substitiution doesn't work
-        self.con.execute('pragma user_version=%d;' % (int(rev),))
+        self.con.execute('pragma user_version=%d;' % (int(rev+1),))
 
     def get_last_revision(self):
         con = self.con
         c = con.execute('pragma user_version;')
         rev = c.fetchone()[0]
-        return rev
+        return rev-1
 
     def update(self):
         """Reindex al pages that changed since last indexing."""
 
-        changed = self.storage.changed_since(self.get_last_revision())
+        last_rev = self.get_last_revision()
+        if last_rev == -1:
+            changed = self.storage.all_pages()
+        else:
+            changed = self.storage.changed_since(last_rev)
         self.reindex(changed)
+        rev = self.storage.repo_revision()
+        self.set_last_revision(rev)
 
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,

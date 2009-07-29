@@ -1346,57 +1346,44 @@ without would yet you your yours yourself yourselves""")).split())
         """Returns an iterator of all pages containing the words, and their
             scores."""
 
-
-        con = self.con # sqlite3.connect(self.filename)
-
-        def word_rank(word):
-            sql = 'SELECT SUM(words.count) FROM words WHERE word LIKE ?;'
-            rank = con.execute(sql, ('%%%s%%' % word,)).fetchone()[0] or 0
-            return float(rank)
-
+        con = self.con
         try:
             ranks = []
             for word in words:
-                ranks.append((word_rank(word), word))
+                # Calculate popularity of each word.
+                sql = 'SELECT SUM(words.count) FROM words WHERE word LIKE ?;'
+                rank = con.execute(sql, ('%%%s%%' % word,)).fetchone()[0]
+                # If any rank is 0, there will be no results anyways
+                if not rank:
+                    return
+                ranks.append((rank, word))
             ranks.sort()
+            # Start with the least popular word. Get all pages that contain it.
             first_rank, first = ranks[0]
             rest = ranks[1:]
-            pattern = '%%%s%%' % first
-            sql = ('SELECT words.page, words.count, titles.title '
+            sql = ('SELECT words.page, titles.title, SUM(words.count) '
                    'FROM words, titles '
-                   'WHERE word LIKE ? AND titles.id=words.page;')
-            first_counts = con.execute(sql, (pattern,))
-            first_hits = {}
-            got = False
-            for title_id, count, title in first_counts:
-                if count>0:
-                    first_hits[(title,
-                                title_id)] = first_hits.get((title,
-                                                             title_id), 0)+count
-                    got = True
-            if not got or first_rank==0:
-                return
-
-
-            for (title, title_id), first_count in first_hits.iteritems():
-                score = first_count/first_rank
-                got = True
-                # print repr(title)
-                # print " * ", first, first_rank, first_count
+                   'WHERE word LIKE ? AND titles.id=words.page '
+                   'GROUP BY words.page;')
+            first_counts = con.execute(sql, ('%%%s%%' % first,))
+            # Check for the rest of words
+            for title_id, title, first_count in first_counts:
+                # Score for the first word
+                score = float(first_count)/first_rank
+                print repr(title)
+                print " * ", first, first_rank, first_count
                 for rank, word in rest:
-                    if rank == 0:
-                        return
-                    sql = ('SELECT SUM(count) '
-                           'FROM words '
+                    sql = ('SELECT SUM(count) FROM words '
                            'WHERE page=? AND word LIKE ?;')
-                    count = con.execute(sql, (title_id,
-                                              '%%%s%%' % word)).fetchone()[0]
+                    count = con.execute(sql,
+                        (title_id, '%%%s%%' % word)).fetchone()[0]
                     if not count:
-                        got = False
+                        # If page misses any of the words, its score is 0
+                        score = 0
                         break
-                    # print " * ", word, rank, count
+                    print " * ", word, rank, count
                     score += float(count)/rank
-                if got and score > 0:
+                if score > 0:
                     yield int(100*score), title
         finally:
             con.commit()
@@ -1468,7 +1455,6 @@ without would yet you your yours yourself yourselves""")).split())
         self.reindex(changed)
         rev = self.storage.repo_revision()
         self.set_last_revision(rev)
-
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):

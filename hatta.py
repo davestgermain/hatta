@@ -1278,11 +1278,11 @@ without would yet you your yours yourself yourselves""")).split())
         return count
 
     def title_id(self, title, con):
-        c = con.execute('select id from titles where title=?;', (title,))
+        c = con.execute('SELECT id FROM titles WHERE title=?;', (title,))
         idents = c.fetchone()
         if idents is None:
-            con.execute('insert into titles (title) values (?);', (title,))
-            c = con.execute('select last_insert_rowid();')
+            con.execute('INSERT INTO titles (title) VALUES (?);', (title,))
+            c = con.execute('SELECT last_insert_rowid();')
             idents = c.fetchone()
         return idents[0]
 
@@ -1292,9 +1292,9 @@ without would yet you your yours yourself yourselves""")).split())
         title_words = self.count_words(self.split_text(title))
         for word, count in title_words.iteritems():
             words[word] = words.get(word, 0) + count
-        cursor.execute('delete from words where page=?;', (title_id,))
+        cursor.execute('DELETE FROM words WHERE page=?;', (title_id,))
         for word, count in words.iteritems():
-            cursor.execute('insert into words values (?, ?, ?);',
+            cursor.execute('INSERT INTO words VALUES (?, ?, ?);',
                              (word, title_id, count))
 
     def update_links(self, title, links_and_labels, cursor):
@@ -1348,8 +1348,12 @@ without would yet you your yours yourself yourselves""")).split())
             return float(rank)
 
         try:
-            first = words[0]
-            rest = words[1:]
+            ranks = []
+            for word in words:
+                ranks.append((word_rank(word), word))
+            ranks.sort()
+            first_rank, first = ranks[0]
+            rest = [w for (r, w) in ranks[1:]]
             pattern = '%%%s%%' % first
             sql = ('SELECT words.page, words.count, titles.title '
                    'FROM words, titles WHERE word LIKE ? '
@@ -1363,26 +1367,28 @@ without would yet you your yours yourself yourselves""")).split())
                                 title_id)] = first_hits.get((title,
                                                              title_id), 0)+count
                     got = True
-            first_rank = word_rank(first)
             if not got or first_rank==0:
                 return
+
 
             for (title, title_id), first_count in first_hits.iteritems():
                 score = first_count/first_rank
                 got = True
+                #print repr(title)
+                #print " * ", first, first_rank, first_count
                 for word in rest:
                     rank = word_rank(word)
                     if rank == 0:
                         return
-                    counts = con.execute('SELECT count FROM words '
-                                         'WHERE word LIKE ? AND page=?;',
-                                         ('%%%s%%' % word, title_id))
-                    got = False
-                    word_score = 0.0
-                    for count in counts:
-                        word_score += float(count[0])
-                        got = True
-                    score += word_score/rank
+                    sql = ('SELECT SUM(count) FROM words '
+                           'WHERE page=? AND word LIKE ?;')
+                    count = con.execute(sql, (title_id,
+                                              '%%%s%%' % word)).fetchone()[0]
+                    if not count:
+                        got = False
+                        break
+                    # print " * ", word, rank, count
+                    score += float(count)/rank
                 if got and score > 0:
                     yield int(100*score), title
         finally:

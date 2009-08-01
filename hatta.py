@@ -2102,6 +2102,28 @@ class WikiPageImage(WikiPageFile):
                       werkzeug.escape(self.title))]
         return content
 
+class WikiPageCSV(WikiPageFile):
+    """Display class for type text/csv."""
+
+    def view_content(self, lines=None):
+        if self.title not in self.storage:
+            raise werkzeug.exceptions.NotFound()
+        import csv
+        csvfile = self.storage.open_page(self.title)
+        reader = csv.reader(csvfile)
+        yield u'<table id=%s class="csvfile">' % self.title
+        try:
+            for row in reader:
+                yield u'<tr>%s</tr>' % u''.join(u'<td>%s</td>' % cell
+                                                for cell in row)
+        except csv.Error, e:
+            yield u'</table>'
+            yield _(u'<p>Error parsing csv file %s on line %d: %s'
+                    % (self.title, reader.line_num, e))
+        finally:
+            csvfile.close()
+        yield u'</table>'
+
 class WikiTitleConverter(werkzeug.routing.PathConverter):
     """Behaves like the path converter, except that it escapes slashes."""
 
@@ -2117,6 +2139,7 @@ class Wiki(object):
     index_class = WikiSearch
     mime_map = {
         'text': WikiPageText,
+        'text/csv': WikiPageCSV,
         'text/x-wiki': WikiPageWiki,
         'image': WikiPageImage,
         '': WikiPageFile,

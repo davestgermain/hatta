@@ -1346,8 +1346,7 @@ without would yet you your yours yourself yourselves""")).split())
             con.commit()
 
     def find(self, words):
-        """Returns an iterator of all pages containing the words, and their
-            scores."""
+        """Iterator of all pages containing the words, and their scores."""
 
         con = self.con
         try:

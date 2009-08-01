@@ -564,7 +564,12 @@ class WikiStorage(object):
     def changed_since(self, rev):
         """Return all pages that changed since specified repository revision."""
 
-        last = self.repo.lookup(int(rev))
+        try:
+            last = self.repo.lookup(int(rev))
+        except IndexError:
+            for page in self.all_pages():
+                yield page
+                return
         current = self.repo.lookup('tip')
         status = self.repo.status(current, last)
         modified, added, removed, deleted, unknown, ignored, clean = status

@@ -2109,19 +2109,20 @@ class WikiPageCSV(WikiPageFile):
         if self.title not in self.storage:
             raise werkzeug.exceptions.NotFound()
         import csv
-        csvfile = self.storage.open_page(self.title)
-        reader = csv.reader(csvfile)
-        yield u'<table id=%s class="csvfile">' % self.title
+        csv_file = self.storage.open_page(self.title)
+        reader = csv.reader(csv_file)
+        html_title = werkzeug.escape(self.title, quote=True)
+        yield u'<table id="%s" class="csvfile">' % html_title
         try:
             for row in reader:
-                yield u'<tr>%s</tr>' % u''.join(u'<td>%s</td>' % cell
-                                                for cell in row)
+                yield u'<tr>%s</tr>' % (u''.join(u'<td>%s</td>' % cell
+                                                 for cell in row))
         except csv.Error, e:
             yield u'</table>'
-            yield _(u'<p>Error parsing csv file %s on line %d: %s'
-                    % (self.title, reader.line_num, e))
+            yield _(u'<p class="error">Error parsing CSV file %s on line %d: %s'
+                    % (html_title, reader.line_num, e))
         finally:
-            csvfile.close()
+            csv_file.close()
         yield u'</table>'
 
 class WikiTitleConverter(werkzeug.routing.PathConverter):

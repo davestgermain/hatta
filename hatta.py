@@ -141,11 +141,7 @@ class WikiConfig(object):
         """
         Convert options to their required types.
         """
-        if self.get('read_only', False) in (True, 'True', 'true', 'TRUE',
-                                            '1', 'on', 'On', 'ON'):
-            self.config['read_only'] = True
-        else:
-            self.config['read_only'] = False
+
         try:
             self.config['port'] = int(self.get('port', 0))
         except ValueError:
@@ -216,7 +212,7 @@ class WikiConfig(object):
             for option, value in parser.items(section):
                 self.config[option] = value
 
-    def get(self, opt, default_value=None):
+    def get(self, option, default_value=None):
         """
         Get the value of a config option or default if not set.
 
@@ -230,7 +226,36 @@ class WikiConfig(object):
         4
         """
 
-        return self.config.get(opt, default_value)
+        return self.config.get(option, default_value)
+
+    def get_bool(self, option, default_value=False):
+        """
+        Like get, only convert the value to True or False.
+        """
+
+        value = self.get(option, default_value)
+        if value in (
+            1, True,
+            'True', 'true', 'TRUE',
+            '1',
+            'on', 'On', 'ON',
+            'yes', 'Yes', 'YES',
+            'enable', 'Enable', 'ENABLE',
+            'enabled', 'Enabled', 'ENABLED',
+        ):
+            return True
+        elif value in (
+            None, 0, False,
+            'False', 'false', 'FALSE',
+            '0',
+            'off', 'Off', 'OFF',
+            'no', 'No', 'NO',
+            'disable', 'Disable', 'DISABLE',
+            'disabled', 'Disabled', 'DISABLED',
+        ):
+            return False
+        else:
+            raise ValueError("expected boolean value")
 
 
 def locked_repo(func):
@@ -1573,6 +1598,8 @@ class WikiPage(object):
         self.storage = self.wiki.storage
         self.index = self.wiki.index
         self.config = self.wiki.config
+        self.js_editor = self.config.get_bool("js_editor", False)
+        self.read_only = self.wiki.read_only
 
         self.default_style = self.config.get('default_style',
 u"""html { background: #fff; color: #2e3436;
@@ -1787,7 +1814,7 @@ abbr.date {border:none}
         yield u'<body>'
         for part in self.page(content, special_title):
             yield part
-        if self.config.get('js_editor', False):
+        if self.js_editor:
             try:
                 self.wiki.check_lock(self.title)
                 yield html.script(u"""
@@ -1831,7 +1858,7 @@ for (var j = 0; j < tagList.length; ++j) {
                     'title': title, 'rev': rev})
             yield u'<li>'
             yield werkzeug.html.a(self.date_html(date), href=url)
-            if not self.config.get('read_only', False):
+            if not self.read_only:
                 yield (u'<input type="submit" name="%d" value="Undo" '
                        u'class="button">' % rev)
             yield u' . . . . '
@@ -1902,7 +1929,7 @@ class WikiPageText(WikiPage):
             yield html.h1(html(_(u'Preview, not saved')), class_="preview")
             for part in self.view_content(preview):
                 yield part
-        if self.config.get('js_editor', False):
+        if self.js_editor:
             # Scroll the textarea to the line specified
             # Move the cursor to the specified line
             yield html.script(ur"""
@@ -2190,7 +2217,7 @@ class Wiki(object):
         self.locked_page = self.config.get('locked_page', u'Locked')
         self.site_name = self.config.get('site_name', u'Hatta Wiki')
         self.style_page = self.config.get('style_page', u'style.css')
-        self.read_only = self.config.get('read_only', False)
+        self.read_only = self.config.get_bool('read_only', False)
 
         self.storage = self.storage_class(self.path, self.page_charset)
         if not os.path.isdir(self.cache):

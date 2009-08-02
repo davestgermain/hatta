@@ -2539,12 +2539,15 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title),
                                              rev))
         response.make_conditional(request)
+        # Remove all headers if it's 304, according to
+        # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3.5
         if response.status.startswith('304'):
             response.response = []
+            del response.content_type
         else:
             if size and set_size:
                 response.content_length = size
-        print repr(response), dir(response)
+        print response.headers
         return response
 
     def download(self, request, title):

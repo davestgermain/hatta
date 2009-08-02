@@ -183,15 +183,15 @@ class WikiConfig(object):
         add('-m', '--front-page', dest='front_page',
             help='Use PAGE as the front page', metavar='PAGE')
         add('-e', '--encoding', dest='page_charset',
-            help='Use encoding ENS to read and write pages', metavar='ENC')
+            help='Use encoding ENC to read and write pages', metavar='ENC')
         add('-c', '--config-file', dest='config_file',
             help='Read configuration from FILE', metavar='FILE')
         add('-l', '--language', dest='language',
             help='Translate interface to LANG', metavar='LANG')
         add('-r', '--read-only', dest='read_only', default=False,
             help='Whether the wiki should be read-only', action="store_true")
-        add('-j', '--js-editor', dest='js_editor', default=False,
-            help='Enable JavaScript in the editor.', action="store_true")
+        add('-j', '--script-page', dest='script_page', metavar="PAGE",
+            help='Include JavaScript from page PAGE.')
 
         options, args = parser.parse_args()
         for option, value in options.__dict__.iteritems():
@@ -1598,8 +1598,9 @@ class WikiPage(object):
         self.storage = self.wiki.storage
         self.index = self.wiki.index
         self.config = self.wiki.config
+        self.script_page = self.config.get("script_page", None)
         self.js_editor = self.config.get_bool("js_editor", False)
-        self.read_only = self.wiki.read_only
+        self.read_only = self.config.get_bool("read_only", False)
 
         self.default_style = self.config.get('default_style',
 u"""html { background: #fff; color: #2e3436;
@@ -1739,6 +1740,9 @@ abbr.date {border:none}
                         title="%s (ATOM)" % self.wiki.site_name,
                          href=self.get_url(None, self.wiki.atom))
 #        yield self.html_head
+        if self.script_page and self.script_page in self.wiki.storage:
+            src = self.get_download_url(self.script_page)
+            yield html.script(type_="application/javascript", src=src)
 
     def search_form(self):
         html = werkzeug.html
@@ -2188,6 +2192,7 @@ class Wiki(object):
     index_class = WikiSearch
     mime_map = {
         'text': WikiPageText,
+        'application/javascript': WikiPageText,
         'text/csv': WikiPageCSV,
         'text/x-wiki': WikiPageWiki,
         'image': WikiPageImage,

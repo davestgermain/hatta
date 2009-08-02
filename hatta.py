@@ -1815,7 +1815,7 @@ abbr.date {border:none}
         yield u'<body>'
         for part in self.page(content, special_title):
             yield part
-        if self.js_editor:
+        if self.wiki.js_editor:
             try:
                 self.wiki.check_lock(self.title)
                 yield html.script(u"""
@@ -1930,7 +1930,7 @@ class WikiPageText(WikiPage):
             yield html.h1(html(_(u'Preview, not saved')), class_="preview")
             for part in self.view_content(preview):
                 yield part
-        if self.js_editor:
+        if self.wiki.js_editor:
             # Scroll the textarea to the line specified
             # Move the cursor to the specified line
             yield html.script(ur"""
@@ -2544,6 +2544,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         else:
             if size and set_size:
                 response.content_length = size
+        print repr(response), dir(response)
         return response
 
     def download(self, request, title):

@@ -4,7 +4,7 @@
 from distutils.core import setup
 import hatta
 
-setup(
+config = dict(
     name='Hatta',
     version=hatta.__version__,
     url='http://hatta.sheep.art.pl/',
@@ -16,26 +16,27 @@ setup(
     description='Wiki engine that lives in Mercurial repository.',
     long_description=hatta.__doc__,
     keywords='wiki wsgi web mercurial repository',
-    py_modules=['hatta', 'hatta_jp'],
+    py_modules=['hatta'],
     data_files=[
-        ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
         ('share/locale/ar/LC_MESSAGES', ['locale/ar/LC_MESSAGES/hatta.mo']),
-        ('share/locale/de/LC_MESSAGES', ['locale/de/LC_MESSAGES/hatta.mo']),
         ('share/locale/da/LC_MESSAGES', ['locale/da/LC_MESSAGES/hatta.mo']),
-        ('share/locale/ja/LC_MESSAGES', ['locale/ja/LC_MESSAGES/hatta.mo']),
+        ('share/locale/de/LC_MESSAGES', ['locale/de/LC_MESSAGES/hatta.mo']),
+        ('share/locale/es/LC_MESSAGES', ['locale/es/LC_MESSAGES/hatta.mo']),
         ('share/locale/fr/LC_MESSAGES', ['locale/fr/LC_MESSAGES/hatta.mo']),
+        ('share/locale/ja/LC_MESSAGES', ['locale/ja/LC_MESSAGES/hatta.mo']),
+        ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
         ('share/locale/sv/LC_MESSAGES', ['locale/sv/LC_MESSAGES/hatta.mo']),
         ('share/icons/hicolor/scalable', ['hatta.svg']),
         ('share/applications', ['hatta.desktop']),
-        ('share/doc/hatta/examples', ['hatta.fcg', 'hatta.wsgi']),
+        ('share/doc/hatta/examples', [
+            'examples/hatta.fcg',
+            'examples/hatta.wsgi',
+            'examples/extend_parser.py'
+        ]),
     ],
     scripts=['hatta-icon.py'],
     platforms='any',
     requires=['werkzeug (>=0.3)', 'mercurial (>=1.0)'],
-    extras_require={
-        'highlight': ['pygments'],
-        'hatta-icon': ['pygtk'],
-    },
     classifiers=[
         'License :: OSI Approved :: GNU General Public License (GPL)',
         'Intended Audience :: Developers',
@@ -47,5 +48,7 @@ setup(
         'Programming Language :: Python',
         'Operating System :: OS Independent',
         'Environment :: Web Environment',
-    ]
+    ],
 )
+
+setup(**config)

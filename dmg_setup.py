@@ -5,71 +5,19 @@ Usage:
     python setup.py py2app
 """
 
+from setup import config
 from setuptools import setup
-# import hatta
 
-APP = ['hatta.py']
-DATA_FILES = []
-# 'includes': ['dbhash', 'encodings'],
-# 'packages' : ['werskezug'],
-OPTIONS = {'argv_emulation': True,
-#  'includes': ['werkzeug'],
- 'includes': ['werkzeug.contrib.wrappers'],
-# 'packages': ['werkzeug', 'mercurial', 'pygments'],
-# 'excludes': ['_ssl', 'tcl', 'tkinter'],
-# 'dylib_excludes': ['tcl84.dll', 'tk84.dll'],
-# 'packages': ['werkzeug.contrib'],
- 'iconfile': \
-         '/Users/cezarykrzyzanowski/Downloads/Hatta-Wiki-1.3.1/hatta.icns',
-}
-
-setup(
-    app=APP,
-    options={'py2app': OPTIONS},
+py2app_config = dict(
+    app=['hatta.py'],
+    options={'py2app': {
+        'argv_emulation': True,
+        'includes': ['werkzeug.contrib.wrappers'],
+        'iconfile': \
+            '/Users/cezarykrzyzanowski/Downloads/Hatta-Wiki-1.3.1/hatta.icns',
+    }},
     setup_requires=['py2app'],
-    name='Hatta',
-#    version=hatta.__version__,
-    version="1.0",
-    url='http://hatta.sheep.art.pl/',
-#    download_url='http://sheep.art.pl/misc/hatta-%s/Hatta-%s.zip' % (
-#        hatta.__version__, hatta.__version__),
-    license='GNU General Public License (GPL)',
-    author='Radomir Dopieralski',
-    author_email='hatta@sheep.art.pl',
-    description='Wiki engine that lives in Mercurial repository.',
-#    long_description=hatta.__doc__,
-    keywords='wiki wsgi web mercurial repository',
-    py_modules=['hatta', 'hatta_jp'],
-    data_files=[
-        ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
-        ('share/locale/ar/LC_MESSAGES', ['locale/ar/LC_MESSAGES/hatta.mo']),
-        ('share/locale/de/LC_MESSAGES', ['locale/de/LC_MESSAGES/hatta.mo']),
-        ('share/locale/da/LC_MESSAGES', ['locale/da/LC_MESSAGES/hatta.mo']),
-        ('share/locale/ja/LC_MESSAGES', ['locale/ja/LC_MESSAGES/hatta.mo']),
-        ('share/locale/fr/LC_MESSAGES', ['locale/fr/LC_MESSAGES/hatta.mo']),
-        ('share/locale/sv/LC_MESSAGES', ['locale/sv/LC_MESSAGES/hatta.mo']),
-        ('share/icons/hicolor/scalable', ['hatta.svg']),
-        ('share/applications', ['hatta.desktop']),
-        ('share/doc/hatta/examples', ['hatta.fcg', 'hatta.wsgi']),
-    ],
-    scripts=['hatta-icon.py'],
-    platforms='any',
-#    requires=['werkzeug (>=0.3)', 'mercurial (>=1.0)'],
-    extras_require={
-        'highlight': ['pygments'],
-        'hatta-icon': ['pygtk'],
-    },
-    classifiers=[
-        'License :: OSI Approved :: GNU General Public License (GPL)',
-        'Intended Audience :: Developers',
-        'Intended Audience :: End Users/Desktop',
-        'Intended Audience :: System Administrators',
-        'Topic :: Communications',
-        'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
-        'Topic :: Internet :: WWW/HTTP :: WSGI :: Application',
-        'Programming Language :: Python',
-        'Operating System :: OS Independent',
-        'Environment :: Web Environment',
-    ]
-
 )
+config.update(py2app_config)
+
+setup(**config)

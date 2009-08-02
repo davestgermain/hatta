@@ -8,10 +8,27 @@
 #
 # By default, the installer will be created as dist\Output\setup.exe.
 
-from distutils.core import setup
 import py2exe
 import sys
 import os
+from setup import config
+from distutils.core import setup
+
+py2exe_config = dict(
+    cmdclass = {"py2exe": build_installer},
+    options = {'py2exe': {
+        'packages': ['werkzeug', 'dbhash', 'encodings'],
+        'excludes': ['_ssl', 'tcl', 'tkinter'],
+        'dll_excludes': ['tcl84.dll', 'tk84.dll'],
+        "compressed": 1,
+        "optimize": 2,
+    }},
+    console = [{
+        'script': 'hatta.py',
+        'icon_resources': [(1, "hatta.ico")],
+    }],
+)
+config.update(py2exe_config)
 
 class InnoScript:
     def __init__(self,
@@ -33,7 +50,7 @@ class InnoScript:
     def chop(self, pathname):
         assert pathname.startswith(self.dist_dir)
         return pathname[len(self.dist_dir):]
-    
+
     def create(self, pathname="dist\\hatta.iss"):
         self.pathname = pathname
         ofi = self.file = open(pathname, "w")
@@ -86,18 +103,16 @@ class InnoScript:
 
 ################################################################
 
-from py2exe.build_exe import py2exe
-
-class build_installer(py2exe):
+class build_installer(py2exe.build_exe.py2exe):
     # This class first builds the exe file(s), then creates a Windows installer.
     # You need InnoSetup for it.
     def run(self):
         # First, let py2exe do it's work.
-        py2exe.run(self)
+        py2exe.build_exe.py2exe.run(self)
 
         lib_dir = self.lib_dir
         dist_dir = self.dist_dir
-        
+
         # create the Installer, using the files py2exe has created.
         script = InnoScript("hatta",
                             lib_dir,
@@ -112,65 +127,5 @@ class build_installer(py2exe):
 
 ################################################################
 
-import hatta
 
-setup(
-    cmdclass = {"py2exe": build_installer},
-    options = {
-              'py2exe': {
-		      'packages': ['werkzeug', 'dbhash', 'encodings'],
-		      'excludes': ['_ssl', 'tcl', 'tkinter'],
-		      'dll_excludes': ['tcl84.dll', 'tk84.dll'],
-		      "compressed": 1,
-                      "optimize": 2
-		  }
-              },
-    console = [
-                  {
-                      'script': 'hatta.py',
-                      'icon_resources': [(1, "hatta.ico")],
-                  }
-              ],
-    name='Hatta',
-    version=hatta.__version__,
-    url='http://hatta.sheep.art.pl/',
-    download_url='http://sheep.art.pl/misc/hatta/Hatta-%s.zip' % hatta.__version__,
-    license='GNU General Public License (GPL)',
-    author='Radomir Dopieralski',
-    author_email='hatta@sheep.art.pl',
-    description='Wiki engine that lives in Mercurial repository.',
-    long_description=hatta.__doc__,
-    keywords='wiki wsgi web mercurial repository',
-    py_modules=['hatta'],
-    data_files=[
-        ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
-        ('share/locale/ar/LC_MESSAGES', ['locale/ar/LC_MESSAGES/hatta.mo']),
-        ('share/locale/de/LC_MESSAGES', ['locale/de/LC_MESSAGES/hatta.mo']),
-        ('share/locale/da/LC_MESSAGES', ['locale/da/LC_MESSAGES/hatta.mo']),
-        ('share/locale/fr/LC_MESSAGES', ['locale/fr/LC_MESSAGES/hatta.mo']),
-        ('share/locale/ja/LC_MESSAGES', ['locale/ja/LC_MESSAGES/hatta.mo']),
-        ('share/locale/sv/LC_MESSAGES', ['locale/sv/LC_MESSAGES/hatta.mo']),
-        ('share/icons/hicolor/scalable', ['hatta.svg']),
-        ('share/applications', ['hatta.desktop']),
-        ('share/doc/hatta/examples', ['hatta.fcg', 'hatta.wsgi']),
-    ],
-    scripts=['hatta-icon.py'],
-    platforms='any',
-    requires=['werkzeug (>=0.3)', 'mercurial (>=1.0)'],
-    extras_require={
-        'highlight': ['pygments'],
-        'hatta-icon': ['pygtk'],
-    },
-    classifiers=[
-        'License :: OSI Approved :: GNU General Public License (GPL)',
-        'Intended Audience :: Developers',
-        'Intended Audience :: End Users/Desktop',
-        'Intended Audience :: System Administrators',
-        'Topic :: Communications',
-        'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
-        'Topic :: Internet :: WWW/HTTP :: WSGI :: Application',
-        'Programming Language :: Python',
-        'Operating System :: OS Independent',
-        'Environment :: Web Environment',
-    ]
-)
+setup(**config)

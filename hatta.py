@@ -2634,6 +2634,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 lastrev[title] = rev
                 yield u'<li>'
                 yield werkzeug.html.a(page.date_html(date), href=url)
+                yield u' '
                 yield werkzeug.html.a(werkzeug.html(title),
                                       href=request.get_url(title))
                 yield u' . . . . '

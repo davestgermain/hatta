@@ -2547,7 +2547,6 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         else:
             if size and set_size:
                 response.content_length = size
-        print response.headers
         return response
 
     def download(self, request, title):

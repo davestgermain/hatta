@@ -1598,9 +1598,6 @@ class WikiPage(object):
         self.storage = self.wiki.storage
         self.index = self.wiki.index
         self.config = self.wiki.config
-        self.script_page = self.config.get("script_page", None)
-        self.js_editor = self.config.get_bool("js_editor", False)
-        self.read_only = self.config.get_bool("read_only", False)
 
         self.default_style = self.config.get('default_style',
 u"""html { background: #fff; color: #2e3436;
@@ -1740,8 +1737,8 @@ abbr.date {border:none}
                         title="%s (ATOM)" % self.wiki.site_name,
                          href=self.get_url(None, self.wiki.atom))
 #        yield self.html_head
-        if self.script_page and self.script_page in self.wiki.storage:
-            src = self.get_download_url(self.script_page)
+        if self.wiki.script_page and self.wiki.script_page in self.wiki.storage:
+            src = self.get_download_url(self.wiki.script_page)
             yield html.script(type_="application/javascript", src=src)
 
     def search_form(self):
@@ -2223,6 +2220,8 @@ class Wiki(object):
         self.site_name = self.config.get('site_name', u'Hatta Wiki')
         self.style_page = self.config.get('style_page', u'style.css')
         self.read_only = self.config.get_bool('read_only', False)
+        self.script_page = self.config.get('script_page', None)
+        self.js_editor = self.config.get_bool('js_editor', False)
 
         self.storage = self.storage_class(self.path, self.page_charset)
         if not os.path.isdir(self.cache):
@@ -2316,10 +2315,13 @@ class Wiki(object):
 
     def check_lock(self, title):
         if self.read_only:
-            raise werkzeug.exceptions.Forbidden()
+            raise werkzeug.exceptions.Forbidden(_("This site is read-only."))
+        if self.script_page and title == self.script_page:
+            raise werkzeug.exceptions.Forbidden(_("""Can't edit live scripts.
+To edit this page remove it from the script_page option first."""))
         if self.locked_page in self.storage:
             if title in self.index.page_links(self.locked_page):
-                raise werkzeug.exceptions.Forbidden()
+                raise werkzeug.exceptions.Forbidden(_("This page is locked."))
 
     def save(self, request, title):
         self.check_lock(title)

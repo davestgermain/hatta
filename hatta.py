@@ -2530,18 +2530,20 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         """Create a WikiResponse for a page."""
 
         response = WikiResponse(content, mimetype=mime)
+        size = None
         if rev is None:
             inode, size, mtime = self.storage.page_file_meta(title)
             response.set_etag(u'%s/%s/%d-%d' % (etag, werkzeug.url_quote(title),
                                                 inode, mtime))
-            if set_size:
-                response.content_length = size
         else:
             response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title),
                                              rev))
         response.make_conditional(request)
         if response.status.startswith('304'):
             response.response = []
+        else:
+            if size and set_size:
+                response.content_length = size
         return response
 
     def download(self, request, title):

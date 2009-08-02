@@ -164,6 +164,7 @@ class WikiConfig(object):
         """Check the commandline arguments for options."""
 
         import optparse
+
         self.options = []
         parser = optparse.OptionParser()
 
@@ -1617,7 +1618,22 @@ div.header div.menu { float: right; margin-top: 1.25em }
 div.header div.menu a.current { color: #000 }
 hr { background: transparent; border:none; height: 0;
      border-bottom: 1px solid #babdb6; clear: both }
-blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}""")
+blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}
+abbr.date {border:none}
+""")
+
+    def date_html(self, datetime):
+        """
+        Create HTML for a date, according to recommendation at
+        http://microformats.org/wiki/date
+        """
+
+        text = datetime.strftime('%Y-%m-%d %H:%M')
+        # We are going for YYYY-MM-DDTHH:MM:SSZ
+        title = datetime.strftime('%Y-%m-%dT%H:%M:%SZ')
+        html = werkzeug.html.abbr(text, class_="date", title=title)
+        return html
+
 
     def wiki_link(self, addr, label, class_='wiki', image=None, lineno=0):
         """Create HTML for a wiki link."""
@@ -1814,7 +1830,7 @@ for (var j = 0; j < tagList.length; ++j) {
                 url = request.adapter.build(self.wiki.revision, {
                     'title': title, 'rev': rev})
             yield u'<li>'
-            yield werkzeug.html.a(date.strftime('%Y-%m-%d %H:%M'), href=url)
+            yield werkzeug.html.a(self.date_html(date), href=url)
             if not self.config.get('read_only', False):
                 yield (u'<input type="submit" name="%d" value="Undo" '
                        u'class="button">' % rev)
@@ -2550,6 +2566,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
     def recent_changes(self, request):
         """Serve the recent changes page."""
 
+        page = self.get_page(request, u'history')
+
         def changes_list():
             yield u'<ul>'
             last = {}
@@ -2576,7 +2594,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 last[title] = author, comment
                 lastrev[title] = rev
                 yield u'<li>'
-                yield u'<a href="%s">%s</a> ' % (url, date.strftime('%Y-%m-%d %H:%M'))
+                yield werkzeug.html.a(page.date_html(date), href=url)
                 yield werkzeug.html.a(werkzeug.html(title),
                                       href=request.get_url(title))
                 yield u' . . . . '
@@ -2586,7 +2604,6 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 yield u'</li>'
             yield u'</ul>'
 
-        page = self.get_page(request, u'history')
         content = page.render_content(changes_list(), _(u'Recent changes'))
         response = werkzeug.Response(content, mimetype='text/html')
         response.set_etag('/history/%d' % self.storage.repo_revision())

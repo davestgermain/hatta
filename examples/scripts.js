@@ -29,7 +29,74 @@ function localize_dates() {
     }
 }
 
+function js_editor() {
+    var textBox = document.getElementById('editortext');
+    if (textBox) {
+        var jumpLine = 0+document.location.hash.substring(1);
+        var textLines = textBox.textContent.match(/(.*\n)/g);
+        var scrolledText = '';
+        for (var i = 0; i < textLines.length && i < jumpLine; ++i) {
+            scrolledText += textLines[i];
+        }
+        textBox.focus();
+        if (textBox.setSelectionRange) {
+            textBox.setSelectionRange(scrolledText.length, scrolledText.length);
+        } else if (textBox.createTextRange) {
+            var range = textBox.createTextRange();
+            range.collapse(true);
+            range.moveEnd('character', scrolledText.length);
+            range.moveStart('character', scrolledText.length);
+            range.select();
+        }
+        var scrollPre = document.createElement('pre');
+        textBox.parentNode.appendChild(scrollPre);
+        var style = window.getComputedStyle(textBox, '');
+        scrollPre.style.font = style.font;
+        scrollPre.style.border = style.border;
+        scrollPre.style.outline = style.outline;
+        scrollPre.style.lineHeight = style.lineHeight;
+        scrollPre.style.letterSpacing = style.letterSpacing;
+        scrollPre.style.fontFamily = style.fontFamily;
+        scrollPre.style.fontSize = style.fontSize;
+        scrollPre.style.padding = 0;
+        scrollPre.style.overflow = 'scroll';
+        try { scrollPre.style.whiteSpace = "-moz-pre-wrap" } catch(e) {};
+        try { scrollPre.style.whiteSpace = "-o-pre-wrap" } catch(e) {};
+        try { scrollPre.style.whiteSpace = "-pre-wrap" } catch(e) {};
+        try { scrollPre.style.whiteSpace = "pre-wrap" } catch(e) {};
+        scrollPre.textContent = scrolledText;
+        textBox.scrollTop = scrollPre.scrollHeight;
+        scrollPre.parentNode.removeChild(scrollPre);
+    } else {
+        var baseUrl = '';
+        var tags = document.getElementsByTagName('link');
+        for (var i = 0; i < tags.length; ++i) {
+            var tag = tags[i];
+            if (tag.getAttribute('type')==='application/wiki') {
+                baseUrl = tag.getAttribute('href');
+            }
+        }
+        if (baseUrl==='') {
+            return;
+        }
+        var tagList = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'ul', 'div'];
+        for (var j = 0; j < tagList.length; ++j) {
+            var tags = document.getElementsByTagName(tagList[j]);
+            for (var i = 0; i < tags.length; ++i) {
+                var tag = tags[i];
+                if (tag.id && tag.id.match(/^line_\d+$/)) {
+                    tag.ondblclick = function () {
+                        var url = baseUrl+'#'+this.id.replace('line_', '');
+                        document.location.href = url;
+                    };
+                }
+            }
+        }
+    }
+}
+
 window.onload = function () {
     localize_dates();
+    js_editor();
 }
 

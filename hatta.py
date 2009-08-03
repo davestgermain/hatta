@@ -1815,27 +1815,6 @@ abbr.date {border:none}
         yield u'<body>'
         for part in self.page(content, special_title):
             yield part
-        if self.wiki.js_editor:
-            try:
-                self.wiki.check_lock(self.title)
-                yield html.script(u"""
-var tagList = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'ul', 'div'];
-var baseUrl = '%s';
-for (var j = 0; j < tagList.length; ++j) {
-    var tags = document.getElementsByTagName(tagList[j]);
-    for (var i = 0; i < tags.length; ++i) {
-        var tag = tags[i];
-        if (tag.id && tag.id.match(/^line_\d+$/)) {
-            tag.ondblclick = function () {
-                var url = baseUrl+'#'+this.id.replace('line_', '');
-                document.location.href = url;
-            };
-        }
-    }
-};
-""" % self.request.get_url(self.title, self.wiki.edit))
-            except werkzeug.exceptions.Forbidden:
-                pass
         yield u'</body></html>'
 
     def history_list(self):
@@ -1930,49 +1909,6 @@ class WikiPageText(WikiPage):
             yield html.h1(html(_(u'Preview, not saved')), class_="preview")
             for part in self.view_content(preview):
                 yield part
-        if self.wiki.js_editor:
-            # Scroll the textarea to the line specified
-            # Move the cursor to the specified line
-            yield html.script(ur"""
-var jumpLine = 0+document.location.hash.substring(1);
-if (jumpLine) {
-    var textBox = document.getElementById('editortext');
-    var textLines = textBox.textContent.match(/(.*\n)/g);
-    var scrolledText = '';
-    for (var i = 0; i < textLines.length && i < jumpLine; ++i) {
-        scrolledText += textLines[i];
-    }
-    textBox.focus();
-    if (textBox.setSelectionRange) {
-        textBox.setSelectionRange(scrolledText.length, scrolledText.length);
-    } else if (textBox.createTextRange) {
-        var range = textBox.createTextRange();
-        range.collapse(true);
-        range.moveEnd('character', scrolledText.length);
-        range.moveStart('character', scrolledText.length);
-        range.select();
-    }
-    var scrollPre = document.createElement('pre');
-    textBox.parentNode.appendChild(scrollPre);
-    var style = window.getComputedStyle(textBox, '');
-    scrollPre.style.font = style.font;
-    scrollPre.style.border = style.border;
-    scrollPre.style.outline = style.outline;
-    scrollPre.style.lineHeight = style.lineHeight;
-    scrollPre.style.letterSpacing = style.letterSpacing;
-    scrollPre.style.fontFamily = style.fontFamily;
-    scrollPre.style.fontSize = style.fontSize;
-    scrollPre.style.padding = 0;
-    scrollPre.style.overflow = 'scroll';
-    try { scrollPre.style.whiteSpace = "-moz-pre-wrap" } catch(e) {};
-    try { scrollPre.style.whiteSpace = "-o-pre-wrap" } catch(e) {};
-    try { scrollPre.style.whiteSpace = "-pre-wrap" } catch(e) {};
-    try { scrollPre.style.whiteSpace = "pre-wrap" } catch(e) {};
-    scrollPre.textContent = scrolledText;
-    textBox.scrollTop = scrollPre.scrollHeight;
-    scrollPre.parentNode.removeChild(scrollPre);
-}
-""")
 
     def highlight(self, text, mime=None, syntax=None, line_no=0):
         try:
@@ -2221,7 +2157,6 @@ class Wiki(object):
         self.style_page = self.config.get('style_page', u'style.css')
         self.read_only = self.config.get_bool('read_only', False)
         self.script_page = self.config.get('script_page', None)
-        self.js_editor = self.config.get_bool('js_editor', False)
 
         self.storage = self.storage_class(self.path, self.page_charset)
         if not os.path.isdir(self.cache):

@@ -1491,7 +1491,6 @@ class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):
     """A typical HTTP response class made out of Werkzeug's mixins."""
 
-    pass
     def make_conditional(self, request):
         ret = super(WikiResponse, self).make_conditional(request)
         # Remove all headers if it's 304, according to
@@ -1500,6 +1499,8 @@ class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
             self.response = []
             del self.content_type
             del self.content_length
+            del self.headers['Content-length']
+            del self.headers['Content-type']
         return ret
 
 class WikiTempFile(object):

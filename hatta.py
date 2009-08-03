@@ -1492,7 +1492,15 @@ class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
     """A typical HTTP response class made out of Werkzeug's mixins."""
 
     pass
-
+    def make_conditional(self, request):
+        ret = super(WikiResponse, self).make_conditional(request)
+        # Remove all headers if it's 304, according to
+        # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3.5
+        if self.status.startswith('304'):
+            self.response = []
+            del self.content_type
+            del self.content_length
+        return ret
 
 class WikiTempFile(object):
     """Wrap a file for uploading content."""
@@ -2396,6 +2404,10 @@ To edit this page remove it from the script_page option first."""))
                                  'application/xml', first_rev, first_date)
         response.set_etag('/atom/%d' % self.storage.repo_revision())
         response.make_conditional(request)
+        if response.status.startswith('304'):
+            response.response = []
+            del response.content_type
+            del response.content_length
         return response
 
     def rss(self, request):
@@ -2458,6 +2470,10 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                                  'application/xml', first_rev, first_date)
         response.set_etag('/rss/%d' % self.storage.repo_revision())
         response.make_conditional(request)
+        if response.status.startswith('304'):
+            response.response = []
+            del response.content_type
+            del response.content_length
         return response
 
     def response(self, request, title, content, etag='', mime='text/html',
@@ -2465,23 +2481,16 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         """Create a WikiResponse for a page."""
 
         response = WikiResponse(content, mimetype=mime)
-        size = None
         if rev is None:
             inode, size, mtime = self.storage.page_file_meta(title)
             response.set_etag(u'%s/%s/%d-%d' % (etag, werkzeug.url_quote(title),
                                                 inode, mtime))
+            if set_size:
+                response.content_length = size
         else:
             response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title),
                                              rev))
         response.make_conditional(request)
-        # Remove all headers if it's 304, according to
-        # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3.5
-        if response.status.startswith('304'):
-            response.response = []
-            del response.content_type
-        else:
-            if size and set_size:
-                response.content_length = size
         return response
 
     def download(self, request, title):
@@ -2580,7 +2589,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             yield u'</ul>'
 
         content = page.render_content(changes_list(), _(u'Recent changes'))
-        response = werkzeug.Response(content, mimetype='text/html')
+        response = WikiResponse(content, mimetype='text/html')
         response.set_etag('/history/%d' % self.storage.repo_revision())
         response.make_conditional(request)
         return response
@@ -2685,7 +2694,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         self.index.update()
         page = self.get_page(request, title)
         html = page.render_content(content(), _(u'Links to "%s"') % title)
-        response = werkzeug.Response(html, mimetype='text/html')
+        response = WikiResponse(html, mimetype='text/html')
         response.set_etag('/search/%d' % self.storage.repo_revision())
         response.make_conditional(request)
         return response

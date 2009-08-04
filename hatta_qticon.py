@@ -9,6 +9,7 @@ without command line knowledge.
 Uses Qt and PyQt in particular for this task.
 """
 
+from os.path import join
 import gettext
 import signal
 from subprocess import Popen
@@ -32,14 +33,15 @@ class HattaTrayIcon(QSystemTrayIcon):
         self.url = 'http://%s:%d/' % (host, port)
 
         # Setup try icon
-        self.setIcon(QIcon('hatta.svg'))
+        self.setIcon(QIcon(join(
+            sys.prefix, 'share/icons/hicolor/32x32/hatta.png')))
         self.setContextMenu(self.__create_menu())
         self.setToolTip(QString(_(u'Hatta Wiki menu')))
         self.show()
 
         # Start wiki subprocess
         self.wiki_process_pid = Popen([sys.executable,
-            'wiki_subprocess.py']).pid
+            'hatta.py']).pid
 
         self.showMessage(QString(_(u'Welcome to Hatta Wiki')),
                 QString(_(u'Click the hat icon to start or quit the '
@@ -89,5 +91,7 @@ if __name__ == '__main__':
         QApplication.setQuitOnLastWindowClosed(False)
         status_icon = HattaTrayIcon(config)
         app.exec_()
+            
     except KeyboardInterrupt:
         pass
+

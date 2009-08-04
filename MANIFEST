@@ -1,8 +1,10 @@
 hatta.py
 hatta-qticon.py
 hatta.svg
+hatta.desktop
 examples/hatta.wsgi
 examples/hatta.fcg
+examples/extend_parser.py
 locale/ar/LC_MESSAGES/hatta.mo
 locale/da/LC_MESSAGES/hatta.mo
 locale/de/LC_MESSAGES/hatta.mo

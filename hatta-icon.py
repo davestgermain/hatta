@@ -32,6 +32,7 @@ class StatusIcon(object):
         self.icon.connect_object('popup-menu', self.on_popup, None)
         self.urls = {}
 
+
     def on_activate(self, status_icon, data=None):
         webbrowser.open(self.url)
 
@@ -42,6 +43,7 @@ class StatusIcon(object):
             for name, url in self.urls.iteritems():
                 item = gtk.MenuItem(name)
                 item.connect('activate', self.url_on_activate, url)
+                item.set_tooltip_text(url)
                 menu.append(item)
                 item.show()
             separator = gtk.SeparatorMenuItem()
@@ -58,7 +60,6 @@ class StatusIcon(object):
         menu.append(quit)
         quit.show()
 
-
         menu.show()
         menu.popup(None, None, None, button, activate_time)
 
@@ -67,6 +68,7 @@ class StatusIcon(object):
 
     def url_on_activate(self, item, data=None):
         webbrowser.open(data)
+
 
 
 class AvahiService(object):

@@ -2,21 +2,12 @@
 # -*- coding: utf-8 -*-
 
 #from distutils.core import setup
-import hatta
-from sys import platform
 from setuptools import setup
+from sys import platform
 
-if platform == 'darwin':
-    py2app_config = dict(
-            app=['hatta.py'],
-            options={'py2app': {
-                'argv_emulation': True,
-                'includes': ['werkzeug.contrib.wrappers', 
-                'werkzeug.routing'],
-                'iconfile': 'hatta.icns',
-                        }},
-            setup_requires=['py2app'],
-            )
+import hatta
+
+################### Common settings ######################
 
 config = dict(
     name='Hatta',
@@ -35,8 +26,7 @@ config = dict(
         ('share/locale/ar/LC_MESSAGES', ['locale/ar/LC_MESSAGES/hatta.mo']),
         ('share/locale/da/LC_MESSAGES', ['locale/da/LC_MESSAGES/hatta.mo']),
         ('share/locale/de/LC_MESSAGES', ['locale/de/LC_MESSAGES/hatta.mo']),
-#        ('share/locale/es/LC_MESSAGES', 
-#        ['locale/es/LC_MESSAGES/hatta.mo']),
+        ('share/locale/es/LC_MESSAGES', ['locale/es/LC_MESSAGES/hatta.mo']),
         ('share/locale/fr/LC_MESSAGES', ['locale/fr/LC_MESSAGES/hatta.mo']),
         ('share/locale/ja/LC_MESSAGES', ['locale/ja/LC_MESSAGES/hatta.mo']),
         ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
@@ -49,7 +39,6 @@ config = dict(
             'examples/extend_parser.py'
         ]),
     ],
-    scripts=['hatta-icon.py'],
     platforms='any',
     requires=['werkzeug (>=0.3)', 'mercurial (>=1.0)'],
     classifiers=[
@@ -66,5 +55,40 @@ config = dict(
     ],
 )
 
-config.update(**py2app_config)
+if platform == 'darwin':
+    py2app_config = dict(
+            app=['hatta_qticon.py'],
+            options={'py2app': {
+                'argv_emulation': True,
+                'includes': ['werkzeug.routing', 'PyQt4.QtGui', 
+                    'PyQt4.QtCore', 'PyQt4._qt'],
+                'iconfile': 'hatta.icns',
+                        }},
+            setup_requires=['py2app'],
+    )
+    config.update(**py2app_config)
+elif platform == 'win32':
+    from exe_setup import build_installer
+    py2exe_config = dict(
+        cmdclass = {"py2exe": build_installer},
+        options = {'py2exe': {
+            'packages': ['werkzeug', 'dbhash', 'encodings'],
+            'excludes': ['_ssl', 'tcl', 'tkinter'],
+            'dll_excludes': ['tcl84.dll', 'tk84.dll'],
+            "compressed": 1,
+            "optimize": 2,
+        }},
+        console = [{
+            'script': 'hatta.py',
+            'icon_resources': [(1, "hatta.ico")],
+        }],
+    )
+    config.update(**py2exe_config)
+else: # Other UNIX-like
+    unix_config = dict(
+            scripts=['hatta_qticon.py'],
+            )
+    config.update(**unix_config)
+
 setup(**config)
+

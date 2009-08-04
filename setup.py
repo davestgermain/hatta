@@ -31,6 +31,7 @@ config = dict(
         ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
         ('share/locale/sv/LC_MESSAGES', ['locale/sv/LC_MESSAGES/hatta.mo']),
         ('share/icons/hicolor/scalable', ['hatta.svg']),
+        ('share/icons/hicolor/32x32', ['hatta.png']),
         ('share/applications', ['hatta.desktop']),
         ('share/doc/hatta/examples', [
             'examples/hatta.fcg',
@@ -63,14 +64,14 @@ config = dict(
         'py2app': {
             'argv_emulation': True,
             'includes': ['werkzeug.routing', 'PyQt4.QtGui',
-                'PyQt4.QtCore', 'PyQt4._qt'],
+                'PyQt4.QtCore', 'PyQt4._qt', 'sip'],
             'iconfile': 'hatta.icns',
+            'resources' : ['hatta.py'],
         },
     },
 # for Mac
     app=['hatta_qticon.py'],
 # For windows
-    cmdclass = {"py2exe": build_installer},
     console = [{
         'script': 'hatta.py',
         'icon_resources': [(1, "hatta.ico")],
@@ -82,9 +83,9 @@ if platform == 'darwin':
     config['setup_requires'] = ['py2app']
 elif platform == 'win32':
     from exe_setup import build_installer
+    config['cmdclass'] = {"py2exe": build_installer}
 else: # Other UNIX-like
     unix_config = dict(scripts=['hatta_qticon.py'],)
     config.update(**unix_config)
 
 setup(**config)
-

@@ -5,11 +5,19 @@ import hatta
 import webbrowser
 import os
 import urllib
+import wsgiref.simple_server
 
+try:
+    import gtk
+except ImportError:
+    gtk = None
 
-import dbus
-import avahi
-from dbus.mainloop.glib import DBusGMainLoop
+try:
+    import dbus
+    import dbus.mainloop.glib
+    import avahi
+except ImportError:
+    avahi = None
 
 class StatusIcon(object):
     def __init__(self, url):
@@ -22,13 +30,23 @@ class StatusIcon(object):
         self.icon.set_tooltip('Hatta Wiki')
         self.icon.connect_object('activate', self.on_activate, None)
         self.icon.connect_object('popup-menu', self.on_popup, None)
-        self.urls = []
+        self.urls = {}
 
     def on_activate(self, status_icon, data=None):
         webbrowser.open(self.url)
 
     def on_popup(self, status_icon, button, activate_time):
         menu = gtk.Menu()
+
+        if self.urls:
+            for name, url in self.urls.iteritems():
+                item = gtk.MenuItem(name)
+                item.connect('activate', self.url_on_activate, url)
+                menu.append(item)
+                item.show()
+            separator = gtk.SeparatorMenuItem()
+            menu.append(separator)
+            separator.show()
 
         browser = gtk.ImageMenuItem(gtk.STOCK_OPEN)
         browser.connect('activate', self.on_activate, False)
@@ -40,11 +58,6 @@ class StatusIcon(object):
         menu.append(quit)
         quit.show()
 
-        for name, url in self.urls:
-            item = gtk.MenuItem(name)
-            item.connect('activate', self.url_on_activate, url)
-            menu.append(item)
-            item.show()
 
         menu.show()
         menu.popup(None, None, None, button, activate_time)
@@ -72,7 +85,7 @@ class AvahiService(object):
         # Counter so we only rename after collisions a sensible number of times
         self.rename_count = 12
 
-        DBusGMainLoop(set_as_default=True)
+        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         self.bus = dbus.SystemBus()
         self.server = dbus.Interface(
                 self.bus.get_object(avahi.DBUS_NAME, avahi.DBUS_PATH_SERVER),
@@ -84,6 +97,7 @@ class AvahiService(object):
             avahi.PROTO_UNSPEC, self.service_type, 'local', dbus.UInt32(0))),
             avahi.DBUS_INTERFACE_SERVICE_BROWSER)
         sbrowser.connect_to_signal("ItemNew", self.new_item)
+        sbrowser.connect_to_signal("ItemRemove", self.remove_item)
 
 
     def add_service(self):
@@ -148,15 +162,17 @@ class AvahiService(object):
                 pass
         self.server.ResolveService(interface, protocol, name, stype,
             domain, avahi.PROTO_UNSPEC, dbus.UInt32(0),
-            reply_handler=self.service_resolved, error_handler=self.print_error)
+            reply_handler=self.new_service_resolved, error_handler=self.print_error)
 
-    def service_resolved(self, *args):
-        print 'service resolved'
-        print 'name:', args[2]
-        print 'address:', args[7]
-        print 'port:', args[8]
+    def remove_item(self, interface, protocol, name, stype, domain, flags):
+        try:
+            del self.status_icon.urls[name]
+        except KeyError:
+            pass
+
+    def new_service_resolved(self, *args):
         url = 'http://%s:%d/' % (args[7], args[8])
-        self.status_icon.urls.append((args[2], url))
+        self.status_icon.urls[args[2]] = url
 
     def print_error(self, *args):
         print 'error_handler'
@@ -187,16 +203,18 @@ if __name__ == "__main__":
     pid = os.fork()
     try:
         if not pid:
-            import wsgiref.simple_server
             wiki = hatta.Wiki(config)
             server = wsgiref.simple_server.make_server(host, port,
                                                        wiki.application)
             while not wiki.dead:
                 server.handle_request()
-        else:
-            import gtk
+        elif gtk:
             status_icon = StatusIcon(url)
-            service = AvahiService(name, host, port, status_icon)
+            if avahi:
+                try:
+                    service = AvahiService(name, host, port, status_icon)
+                except dbus.exceptions.DBusException:
+                    pass
             gtk.main()
             urllib.urlopen('/'.join([url, 'off-with-his-head'])).read(1)
             os.waitpid(pid, 0)

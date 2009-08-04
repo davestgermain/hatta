@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#from distutils.core import setup
-from setuptools import setup
+from distutils.core import setup
 from sys import platform
 
 import hatta
@@ -56,11 +55,12 @@ config = dict(
 )
 
 if platform == 'darwin':
+    from setuptools import setup
     py2app_config = dict(
             app=['hatta_qticon.py'],
             options={'py2app': {
                 'argv_emulation': True,
-                'includes': ['werkzeug.routing', 'PyQt4.QtGui', 
+                'includes': ['werkzeug.routing', 'PyQt4.QtGui',
                     'PyQt4.QtCore', 'PyQt4._qt'],
                 'iconfile': 'hatta.icns',
                         }},
@@ -85,9 +85,7 @@ elif platform == 'win32':
     )
     config.update(**py2exe_config)
 else: # Other UNIX-like
-    unix_config = dict(
-            scripts=['hatta_qticon.py'],
-            )
+    unix_config = dict(scripts=['hatta_qticon.py'],)
     config.update(**unix_config)
 
 setup(**config)

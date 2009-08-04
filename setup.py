@@ -61,7 +61,7 @@ if platform == 'darwin':
             options={'py2app': {
                 'argv_emulation': True,
                 'includes': ['werkzeug.routing', 'PyQt4.QtGui', 
-                    'PyQt4.QtCore'],
+                    'PyQt4.QtCore', 'PyQt4._qt'],
                 'iconfile': 'hatta.icns',
                         }},
             setup_requires=['py2app'],

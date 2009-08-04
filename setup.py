@@ -52,38 +52,36 @@ config = dict(
         'Operating System :: OS Independent',
         'Environment :: Web Environment',
     ],
-)
-
-if platform == 'darwin':
-    from setuptools import setup
-    py2app_config = dict(
-            app=['hatta_qticon.py'],
-            options={'py2app': {
-                'argv_emulation': True,
-                'includes': ['werkzeug.routing', 'PyQt4.QtGui',
-                    'PyQt4.QtCore', 'PyQt4._qt'],
-                'iconfile': 'hatta.icns',
-                        }},
-            setup_requires=['py2app'],
-    )
-    config.update(**py2app_config)
-elif platform == 'win32':
-    from exe_setup import build_installer
-    py2exe_config = dict(
-        cmdclass = {"py2exe": build_installer},
-        options = {'py2exe': {
+    options = {
+        'py2exe': {
             'packages': ['werkzeug', 'dbhash', 'encodings'],
             'excludes': ['_ssl', 'tcl', 'tkinter'],
             'dll_excludes': ['tcl84.dll', 'tk84.dll'],
             "compressed": 1,
             "optimize": 2,
-        }},
-        console = [{
-            'script': 'hatta.py',
-            'icon_resources': [(1, "hatta.ico")],
-        }],
-    )
-    config.update(**py2exe_config)
+        },
+        'py2app': {
+            'argv_emulation': True,
+            'includes': ['werkzeug.routing', 'PyQt4.QtGui',
+                'PyQt4.QtCore', 'PyQt4._qt'],
+            'iconfile': 'hatta.icns',
+        },
+    },
+# for Mac
+    app=['hatta_qticon.py'],
+# For windows
+    cmdclass = {"py2exe": build_installer},
+    console = [{
+        'script': 'hatta.py',
+        'icon_resources': [(1, "hatta.ico")],
+    }],
+)
+
+if platform == 'darwin':
+    from setuptools import setup
+    config['setup_requires'] = ['py2app']
+elif platform == 'win32':
+    from exe_setup import build_installer
 else: # Other UNIX-like
     unix_config = dict(scripts=['hatta_qticon.py'],)
     config.update(**unix_config)

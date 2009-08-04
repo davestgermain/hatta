@@ -3,9 +3,10 @@
 
 import hatta
 import webbrowser
-import os
 import urllib
 import wsgiref.simple_server
+import threading
+import time
 
 try:
     import gtk
@@ -68,8 +69,6 @@ class StatusIcon(object):
 
     def url_on_activate(self, item, data=None):
         webbrowser.open(data)
-
-
 
 class AvahiService(object):
     def __init__(self, name, host=None, port=8080, status_icon=None):
@@ -180,9 +179,21 @@ class AvahiService(object):
         print 'error_handler'
         print args[0]
 
+class WikiServer(threading.Thread):
+    def __init__(self, config, host, port):
+        super(WikiServer, self).__init__()
+        self.config = config
+        self.port = port
+        self.wiki = hatta.Wiki(config)
+        self.server = wsgiref.simple_server.make_server(
+                        host, port, self.wiki.application)
+
+    def run(self):
+        while not self.wiki.dead:
+            self.server.handle_request()
 
 
-if __name__ == "__main__":
+def main():
     config = hatta.WikiConfig(
         # Here you can modify the configuration: uncomment and change
         # the ones you need. Note that it's better use environment
@@ -197,29 +208,33 @@ if __name__ == "__main__":
         # page_charset = 'UTF-8'
     )
     config.parse_args()
+    config.parse_files()
     port = int(config.get('port', 8080))
     host = config.get('interface', '')
     name = config.get('site_name', 'Hatta Wiki')
-    url = 'http://%s:%d/' % (host or 'localhost', port)
-
-    pid = os.fork()
-    try:
-        if not pid:
-            wiki = hatta.Wiki(config)
-            server = wsgiref.simple_server.make_server(host, port,
-                                                       wiki.application)
-            while not wiki.dead:
-                server.handle_request()
-        elif gtk:
-            status_icon = StatusIcon(url)
-            if avahi:
-                try:
-                    service = AvahiService(name, host, port, status_icon)
-                except dbus.exceptions.DBusException:
-                    pass
-            gtk.main()
-            urllib.urlopen('/'.join([url, 'off-with-his-head'])).read(1)
-            os.waitpid(pid, 0)
+    url = 'http://%s:%d' % (host or 'localhost', port)
+    thread = WikiServer(config, host, port)
+    thread.start()
+    if gtk:
+        gtk.gdk.threads_init()
+        status_icon = StatusIcon(url)
+        if avahi:
+            try:
+                service = AvahiService(name, host, port, status_icon)
+            except dbus.exceptions.DBusException:
+                service = None
+        gtk.main()
+        if avahi and service:
             service.close()
-    except KeyboardInterrupt:
-        pass
+    else:
+        webbrowser.open(url)
+        try:
+            while True:
+                time.sleep(100)
+        except KeyboardInterrupt:
+            pass
+    urllib.urlopen('/'.join([url, 'off-with-his-head'])).read(1)
+    thread.join()
+
+if __name__ == "__main__":
+    main()

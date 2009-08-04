@@ -1,8 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from distutils.core import setup
+#from distutils.core import setup
 import hatta
+from sys import platform
+from setuptools import setup
+
+if platform == 'darwin':
+    py2app_config = dict(
+            app=['hatta.py'],
+            options={'py2app': {
+                'argv_emulation': True,
+                'includes': ['werkzeug.contrib.wrappers', 
+                'werkzeug.routing'],
+                'iconfile': 'hatta.icns',
+                        }},
+            setup_requires=['py2app'],
+            )
 
 config = dict(
     name='Hatta',
@@ -21,7 +35,8 @@ config = dict(
         ('share/locale/ar/LC_MESSAGES', ['locale/ar/LC_MESSAGES/hatta.mo']),
         ('share/locale/da/LC_MESSAGES', ['locale/da/LC_MESSAGES/hatta.mo']),
         ('share/locale/de/LC_MESSAGES', ['locale/de/LC_MESSAGES/hatta.mo']),
-        ('share/locale/es/LC_MESSAGES', ['locale/es/LC_MESSAGES/hatta.mo']),
+#        ('share/locale/es/LC_MESSAGES', 
+#        ['locale/es/LC_MESSAGES/hatta.mo']),
         ('share/locale/fr/LC_MESSAGES', ['locale/fr/LC_MESSAGES/hatta.mo']),
         ('share/locale/ja/LC_MESSAGES', ['locale/ja/LC_MESSAGES/hatta.mo']),
         ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
@@ -51,4 +66,5 @@ config = dict(
     ],
 )
 
+config.update(**py2app_config)
 setup(**config)

@@ -14,13 +14,50 @@ import gettext
 import signal
 from subprocess import Popen
 import sys
+from threading import Thread
 from urllib import urlopen
 import webbrowser
+from wsgiref import simple_server
 
-from PyQt4.QtGui import QApplication, QSystemTrayIcon, QMenu, QIcon
-from PyQt4.QtCore import QString
+from PyQt4.QtGui import (QApplication, QSystemTrayIcon, QMenu, QIcon,
+    QMessageBox)
+from PyQt4.QtCore import QString, QThread, pyqtSignal, pyqtSlot
 
-from hatta import WikiConfig
+from hatta import WikiConfig, Wiki
+
+class HattaThread(QThread):
+    """
+    An instance of wiki server running in the background and handling incoming 
+    requests.
+    """
+
+    # For passing multithread exception in Qt.
+    exception_signal = pyqtSignal(Exception)
+
+    def __init__(self, config, error_handler):
+        """Create a wiki instance and a server for it."""
+        super(HattaThread, self).__init__()
+        self.config = config
+        self.wiki = Wiki(config)
+        self.server = simple_server.make_server(
+                config.get('interface', ''),
+                int(config.get('port', 8080)),
+                self.application_wrapper)
+
+        self.exception_signal.connect(error_handler)
+
+    def run(self):
+        """Thread execution. Handles requests."""
+        while not self.wiki.dead:
+            self.server.handle_request()
+
+    def application_wrapper(self, *args, **kwargs):
+        try:
+            return RuntimeError('To jest test')
+            return self.wiki.application(*args, **kwargs)
+        except Exception, e:
+            print 'Tutaj!'
+            self.exception_signal.emit(e)
 
 class HattaTrayIcon(QSystemTrayIcon):
     """Extension of QSystemTrayIcon for customization towards Hatta."""
@@ -39,9 +76,9 @@ class HattaTrayIcon(QSystemTrayIcon):
         self.setToolTip(QString(_(u'Hatta Wiki menu')))
         self.show()
 
-        # Start wiki subprocess
-        self.wiki_process_pid = Popen([sys.executable,
-            'hatta.py']).pid
+        # Start wiki thread
+        self.wiki_thread = HattaThread(config, self.on_error)
+        self.wiki_thread.start()
 
         self.showMessage(QString(_(u'Welcome to Hatta Wiki')),
                 QString(_(u'Click the hat icon to start or quit the '
@@ -63,11 +100,17 @@ class HattaTrayIcon(QSystemTrayIcon):
     def on_wiki_quit(self):
         """Callback to close running Hatta instance and unload statu 
         icon."""
-        urlopen('http://localhost:%s/off-with-his-head'
-                    % int(config.get('port'))).read(1)
+#        urlopen('http://localhost:%s/off-with-his-head'
+#                    % int(config.get('port'))).read(1)
+        self.wiki_thread.quit()
         self.menu.destroy()
         global app
         app.quit()
+
+    pyqtSlot(Exception)
+    def on_error(self, erro):
+        """Displays errors from exceptions."""
+        QMessageBox.critical(None, 'Test title', 'Test content', 1, 2)
 
 config = WikiConfig(
     # Here you can modify the configuration: uncomment and change
@@ -91,7 +134,6 @@ if __name__ == '__main__':
         QApplication.setQuitOnLastWindowClosed(False)
         status_icon = HattaTrayIcon(config)
         app.exec_()
-            
     except KeyboardInterrupt:
         pass
 

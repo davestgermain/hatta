@@ -66,16 +66,11 @@ config = dict(
             'includes': ['werkzeug.routing', 'PyQt4.QtGui',
                 'PyQt4.QtCore', 'PyQt4._qt', 'sip'],
             'iconfile': 'hatta.icns',
-            'resources' : ['hatta.py'],
+            'resources': ['hatta.py'],
         },
     },
 # for Mac
     app=['hatta_qticon.py'],
-# For windows
-    console = [{
-        'script': 'hatta.py',
-        'icon_resources': [(1, "hatta.ico")],
-    }],
 )
 
 if platform == 'darwin':
@@ -84,6 +79,11 @@ if platform == 'darwin':
 elif platform == 'win32':
     from exe_setup import build_installer
     config['cmdclass'] = {"py2exe": build_installer}
+    config['console'] = [{
+        'script': 'hatta.py',
+        'icon_resources': [(1, "hatta.ico")],
+    }],
+
 else: # Other UNIX-like
     unix_config = dict(scripts=['hatta_qticon.py'],)
     config.update(**unix_config)

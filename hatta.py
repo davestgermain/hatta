@@ -2216,6 +2216,7 @@ class Wiki(object):
             R('/search/<title:title>', endpoint=self.backlinks,
               methods=['GET', 'POST']),
             R('/off-with-his-head', endpoint=self.die, methods=['GET']),
+            R('/throw-up-tey', endpoint=self.test_exception, methods=['GET']),
         ], converters={'title':WikiTitleConverter})
 
     def get_page(self, request, title):
@@ -2733,15 +2734,30 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                  )
         return werkzeug.Response(robots, mimetype='text/plain')
 
-    def die(self, request):
-        """Terminate the standalone server if invoked from localhost."""
+    def __should_allow_special_requests(self, request):
+        """
+        Ensures that special requests come from localhost only.
 
+        This seems reasonable to forbid remote URL requests to throw exceptions 
+        or kill the wiki :)
+        """
         if not request.remote_addr.startswith('127.'):
             raise werkzeug.exceptions.Forbidden()
+
+    def die(self, request):
+        """Terminate the standalone server if invoked from localhost."""
+        self.__should_allow_special_requests(request)
         def agony():
             yield u'Oh dear!'
             self.dead = True
         return werkzeug.Response(agony(), mimetype='text/plain')
+    def test_exception(self, request):
+        """Used to test multi-thread thread handling."""
+        self.__should_allow_special_requests(request)
+        def throw_up():
+            yield u'Bleeee *hyk*'
+            raise RuntimeError('This is a test exception.')
+        return werkzeug.Response(throw_up(), mimetype='text/plain')
 
     @werkzeug.responder
     def application(self, environ, start):

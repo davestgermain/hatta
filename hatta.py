@@ -2738,8 +2738,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         """
         Ensures that special requests come from localhost only.
 
-        This seems reasonable to forbid remote URL requests to throw exceptions 
-        or kill the wiki :)
+        This seems reasonable to forbid remote URL requests to throw 
+        exceptions or kill the wiki :)
         """
         if not request.remote_addr.startswith('127.'):
             raise werkzeug.exceptions.Forbidden()
@@ -2751,8 +2751,9 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             yield u'Oh dear!'
             self.dead = True
         return werkzeug.Response(agony(), mimetype='text/plain')
+
     def test_exception(self, request):
-        """Used to test multi-thread thread handling."""
+        """Used to test multi-thread thread exception handling."""
         self.__should_allow_special_requests(request)
         def throw_up():
             yield u'Bleeee *hyk*'

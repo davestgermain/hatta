@@ -12,3 +12,5 @@ dist
 cache
 build
 docs
+*.egg
+*.DS_Store

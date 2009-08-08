@@ -1,7 +1,10 @@
 hatta.py
-hatta-qticon.py
-hatta.svg
-hatta.desktop
+hatta_qticon.py
+hatta_gtkicon.py
+resources/hatta.svg
+resources/hatta.png
+resources/hatta.ico
+resources/hatta.desktop
 examples/hatta.wsgi
 examples/hatta.fcg
 examples/extend_parser.py

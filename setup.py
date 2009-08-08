@@ -30,9 +30,9 @@ config = dict(
         ('share/locale/ja/LC_MESSAGES', ['locale/ja/LC_MESSAGES/hatta.mo']),
         ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
         ('share/locale/sv/LC_MESSAGES', ['locale/sv/LC_MESSAGES/hatta.mo']),
-        ('share/icons/hicolor/scalable', ['hatta.svg']),
-        ('share/icons/hicolor/32x32', ['hatta.png']),
-        ('share/applications', ['hatta.desktop']),
+        ('share/icons/hicolor/scalable', ['resources/hatta.svg']),
+        ('share/icons/hicolor/32x32', ['resources/hatta.png']),
+        ('share/applications', ['resources/hatta.desktop']),
         ('share/doc/hatta/examples', [
             'examples/hatta.fcg',
             'examples/hatta.wsgi',
@@ -65,7 +65,7 @@ config = dict(
             'argv_emulation': True,
             'includes': ['werkzeug.routing', 'PyQt4.QtGui',
                 'PyQt4.QtCore', 'PyQt4._qt', 'sip'],
-            'iconfile': 'hatta.icns',
+            'iconfile': 'resources/hatta.icns',
             'resources': ['hatta.py'],
         },
     },
@@ -77,15 +77,34 @@ if platform == 'darwin':
     from setuptools import setup
     config['setup_requires'] = ['py2app']
 elif platform == 'win32':
-    from exe_setup import build_installer
-    config['cmdclass'] = {"py2exe": build_installer}
+    ### Windows installer ###
+    class BuildInstaller(py2exe.build_exe.py2exe):
+        """
+           This class first builds the exe file(s),
+           then creates a Windows installer.
+           You need InnoSetup for it.
+        """
+        def run(self):
+            # First, let py2exe do it's work.
+            py2exe.build_exe.py2exe.run(self)
+            lib_dir = self.lib_dir
+            dist_dir = self.dist_dir
+            # create the Installer, using the files py2exe has created.
+            script = InnoScript("hatta", lib_dir, dist_dir,
+                                self.console_exe_files+self.windows_exe_files,
+                                self.lib_files)
+            print "*** creating the inno setup script***"
+            script.create()
+            print "*** compiling the inno setup script***"
+            script.compile()
+            # Note: By default the final setup.exe will be in an
+            # Output subdirectory.
+    config['cmdclass'] = {"py2exe-installer": BuildInstaller}
     config['console'] = [{
         'script': 'hatta.py',
-        'icon_resources': [(1, "hatta.ico")],
+        'icon_resources': [(1, "resources/hatta.ico")],
     }],
-
 else: # Other UNIX-like
-    unix_config = dict(scripts=['hatta_qticon.py'],)
-    config.update(**unix_config)
+    config['scripts'] = ['hatta_qticon.py', 'hatta_gtkicon.py']
 
 setup(**config)

@@ -757,12 +757,6 @@ class WikiParser(object):
         """
         Find all the line-level markup and return HTML for it.
 
-        >>> import lxml.html.usedoctest
-        >>> parser = WikiParser([], None, None)
-        >>> print u''.join(parser.parse_line(u'some **bold** words'))
-        some <b>bold</b> words
-        >>> print u''.join(parser.parse_line(u'some **bold words'))
-        some <b>bold words
         """
 
         for match in self.markup_re.finditer(line):

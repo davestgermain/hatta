@@ -107,4 +107,5 @@ elif platform == 'win32':
 else: # Other UNIX-like
     config['scripts'] = ['hatta_qticon.py', 'hatta_gtkicon.py']
 
-setup(**config)
+if __name__=='__main__':
+    setup(**config)

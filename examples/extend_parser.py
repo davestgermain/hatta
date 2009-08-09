@@ -38,6 +38,6 @@ class MyWikiParser(hatta.WikiParser):
         "text": ur".+?",
     } # note that the priority is alphabetical
 
-hatta.WikiParser = MyWikiParser
-hatta.main()
-
+if __name__=='__main__':
+    hatta.WikiParser = MyWikiParser
+    hatta.main()

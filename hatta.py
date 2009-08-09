@@ -2271,8 +2271,14 @@ To edit this page remove it from the script_page option first."""))
         response.make_conditional(request)
         if response.status.startswith('304'):
             response.response = []
-            del response.content_type
-            del response.content_length
+            try:
+                del response.content_type
+            except AttributeError:
+                pass
+            try:
+                del response.content_length
+            except AttributeError:
+                pass
         return response
 
     def rss(self, request):

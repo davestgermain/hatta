@@ -1869,6 +1869,8 @@ class WikiPageWiki(WikiPageText):
         if self.wiki.icon_page and self.wiki.icon_page in self.storage:
             icons = self.index.page_links_and_labels(self.wiki.icon_page)
             smilies = dict((emo, link) for (link, emo) in icons)
+        else:
+            smilies = None
         content = WikiParser(lines, self.wiki_link, self.wiki_image,
                              self.highlight, self.wiki_math, smilies)
         return content

@@ -94,30 +94,6 @@ def external_link(addr):
             or addr.startswith('ftp://')
             or addr.startswith('mailto:'))
 
-def page_mime(addr):
-    """
-    Guess the mime type based on the page name.
-
-    >>> page_mime('something.txt')
-    'text/plain'
-    >>> page_mime('SomePage')
-    'text/x-wiki'
-    >>> page_mime(u'ąęśUnicodePage')
-    'text/x-wiki'
-    >>> page_mime('image.png')
-    'image/png'
-    >>> page_mime('style.css')
-    'text/css'
-    >>> page_mime('archive.tar.gz')
-    'archive/gzip'
-    """
-
-    mime, encoding = mimetypes.guess_type(addr, strict=False)
-    if encoding:
-        mime = 'archive/%s' % encoding
-    if mime is None:
-        mime = 'text/x-wiki'
-    return mime
 
 class WikiConfig(object):
     """
@@ -495,11 +471,31 @@ class WikiStorage(object):
         return self._changectx().rev()
 
     def page_mime(self, title):
-        """Guess page's mime type ased on corresponding file name."""
+        """
+        Guess page's mime type ased on corresponding file name.
+        Default ot text/x-wiki for files without an extension.
 
-        file_path = self._file_path(title)
-        return page_mime(file_path)
+        >>> page_mime('something.txt')
+        'text/plain'
+        >>> page_mime('SomePage')
+        'text/x-wiki'
+        >>> page_mime(u'ąęśUnicodePage')
+        'text/x-wiki'
+        >>> page_mime('image.png')
+        'image/png'
+        >>> page_mime('style.css')
+        'text/css'
+        >>> page_mime('archive.tar.gz')
+        'archive/gzip'
+        """
 
+        addr = self._file_path(title)
+        mime, encoding = mimetypes.guess_type(addr, strict=False)
+        if encoding:
+            mime = 'archive/%s' % encoding
+        if mime is None:
+            mime = 'text/x-wiki'
+        return mime
 
     def _changectx(self):
         """Get the changectx of the tip."""

@@ -1,0 +1,162 @@
+>>> import lxml.html.usedoctest
+>>> from hatta import *
+>>> def link(addr, label, class_=None, image=None, lineno=0):
+...     href = werkzeug.escape(addr, quote=True)
+...     text = image or werkzeug.escape(label or addr)
+...     return u'<a href="%s">%s</a>' % (href, text)
+>>> def img(addr, label, class_=None, image=None):
+...     href = werkzeug.escape(addr, quote=True)
+...     text = image or werkzeug.escape(label or addr, quote=True)
+...     return u'<img src="%s" alt="%s">' % (href, text)
+>>> def parse(text):
+...     lines = '\n\r'.join(text.split('\n')).split('\r')
+...     print u''.join(WikiParser(lines, link, img))
+
+>>> parse(u"ziew")
+<p id="line_0">ziew</p>
+
+>>> parse(u"d&d")
+<p id="line_0">d&amp;d</p>
+
+>>> parse(u"= head =")
+<a name="head-1"></a><h1 id="line_0">head</h1>
+
+>>> parse(u'test')
+<p id="line_0">test</p>
+
+>>> parse(u'test\ntest')
+<p id="line_0">test
+test</p>
+
+>>> parse(u'test\n\ntest')
+<p id="line_0">test</p>
+<p id="line_2">test</p>
+
+>>> parse(u'test\\\\test')
+<p id="line_0">test<br>test</p>
+
+>>> parse(u'----')
+<hr>
+
+>>> parse(u'==test==')
+<a name="head-0-1"></a>
+<h2 id="line_0">test</h2>
+
+>>> parse(u'== test')
+<a name="head-0-1"></a>
+<h2 id="line_0">test</h2>
+
+>>> parse(u'==test====')
+<a name="head-0-1"></a>
+<h2 id="line_0">test</h2>
+
+>>> parse(u'=====test')
+<a name="head-0-0-0-0-1"></a>
+<h5 id="line_0">test</h5>
+
+>>> parse(u'==test==\ntest\n===test===')
+<a name="head-0-1"></a>
+<h2 id="line_0">test</h2>
+<p id="line_1">test</p>
+<a name="head-0-1-1"></a>
+<h3 id="line_2">test</h3>
+
+>>> parse(u'test\n* test line one\n * test line two\ntest')
+<p id="line_0">test</p>
+<ul id="line_1">
+    <li>test line one</li>
+    <li>test line two</li>
+</ul>
+<p id="line_3">test</p>
+
+>>> parse(u'* test line one\n* test line two\n** Nested item')
+<ul id="line_0">
+    <li>test line one</li>
+    <li>test line two<ul id="line_2">
+        <li>Nested item</li>
+    </ul></li>
+</ul>
+
+>>> parse(u'test //test test// test **test test** test')
+<p id="line_0">test <i>test test</i> test <b>test test</b> test</p>
+
+>>> parse(u'test //test **test// test** test')
+<p id="line_0">test <i>test <b>test</b></i> test<b> test</b></p>
+
+>>> parse(u'**test')
+<p id="line_0"><b>test</b></p>
+
+>>> parse(u'|x|y|z|\n|a|b|c|\n|d|e|f|\ntest')
+<table id="line_0">
+    <tr>
+        <td>x</td>
+        <td>y</td>
+        <td>z</td>
+    </tr>
+    <tr>
+        <td>a</td>
+        <td>b</td>
+        <td>c</td>
+    </tr>
+    <tr>
+        <td>d</td>
+        <td>e</td>
+        <td>f</td>
+    </tr>
+</table>
+<p id="line_3">test</p>
+
+>>> parse(u'|=x|y|=z=|\n|a|b|c|\n|d|e|=f=|')
+<table id="line_0">
+    <thead><tr>
+        <th>x</th>
+        <td>y</td>
+        <th>z</th>
+    </tr></thead>
+    <tr>
+        <td>a</td>
+        <td>b</td>
+        <td>c</td>
+    </tr>
+    <tr>
+        <td>d</td>
+        <td>e</td>
+        <th>f</th>
+    </tr>
+</table>
+
+>>> parse(u'test http://example.com/test test')
+<p id="line_0">
+    test <a href="http://example.com/test">
+            http://example.com/test
+    </a> test</p>
+
+>>> parse(u'http://example.com/,test, test')
+<p id="line_0">
+    <a href="http://example.com/,test">http://example.com/,test</a>, test
+</p>
+
+>>> parse(u'(http://example.com/test)')
+<p id="line_0">
+    (<a href="http://example.com/test">http://example.com/test</a>)</p>
+
+This might be considered a bug, but impossible to detect in general.
+>>> parse(u'http://example.com/(test)')
+<p id="line_0">
+    <a href="http://example.com/(test">http://example.com/(test</a>)</p>
+
+>>> parse(u'http://example.com/test?test&test=1')
+<p id="line_0"><a href="http://example.com/test?test&amp;test=1">
+        http://example.com/test?test&amp;test=1
+</a></p>
+
+>>> parse(u'http://example.com/~test')
+<p id="line_0">
+    <a href="http://example.com/~test">http://example.com/~test</a></p>
+
+>>> parse(u'[[test]] [[tset|test]]')
+<p id="line_0"><a href="test">test</a> <a href="tset">test</a></p>
+
+>>> parse(u'[[http://example.com|test]]')
+<p id="line_0"><a href="http://example.com">test</a></p>
+

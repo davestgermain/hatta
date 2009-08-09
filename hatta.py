@@ -1338,10 +1338,22 @@ class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
         # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3.5
         if self.status.startswith('304'):
             self.response = []
-            del self.content_type
-            del self.content_length
-            del self.headers['Content-length']
-            del self.headers['Content-type']
+            try:
+                del self.content_type
+            except AttributeError:
+                pass
+            try:
+                del self.content_length
+            except AttributeError:
+                pass
+            try:
+                del self.headers['Content-length']
+            except (KeyError, IndexError):
+                pass
+            try:
+                del self.headers['Content-type']
+            except (KeyError, IndexError):
+                pass
         return ret
 
 class WikiTempFile(object):
@@ -2269,16 +2281,6 @@ To edit this page remove it from the script_page option first."""))
                                  'application/xml', first_rev, first_date)
         response.set_etag('/atom/%d' % self.storage.repo_revision())
         response.make_conditional(request)
-        if response.status.startswith('304'):
-            response.response = []
-            try:
-                del response.content_type
-            except AttributeError:
-                pass
-            try:
-                del response.content_length
-            except AttributeError:
-                pass
         return response
 
     def rss(self, request):
@@ -2341,10 +2343,6 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                                  'application/xml', first_rev, first_date)
         response.set_etag('/rss/%d' % self.storage.repo_revision())
         response.make_conditional(request)
-        if response.status.startswith('304'):
-            response.response = []
-            del response.content_type
-            del response.content_length
         return response
 
     def response(self, request, title, content, etag='', mime='text/html',

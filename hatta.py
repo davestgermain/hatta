@@ -38,6 +38,10 @@ Options:
   -l LANG, --language=LANG
                         Translate interface to LANG
   -r, --read-only       Whether the wiki should be read-only
+  -j, --script-page=PAGE
+                        Use PAGE as Javascript script on all pages
+  -g, --icon-page=PAGE
+                        Read icons graphics from page PAGE
 
 """
 
@@ -168,6 +172,8 @@ class WikiConfig(object):
             help='Whether the wiki should be read-only', action="store_true")
         add('-j', '--script-page', dest='script_page', metavar="PAGE",
             help='Include JavaScript from page PAGE.')
+        add('-g', '--icon-page', dest='icon_page', metavar="PAGE",
+            help='Read icons graphics from PAGE.')
 
         options, args = parser.parse_args()
         for option, value in options.__dict__.iteritems():
@@ -677,19 +683,19 @@ class WikiParser(object):
         "newline": ur"\n",
         "punct": (ur'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+])|\b|$)' %
                   ur"|".join(re.escape(k) for k in punct)),
-        "smiley": ur"(^|\b|(?<=\s))(?P<smiley_face>%s)((?=[\s.,:;!?)/&=+-])|$)"
-                  % ur"|".join(re.escape(k) for k in smilies),
         "text": ur".+?",
     } # note that the priority is alphabetical
 
 
     def __init__(self, lines, wiki_link, wiki_image,
-                 wiki_syntax=None, wiki_math=None):
+                 wiki_syntax=None, wiki_math=None, smilies=None):
         self.wiki_link = wiki_link
         self.wiki_image = wiki_image
         self.wiki_syntax = wiki_syntax
         self.wiki_math = wiki_math
         self.enumerated_lines = enumerate(lines)
+        if smilies is not None:
+            self.smilies = smilies
         self.compile_patterns()
         self.headings = {}
         self.stack = []
@@ -706,6 +712,11 @@ class WikiParser(object):
         self.conflict_close_re = re.compile(ur"^>>>>>>> other\s*$", re.U)
         self.conflict_sep_re = re.compile(ur"^=======\s*$", re.U)
         self.image_re = re.compile(self.image_pat, re.U)
+        self.markup['smiley'] = (ur"(^|\b|(?<=\s))"
+                                 ur"(?P<smiley_face>%s)"
+                                 ur"((?=[\s.,:;!?)/&=+-])|$)"
+                                 % ur"|".join(re.escape(k)
+                                              for k in self.smilies))
         self.markup_re = re.compile(ur"|".join("(?P<%s>%s)" % kv
                                     for kv in sorted(self.markup.iteritems())))
 
@@ -1855,8 +1866,11 @@ class WikiPageWiki(WikiPageText):
         if lines is None:
             f = self.storage.open_page(self.title)
             lines = self.storage.page_lines(f)
+        if self.wiki.icon_page and self.wiki.icon_page in self.storage:
+            icons = self.index.page_links_and_labels(self.wiki.icon_page)
+            smilies = dict((emo, link) for (link, emo) in icons)
         content = WikiParser(lines, self.wiki_link, self.wiki_image,
-                             self.highlight, self.wiki_math)
+                             self.highlight, self.wiki_math, smilies)
         return content
 
     def wiki_math(self, math):
@@ -2012,6 +2026,7 @@ class Wiki(object):
         self.style_page = self.config.get('style_page', u'style.css')
         self.read_only = self.config.get_bool('read_only', False)
         self.script_page = self.config.get('script_page', None)
+        self.icon_page = self.config.get('icon_page', None)
 
         self.storage = self.storage_class(self.path, self.page_charset)
         if not os.path.isdir(self.cache):

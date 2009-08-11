@@ -71,10 +71,10 @@ class StatusIcon(object):
         webbrowser.open(data)
 
 class AvahiService(object):
-    def __init__(self, name, host=None, port=8080, status_icon=None):
+    def __init__(self, name, host=None, port=8080, services={}):
         if not host:
             host = ''
-        self.status_icon = status_icon
+        self.services = services
         self.service_name = name
         # See http://www.dns-sd.org/ServiceTypes.html
         self.service_type = "_http._tcp"
@@ -167,13 +167,13 @@ class AvahiService(object):
 
     def remove_item(self, interface, protocol, name, stype, domain, flags):
         try:
-            del self.status_icon.urls[name]
+            del self.services[name]
         except KeyError:
             pass
 
     def new_service_resolved(self, *args):
         url = 'http://%s:%d/' % (args[7], args[8])
-        self.status_icon.urls[args[2]] = url
+        self.services[args[2]] = url
 
     def print_error(self, *args):
         print 'error_handler'
@@ -220,7 +220,7 @@ def main():
         status_icon = StatusIcon(url)
         if avahi:
             try:
-                service = AvahiService(name, host, port, status_icon)
+                service = AvahiService(name, host, port, status_icon.urls)
             except dbus.exceptions.DBusException:
                 service = None
         gtk.main()

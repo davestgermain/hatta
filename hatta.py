@@ -1700,7 +1700,7 @@ abbr.date {border:none}
                     'title': title, 'rev': rev})
             yield u'<li>'
             yield werkzeug.html.a(self.date_html(date), href=url)
-            if not self.read_only:
+            if not self.wiki.read_only:
                 yield (u'<input type="submit" name="%d" value="Undo" '
                        u'class="button">' % rev)
             yield u' . . . . '

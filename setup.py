@@ -12,8 +12,8 @@ import hatta
 config = dict(
     name='Hatta',
     version=hatta.__version__,
-    url='http://hatta.sheep.art.pl/',
-    download_url='http://sheep.art.pl/misc/hatta-%s/Hatta-%s.zip' % (
+    url='http://hatta-wiki.org/',
+    download_url='http://download.hatta-wiki.org/hatta-%s/Hatta-%s.zip' % (
         hatta.__version__, hatta.__version__),
     license='GNU General Public License (GPL)',
     author='Radomir Dopieralski',

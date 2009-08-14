@@ -8,9 +8,3 @@ dist/*
 pygments/*
 werkzeug/*
 cache/*
-dist
-cache
-build
-docs
-*.egg
-*.DS_Store

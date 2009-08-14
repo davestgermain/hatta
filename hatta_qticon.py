@@ -53,10 +53,8 @@ class HattaThread(QThread):
 
     def application_wrapper(self, *args, **kwargs):
         try:
-            return RuntimeError('To jest test')
             return self.wiki.application(*args, **kwargs)
         except Exception, e:
-            print 'Tutaj!'
             self.exception_signal.emit(e)
 
 class HattaTrayIcon(QSystemTrayIcon):

@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 from distutils.core import setup
-from sys import platform
+import sys
+import os
 
 import hatta
 
@@ -73,10 +74,10 @@ config = dict(
     app=['hatta_qticon.py'],
 )
 
-if platform == 'darwin':
+if sys.platform == 'darwin':
     from setuptools import setup
     config['setup_requires'] = ['py2app']
-elif platform == 'win32':
+elif sys.platform == 'win32':
     ### Windows installer ###
     import py2exe
     class InnoScript(object):

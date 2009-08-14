@@ -32,7 +32,7 @@ config = dict(
         ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
         ('share/locale/sv/LC_MESSAGES', ['locale/sv/LC_MESSAGES/hatta.mo']),
         ('share/icons/hicolor/scalable', ['resources/hatta.svg']),
-        ('share/icons/hicolor/32x32', ['resources/hatta.png']),
+        ('share/icons/hicolor/64x64', ['resources/hatta.png']),
         ('share/applications', ['resources/hatta.desktop']),
         ('share/doc/hatta/examples', [
             'examples/hatta.fcg',
@@ -65,7 +65,10 @@ config = dict(
         'py2app': {
             'argv_emulation': True,
             'includes': ['werkzeug.routing', 'PyQt4.QtGui',
-                'PyQt4.QtCore', 'PyQt4._qt', 'sip'],
+                'PyQt4.QtCore', 'sip'],
+# When packaging with MacPorts PyQt add to includes:
+# PyQt4._qt
+# See README-MAC
             'iconfile': 'resources/hatta.icns',
             'resources': ['hatta.py'],
         },

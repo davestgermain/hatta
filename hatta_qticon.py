@@ -53,10 +53,8 @@ class HattaThread(QThread):
 
     def application_wrapper(self, *args, **kwargs):
         try:
-            return RuntimeError('To jest test')
             return self.wiki.application(*args, **kwargs)
         except Exception, e:
-            print 'Tutaj!'
             self.exception_signal.emit(e)
 
 class HattaTrayIcon(QSystemTrayIcon):
@@ -71,7 +69,7 @@ class HattaTrayIcon(QSystemTrayIcon):
 
         # Setup try icon
         self.setIcon(QIcon(join(
-            sys.prefix, 'share/icons/hicolor/32x32/hatta.png')))
+            sys.prefix, 'share/icons/hicolor/64x64/hatta.png')))
         self.setContextMenu(self.__create_menu())
         self.setToolTip(QString(_(u'Hatta Wiki menu')))
         self.show()

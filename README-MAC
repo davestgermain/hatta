@@ -1,0 +1,18 @@
+====================================
+Using py2app with PyQt from MacPorts
+====================================
+
+The binary on the Hatta website is produced from a custom PyQt build that 
+included only QtCore and QtGui. The PyQt bundle from MacPorts compiles all 
+the modules (wisely), but that makes PyQt python module require all the Qt 
+modules (like QtNetwork or QtDBus --- obviousely not needed by mac version 
+of Hatta). That in turn produces a 100MB bundle, which is an overkill.
+
+So to compile your own bundle with py2app, build a custom PyQt with only 
+QtGui and QtCore and when using py2app add the custom PyQt modules path to 
+PYTHONPATH environmental variable before your default system PyQt (for 
+example the one in MacPorts).
+
+If size isn't an issue for you or you jsut don't want to play with custom 
+builds, **add PyQt4._qt to the includes dictionary for py2app in 
+setup.py**.

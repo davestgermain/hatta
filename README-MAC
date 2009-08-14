@@ -13,15 +13,15 @@ QtGui and QtCore and when using py2app add the custom PyQt modules path to
 PYTHONPATH environmental variable before your default system PyQt (for 
 example the one in MacPorts).
 
-If size isn't an issue for you or you jsut don't want to play with custom 
+If size isn't an issue for you or you just don't want to play with custom 
 builds, **add PyQt4._qt to the includes dictionary for py2app in 
 setup.py**.
 
 Removing debugging libraries
 ============================
 
-Since py2app adds also the _debug version of libraries (QtGui_debug and 
-QtNetwork_debug) you can strip a few additional MB of the final bundle by 
+Since py2app adds also the _debug version of libraries (QtCore_debug and 
+QtGui_debug) you can strip a few additional MB of the final bundle by 
 deleting them, since no one will be using them for the most part. You 
 could do something like this after running py2app:
 

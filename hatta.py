@@ -597,7 +597,7 @@ class WikiStorage(object):
         except IndexError:
             for page in self.all_pages():
                 yield page
-                return
+            return
         current = self.repo.lookup('tip')
         status = self.repo.status(current, last)
         modified, added, removed, deleted, unknown, ignored, clean = status

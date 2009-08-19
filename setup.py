@@ -13,6 +13,7 @@ config = dict(
     name='Hatta',
     version=hatta.__version__,
     url='http://hatta-wiki.org/',
+    organization='org.hatta-wiki',
     download_url='http://download.hatta-wiki.org/hatta-%s/Hatta-%s.zip' % (
         hatta.__version__, hatta.__version__),
     license='GNU General Public License (GPL)',

@@ -110,6 +110,7 @@ class WikiConfig(object):
     2080
     """
 
+    default_filename = u'hatta.conf'
 
     # Please see the bottom of the script for modifying these values.
 
@@ -187,12 +188,30 @@ class WikiConfig(object):
         import ConfigParser
 
         if files is None:
-            files = [self.get('config_file', u'hatta.conf')]
+            files = [self.get('config_file', default_filename)]
         parser = ConfigParser.SafeConfigParser()
         parser.read(files)
         for section in parser.sections():
             for option, value in parser.items(section):
                 self.config[option] = value
+
+    def save_config(self, filename=None):
+        """Saves configuration to a given file."""
+        if filename is None:
+            filename = self.default_filename
+
+        import ConfigParser
+        parser = ConfigParser.RawConfigParser()
+        section = self.config['site_name']
+        parser.add_section(section)
+        for key, value in self.config.iteritems():
+            parser.set(section, str(key), str(value))
+
+        configfile = open(filename, 'wb')
+        try:
+            parser.write(configfile)
+        finally:
+            configfile.close()
 
     def get(self, option, default_value=None):
         """
@@ -238,6 +257,9 @@ class WikiConfig(object):
             return False
         else:
             raise ValueError("expected boolean value")
+
+    def set(self, key, value):
+        self.config[key] = value
 
 
 def locked_repo(func):

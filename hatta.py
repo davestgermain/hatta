@@ -73,6 +73,9 @@ import mercurial.revlog
 import mercurial.util
 
 __version__ = '1.3.3dev'
+name = 'Hatta'
+url = 'http://hatta-wiki.org/'
+organization = 'org.hatta-wiki'
 
 def external_link(addr):
     """
@@ -188,7 +191,7 @@ class WikiConfig(object):
         import ConfigParser
 
         if files is None:
-            files = [self.get('config_file', default_filename)]
+            files = [self.get('config_file', self.default_filename)]
         parser = ConfigParser.SafeConfigParser()
         parser.read(files)
         for section in parser.sections():

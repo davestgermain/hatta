@@ -29,9 +29,8 @@ from PyQt4.QtGui import (QApplication, QSystemTrayIcon, QMenu, QIcon,
 from PyQt4.QtCore import (QString, QThread, pyqtSignal, pyqtSlot, Qt,
     QPoint)
 
-from hatta import WikiConfig, Wiki, WikiRequest
+from hatta import WikiConfig, Wiki, WikiRequest, name, organization, url
 from path_utils import user_data_dir, user_cache_dir, user_config_file
-import setup
 
 class HattaThread(QThread):
     """
@@ -181,8 +180,8 @@ class HattaTrayIcon(QSystemTrayIcon):
     """Extension of QSystemTrayIcon for customization towards Hatta."""
 
     config_filename = user_config_file(
-        setup.config['name'],
-        setup.config['organization'])
+        name,
+        organization)
 
     def save_config(self):
         """Saves a WikiConfig instance with custom data."""
@@ -256,7 +255,8 @@ class HattaTrayIcon(QSystemTrayIcon):
 
         self.preferences_window = PreferenceWindow(self, self.config)
         self.preferences_window.config_change.connect(
-            self.reload_config)
+            self.reload_config,
+            type=Qt.QueuedConnection)
 
         self.default_actions = []
         self.discovery_header = QAction(_(u'Nearby wikis:'), self)
@@ -367,17 +367,15 @@ default_config = WikiConfig(
     port=8080,
     site_name='Hatta Wiki',
     pages_path=join(user_data_dir(
-        setup.config['name'],
-        setup.config['organization']),
+        name,
+        organization),
         u'pages'),
     cache_path=user_cache_dir(
-        setup.config['name'],
-        setup.config['organization']),
+        name,
+        organization),
     # front_page = 'Home'
     # page_charset = 'UTF-8'
 )
-
-print default_config.config['cache_path']
 
 class PreferenceWindow(QWidget):
     """Panel with most important preferences editable to user."""
@@ -460,6 +458,7 @@ class PreferenceWindow(QWidget):
 
     def closeEvent(self, event):
         """Notify config change to main app."""
+        self.hide()
         self.wiki_name = self.name_edit.text()
         self.wiki_page_path = self.pages_edit.text()
         self.wiki_port = self.port_spin.value

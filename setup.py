@@ -10,10 +10,10 @@ import hatta
 ################### Common settings ######################
 
 config = dict(
-    name='Hatta',
+    name=hatta.name,
     version=hatta.__version__,
-    url='http://hatta-wiki.org/',
-    organization='org.hatta-wiki',
+    url=hatta.url,
+    organization=hatta.organization,
     download_url='http://download.hatta-wiki.org/hatta-%s/Hatta-%s.zip' % (
         hatta.__version__, hatta.__version__),
     license='GNU General Public License (GPL)',

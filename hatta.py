@@ -1979,10 +1979,18 @@ class WikiPageImage(WikiPageFile):
                       werkzeug.escape(self.title))]
         return content
 
-    def render_cache(self, cache_file):
-        in_file = self.storage.open_page(self.title)
-        cache_file.write(in_file.read())
-        in_file.close()
+    def render_cache(self, cache_file, cache_path):
+        try:
+            import Image
+        except ImportError:
+            in_file = self.storage.open_page(self.title)
+            cache_file.write(in_file.read())
+            in_file.close()
+            return
+        im = Image.open(self.storage.open_page(self.title))
+        im = im.convert('RGBA')
+        im.thumbnail((128, 128), Image.ANTIALIAS)
+        im.save(cache_file,'PNG')
 
 class WikiPageCSV(WikiPageFile):
     """Display class for type text/csv."""
@@ -2423,13 +2431,12 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         except OSError:
             st_mtime = 0
             st_size = None
-        print mtime, st_mtime
         if mtime > st_mtime:
             if not os.path.exists(cache_dir):
                 os.makedirs(cache_dir)
             cache_file = open(cache_path, 'wb')
             try:
-                render(cache_file)
+                render(cache_file, cache_path)
             finally:
                 cache_file.close
         cache_file = open(cache_path)

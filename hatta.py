@@ -2091,6 +2091,8 @@ class Wiki(object):
               endpoint=self.diff, methods=['GET']),
             R('/+download/<title:title>', endpoint=self.download,
               methods=['GET', 'HEAD']),
+            R('/+render/<title:title>', endpoint=self.render,
+              methods=['GET', 'HEAD']),
             R('/<title:title>', endpoint=self.view, methods=['GET', 'HEAD']),
             R('/+feed/rss', endpoint=self.rss, methods=['GET', 'HEAD']),
             R('/+feed/atom', endpoint=self.atom, methods=['GET', 'HEAD']),
@@ -2371,19 +2373,21 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return response
 
     def response(self, request, title, content, etag='', mime='text/html',
-                 rev=None, date=None, set_size=False):
+                 rev=None, date=None, size=None):
         """Create a WikiResponse for a page."""
 
         response = WikiResponse(content, mimetype=mime)
         if rev is None:
-            inode, size, mtime = self.storage.page_file_meta(title)
+            inode, _size, mtime = self.storage.page_file_meta(title)
             response.set_etag(u'%s/%s/%d-%d' % (etag, werkzeug.url_quote(title),
                                                 inode, mtime))
-            if set_size:
-                response.content_length = size
+            if size == -1:
+                size = _size
         else:
             response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title),
                                              rev))
+        if size:
+            response.content_length = size
         response.make_conditional(request)
         return response
 
@@ -2394,9 +2398,19 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         if mime == 'text/x-wiki':
             mime = 'text/plain'
         f = self.storage.open_page(title)
-        inode, size, mtime = self.storage.page_file_meta(title)
-        response = self.response(request, title, f, '/download', mime,
-                                 set_size=True)
+        response = self.response(request, title, f, '/download', mime, size=-1)
+        return response
+
+    def render(self, request, title):
+        """Serve a thumbnail or otherwise rendered content."""
+
+        page = self.get_page(request, title)
+        try:
+            render = page.render_cache
+        except AttributeError:
+            return self.download(request, title)
+        f = self.storage.open_page(title)
+        response = self.response(request, title, f, '/render', page.mime)
         return response
 
     def undo(self, request, title):

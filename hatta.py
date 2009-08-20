@@ -1975,7 +1975,7 @@ class WikiPageImage(WikiPageFile):
         if self.title not in self.storage:
             raise werkzeug.exceptions.NotFound()
         content = ['<img src="%s" alt="%s">'
-                   % (self.request.get_download_url(self.title),
+                   % (self.request.get_url(self.title, self.wiki.render),
                       werkzeug.escape(self.title))]
         return content
 

@@ -44,8 +44,8 @@ class TestHattaStandalone(object):
         client = werkzeug.Client(wiki.application, hatta.WikiResponse)
         response = client.get('')
         assert response.status_code == 303
-        assert response.headers['Location'] == 'http://localhost/edit/Home'
-        response = client.get('/edit/Home')
+        assert response.headers['Location'] == 'http://localhost/+edit/Home'
+        response = client.get('/+edit/Home')
         assert response.status_code == 404
 
     def test_create_front_page(self, wiki):
@@ -53,7 +53,7 @@ class TestHattaStandalone(object):
 
         client = werkzeug.Client(wiki.application, hatta.WikiResponse)
         data = 'text=test&parent=-1&comment=created&author=test&save=Save'
-        response = client.post('/edit/Home', data=data, content_type='application/x-www-form-urlencoded')
+        response = client.post('/+edit/Home', data=data, content_type='application/x-www-form-urlencoded')
         assert response.status_code == 303
         response = client.get('')
         assert response.status_code == 200
@@ -63,7 +63,7 @@ class TestHattaStandalone(object):
 
         client = werkzeug.Client(wiki.application, hatta.WikiResponse)
         data = 'text=test&parent=-1&comment=created&author=test&save=Save'
-        response = client.post('/edit/Home', data=data,
+        response = client.post('/+edit/Home', data=data,
                             content_type='application/x-www-form-urlencoded')
         assert response.status_code == 303
         response = client.get('')
@@ -75,7 +75,7 @@ class TestHattaStandalone(object):
         """Check the editor's docstring."""
 
         client = werkzeug.Client(wiki.application, hatta.WikiResponse)
-        response = client.get('/edit/Home')
+        response = client.get('/+edit/Home')
         data = ''.join(response.data)
         assert data.startswith(self.docstring)
 
@@ -84,12 +84,12 @@ class TestHattaStandalone(object):
 
         client = werkzeug.Client(wiki.application, hatta.WikiResponse)
         data = 'text=test&parent=-1&comment=created&author=test&save=Save'
-        response = client.post('/edit/1/2', data=data,
+        response = client.post('/+edit/1/2', data=data,
                             content_type='application/x-www-form-urlencoded')
         assert response.status_code == 303
         response = client.get('/1/2')
         assert response.status_code == 200
-        response = client.get('/history/1/2/0')
+        response = client.get('/+history/1/2/0')
         assert response.status_code == 200
 
     def test_search(self, wiki):
@@ -97,10 +97,10 @@ class TestHattaStandalone(object):
 
         client = werkzeug.Client(wiki.application, hatta.WikiResponse)
         data = 'text=test&parent=-1&comment=created&author=test&save=Save'
-        response = client.post('/edit/searching', data=data,
+        response = client.post('/+edit/searching', data=data,
                             content_type='application/x-www-form-urlencoded')
         assert response.status_code == 303
-        response = client.get('/search?q=test')
+        response = client.get('/+search?q=test')
         assert response.status_code == 200
         data = ''.join(response.data)
         assert '>searching</a>' in data
@@ -109,7 +109,7 @@ class TestHattaStandalone(object):
         client = werkzeug.Client(wiki.application, hatta.WikiResponse)
         wiki.read_only = True
         data = 'text=test&parent=-1&comment=created&author=test&save=Save'
-        response = client.post('/edit/readonly', data=data,
+        response = client.post('/+edit/readonly', data=data,
                             content_type='application/x-www-form-urlencoded')
         assert response.status_code == 403
 
@@ -117,7 +117,7 @@ class TestHattaStandalone(object):
         client = werkzeug.Client(wiki.application, hatta.WikiResponse)
         wiki.read_only = True
         data = '52=Undo'
-        response = client.post('/undo/readonly', data=data,
+        response = client.post('/+undo/readonly', data=data,
                             content_type='application/x-www-form-urlencoded')
         assert response.status_code == 403
 
@@ -209,8 +209,8 @@ class TestHTML(object):
     def test_wiki_request_get_url(self, req):
         wiki, request = req
         assert request.get_url('title') == u'/title'
-        assert request.get_download_url('title') == u'/download/title'
-        assert request.get_url('title', wiki.edit) == u'/edit/title'
+        assert request.get_download_url('title') == u'/+download/title'
+        assert request.get_url('title', wiki.edit) == u'/+edit/title'
         assert request.get_url(None, wiki.favicon) == u'/favicon.ico'
 
     def test_html_page(self, req):
@@ -225,27 +225,27 @@ class TestHTML(object):
 <html><head>
     <title>page &lt;title&gt; - Hatta Wiki</title>
     <style type="text/css">...</style>
-    <link type="application/wiki" href="/edit/page%20%3Ctitle%3E" rel="alternate">
+    <link type="application/wiki" href="/+edit/page%20%3Ctitle%3E" rel="alternate">
     <link type="image/x-icon" href="/favicon.ico" rel="shortcut icon">
-    <link type="application/rss+xml" href="/feed/rss" rel="alternate" title="Hatta Wiki (RSS)">
-    <link type="application/rss+xml" href="/feed/atom" rel="alternate" title="Hatta Wiki (ATOM)">
+    <link type="application/rss+xml" href="/+feed/rss" rel="alternate" title="Hatta Wiki (RSS)">
+    <link type="application/rss+xml" href="/+feed/atom" rel="alternate" title="Hatta Wiki (ATOM)">
 </head><body>
     <div class="header">
-        <form action="/search" class="search" method="GET"><div>
+        <form action="/+search" class="search" method="GET"><div>
             <input class="search" name="q">
             <input class="button" type="submit" value="Search">
         </div></form>
         <div class="menu">
           <a href="/">Home</a>
-          <a href="/history">Recent changes</a>
+          <a href="/%2Bhistory">Recent changes</a>
         </div>
         <h1>page &lt;title&gt;</h1>
     </div>
     <div class="content">some &lt;content&gt;
     <div class="footer">
-        <a href="/edit/page%20%3Ctitle%3E" class="edit">Edit</a>
-        <a href="/history/page%20%3Ctitle%3E" class="history">History</a>
-        <a href="/search/page%20%3Ctitle%3E" class="backlinks">Backlinks</a>
+        <a href="/+edit/page%20%3Ctitle%3E" class="edit">Edit</a>
+        <a href="/+history/page%20%3Ctitle%3E" class="history">History</a>
+        <a href="/+search/page%20%3Ctitle%3E" class="backlinks">Backlinks</a>
     </div></div>
 </body></html>"""
         html_eq(expect, html)
@@ -260,17 +260,17 @@ class TestHTML(object):
     <style type="text/css">...</style>
     <meta content="NOINDEX,NOFOLLOW" name="robots">
     <link type="image/x-icon" href="/favicon.ico" rel="shortcut icon">
-    <link type="application/rss+xml" href="/feed/rss" rel="alternate" title="Hatta Wiki (RSS)">
-    <link type="application/rss+xml" href="/feed/atom" rel="alternate" title="Hatta Wiki (ATOM)">
+    <link type="application/rss+xml" href="/+feed/rss" rel="alternate" title="Hatta Wiki (RSS)">
+    <link type="application/rss+xml" href="/+feed/atom" rel="alternate" title="Hatta Wiki (ATOM)">
 </head><body>
     <div class="header">
-        <form action="/search" class="search" method="GET"><div>
+        <form action="/+search" class="search" method="GET"><div>
             <input class="search" name="q">
             <input class="button" type="submit" value="Search">
         </div></form>
         <div class="menu">
           <a href="/">Home</a>
-          <a href="/history">Recent changes</a>
+          <a href="/%2Bhistory">Recent changes</a>
         </div>
         <h1>different &lt;title&gt;</h1>
     </div>

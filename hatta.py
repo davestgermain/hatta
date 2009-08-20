@@ -1979,6 +1979,11 @@ class WikiPageImage(WikiPageFile):
                       werkzeug.escape(self.title))]
         return content
 
+    def render_cache(self, cache_file):
+        in_file = self.storage.open_page(self.title)
+        cache_file.write(in_file.read())
+        in_file.close()
+
 class WikiPageCSV(WikiPageFile):
     """Display class for type text/csv."""
 
@@ -2409,8 +2414,27 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             render = page.render_cache
         except AttributeError:
             return self.download(request, title)
-        f = self.storage.open_page(title)
-        response = self.response(request, title, f, '/render', page.mime)
+        inode, size, mtime = self.storage.page_file_meta(title)
+        cache_dir = os.path.join(self.cache, 'render')
+        cache_path = os.path.join(cache_dir, werkzeug.url_quote(title, safe=''))
+        try:
+            (st_mode, st_ino, st_dev, st_nlink, st_uid, st_gid, st_size,
+             st_atime, st_mtime, st_ctime) = os.stat(cache_path)
+        except OSError:
+            st_mtime = 0
+            st_size = None
+        print mtime, st_mtime
+        if mtime > st_mtime:
+            if not os.path.exists(cache_dir):
+                os.makedirs(cache_dir)
+            cache_file = open(cache_path, 'wb')
+            try:
+                render(cache_file)
+            finally:
+                cache_file.close
+        cache_file = open(cache_path)
+        response = self.response(request, title, cache_file, '/render',
+                                 page.mime, size=st_size)
         return response
 
     def undo(self, request, title):

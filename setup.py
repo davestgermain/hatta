@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from distutils.core import setup
+
 import sys
 import os
 
@@ -57,11 +58,13 @@ config = dict(
     ],
     options = {
         'py2exe': {
+			'includes': ['sip'],
             'packages': ['werkzeug', 'dbhash', 'encodings'],
-            'excludes': ['_ssl', 'tcl', 'tkinter'],
-            'dll_excludes': ['tcl84.dll', 'tk84.dll'],
+            'excludes': ['_ssl', 'tcl', 'tkinter', 'Tkconstants' ,'Tkinter'],
+            'dll_excludes': ['tcl84.dll', 'tk84.dll',],
             "compressed": 1,
             "optimize": 2,
+			"bundle_files": 1,
         },
         'py2app': {
             'argv_emulation': True,
@@ -83,7 +86,26 @@ if sys.platform == 'darwin':
     config['setup_requires'] = ['py2app']
 elif sys.platform == 'win32':
     ### Windows installer ###
+	# Hack to make py2exe import win32com
+	# http://www.py2exe.org/index.cgi/WinShell
+    # ModuleFinder can't handle runtime changes to __path__, but win32com uses them
+    import time
+    try:
+        # if this doesn't work, try import modulefinder
+        import py2exe.mf as modulefinder
+        import win32com
+        for p in win32com.__path__[1:]:
+            modulefinder.AddPackagePath("win32com", p)
+        for extra in ["win32com.shell"]: #,"win32com.mapi"
+            __import__(extra)
+            m = sys.modules[extra]
+            for p in m.__path__[1:]:
+                modulefinder.AddPackagePath(extra, p)
+    except ImportError:
+        # no build path setup, no worries.
+        pass
     import py2exe
+
     class InnoScript(object):
         def __init__(self, name, lib_dir, dist_dir, windows_exe_files = [],
                      lib_files = [], version = "1.0"):
@@ -164,7 +186,9 @@ elif sys.platform == 'win32':
             # Output subdirectory.
     config['cmdclass'] = {"py2exe": BuildInstaller}
     config['console'] = {
-        'script': 'hatta.py',
+#    config['windows'] = {
+#        'script': 'hatta.py',
+		'script': 'hatta_qticon.py',
         'icon_resources': [(1, "resources/hatta.ico")],
     },
 else: # Other UNIX-like

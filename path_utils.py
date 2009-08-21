@@ -113,7 +113,7 @@ def user_cache_dir(appname, owner=None):
             raise Error("must specify 'owner' on Windows")
         from win32com.shell import shellcon, shell
         shellcon.CSIDL_COMMON_APPDATA = 0x23 # missing from shellcon
-        path = shell.SHGetFolderPath(0, shellcon.CSIDL_COMMON_APPDATA, 0, 0)
+        path = shell.SHGetFolderPath(0, shellcon.CSIDL_APPDATA, 0, 0)
         try:
             path = unicode(path)
         except UnicodeError:
@@ -155,7 +155,7 @@ def user_config_file(appname, owner=None, filename=None):
             raise Error("must specify 'owner' on Windows")
         from win32com.shell import shellcon, shell
         shellcon.CSIDL_COMMON_APPDATA = 0x23 # missing from shellcon
-        path = shell.SHGetFolderPath(0, shellcon.CSIDL_COMMON_APPDATA, 0, 0)
+        path = shell.SHGetFolderPath(0, shellcon.CSIDL_APPDATA, 0, 0)
         try:
             path = unicode(path)
         except UnicodeError:

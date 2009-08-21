@@ -1,0 +1,23 @@
+============
+Using py2exe
+============
+
+The tested approach is with python 2.6.2.
+
+The trick is, that after running python setup.py py2exe
+you need to add MS C library to the distribution folder
+(dist). Create there a folder named Microsoft.VC90.CRT.
+Ensure You've got installed the 2008 runtime libs
+msvrt90_ and go to C:\WINDOWS\WinSxS. Copy those files to
+the directory you've just created:
+
+ :: _msvrt90: http://www.microsoft.com/downloads/details.aspx?familyid=A5C84275-3B97-4AB7-A40D-3802B2AF5FC2&displaylang=en
+
+C:\WINDOWS\WinSxS\x86_Microsoft.VC90.CRT_(strange_hash)\msvcr90.dll
+C:\WINDOWS\WinSxS\Manifests\x86_Microsoft.VC90.CRT_(long hash).manifest
+
+Rename the manifest file to Microsoft.VC90.CRT.manifest.
+
+This should allow for hatta to be shipped to other boxes.
+
+

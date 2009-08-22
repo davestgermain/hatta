@@ -15,6 +15,7 @@ from time import sleep
 from urllib import urlopen, unquote
 from wsgiref import simple_server
 import gettext
+import os
 try:
     import pybonjour
 except ImportError:
@@ -189,7 +190,7 @@ class HattaTrayIcon(QSystemTrayIcon):
         try:
             os.makedirs(config_dir)
         except OSError, e:
-            if os.path.isdir(config_dir):
+            if not os.path.isdir(config_dir):
                 raise e
         self.config.save_config(self.config_filename)
 

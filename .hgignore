@@ -8,3 +8,4 @@ dist/*
 pygments/*
 werkzeug/*
 cache/*
+*.DS_Store

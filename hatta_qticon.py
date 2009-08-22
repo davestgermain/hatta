@@ -185,6 +185,12 @@ class HattaTrayIcon(QSystemTrayIcon):
 
     def save_config(self):
         """Saves a WikiConfig instance with custom data."""
+        config_dir = os.path.dirname(self.config_filename)
+        try:
+            os.makedirs(config_dir)
+        except OSError, e:
+            if os.path.isdir(config_dir):
+                raise e
         self.config.save_config(self.config_filename)
 
     @pyqtSlot(unicode, unicode, int)
@@ -244,6 +250,7 @@ class HattaTrayIcon(QSystemTrayIcon):
         # Get config from file or create
         self.config = WikiConfig()
         self.config.parse_files([self.config_filename])
+        self.config.parse_args()
         if len(self.config.config) == 0:
             self.config = default_config
             self.save_config()

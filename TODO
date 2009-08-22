@@ -2,3 +2,6 @@
 * gray out status icon when starting/restarting server
 * make a preferecne option to not announce wiki (bonjour)
 * if bonjour server not present, display download info in menu
+* fix bug with no hostname in wiki open option, when no bonjour installed
+* write test for non-existing config dir
+* generally write test for the GUI

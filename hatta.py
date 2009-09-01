@@ -63,6 +63,7 @@ sys.stdout = sys.__stdout__
 sys.stderr = sys.__stderr__
 
 import werkzeug
+import werkzeug.exceptions, werkzeug.routing
 
 # Note: we have to set these before importing Mercurial
 os.environ['HGENCODING'] = 'utf-8'

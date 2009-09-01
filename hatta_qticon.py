@@ -251,10 +251,10 @@ class HattaTrayIcon(QSystemTrayIcon):
         # Get config from file or create
         self.config = WikiConfig()
         self.config.parse_files([self.config_filename])
-        self.config.parse_args()
         if len(self.config.config) == 0:
             self.config = default_config
             self.save_config()
+        self.config.parse_args()
 
         # Global wiki settings
         host = self.config.get('interface')

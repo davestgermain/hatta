@@ -365,9 +365,9 @@ class HattaTrayIcon(QSystemTrayIcon):
         """Displays discovered services in menu."""
         self.menu.clear()
 
+        self.menu.addAction(self.discovery_header)
         if len(services) > 0:
-            self.menu.addAction(self.discovery_header)
-
+            # Apparently Zeroconf daemon works and returns results
             for name, host, port in services[:4]:
                 self.menu.addAction(self._make_discovery_action(name, host,
                                                                 port))
@@ -379,6 +379,24 @@ class HattaTrayIcon(QSystemTrayIcon):
                     submenu.addAction(self._make_discovery_action(name, host,
                                                                   port))
             self.menu.addSeparator()
+        else:
+            # Seems Zeroconf returned no results. Probably no bonjour 
+            # installed.
+            if sys.platform.startswith('win32'):
+                info = QAction(_(
+                    u'    Install Bonjour to view nearby wikis'),
+                    self)
+                info.triggered.connect((lambda: lambda:
+                        webbrowser.open('http://support.apple.com/'
+                                        'downloads/Bonjour_for_Windows'))())
+            else:
+                info = QAction(_(
+                    u'    Install libavahi-compat-libdnssd1'
+                    u' to view nearby wikis'),
+                    self
+                )
+                info.setDisabled(True)
+            self.menu.addAction(info)
 
         self.menu.addActions(self.default_actions)
         self.menu.setDisabled(False)

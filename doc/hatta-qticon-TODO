@@ -1,6 +1,6 @@
 * make menu dynamic, i.e. gray in/out and add new services when menu is 
   opened
-* if bonjour server not present, display download info in menu
+* announcing of wiki should be settable separately from discovery
 * fix bug with no hostname in wiki open option, when no bonjour installed
 * write test for non-existing config dir
 * generally write test for the GUI

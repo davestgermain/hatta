@@ -26,7 +26,7 @@ import webbrowser
 from PyQt4.QtGui import (QApplication, QSystemTrayIcon, QMenu, QIcon,
     QMessageBox, QAction, QKeySequence, QWidget, QVBoxLayout, QGridLayout,
     QLabel, QSpinBox, QToolTip, QLineEdit, QHBoxLayout, QPushButton,
-    QFileDialog, QPixmap)
+    QFileDialog, QPixmap, QCheckBox)
 from PyQt4.QtCore import (QString, QThread, pyqtSignal, pyqtSlot, Qt,
     QPoint)
 
@@ -197,8 +197,8 @@ class HattaTrayIcon(QSystemTrayIcon):
                 raise e
         self.config.save_config(self.config_filename)
 
-    @pyqtSlot(unicode, unicode, int)
-    def reload_config(self, site_name, pages_path, port):
+    @pyqtSlot(unicode, unicode, int, bool)
+    def reload_config(self, site_name, pages_path, port, announce):
         """Change own config and realod the wiki."""
         self.setDisabled(True)
         self.menu.setDisabled(True)
@@ -208,17 +208,21 @@ class HattaTrayIcon(QSystemTrayIcon):
         self.wiki_thread.quit()
         if self.zeroconf_thread is not None:
             self.zeroconf_thread.quit()
+            # Necessary if turned off/on via preferences
+            self.zeroconf_thread = None
 
         self.url = 'http://%s:%d/' % ('', port)
         self.config.set('site_name', str(site_name))
         self.config.set('pages_path', str(pages_path))
         self.config.set('port', port)
+        self.should_announce = announce
+        self.config.set('announce', str(announce))
         self.save_config()
 
         self.wiki_thread = HattaThread(self.config, self.on_error)
         self.wiki_thread.start()
 
-        if self.zeroconf_thread is not None:
+        if self.should_announce:
             def delay_zeroconf_start():
                 # This sleep is needed, as mdns server needs to change the 
                 # port on which wiki is registered.
@@ -271,6 +275,7 @@ class HattaTrayIcon(QSystemTrayIcon):
         host = self.config.get('interface')
         port = int(self.config.get('port'))
         self.url = 'http://%s:%d/' % (host, port)
+        self.should_announce = bool(self.config.get_bool('announce', 1))
 
         self.preferences_window = PreferenceWindow(self, self.config)
         self.preferences_window.config_change.connect(
@@ -295,7 +300,7 @@ class HattaTrayIcon(QSystemTrayIcon):
 
         self._prepare_default_menu()
 
-        if pybonjour:
+        if pybonjour and self.should_announce:
             self.zeroconf_thread = ZeroconfThread(self.config,
                                                   self.on_new_services)
             self.zeroconf_thread.start()
@@ -337,6 +342,7 @@ class HattaTrayIcon(QSystemTrayIcon):
         if self.zeroconf_thread is not None:
             self.zeroconf_thread.quit()
         self.menu.destroy()
+        self.save_config()
         global app
         app.quit()
 
@@ -400,7 +406,7 @@ default_config = WikiConfig(
 class PreferenceWindow(QWidget):
     """Panel with most important preferences editable to user."""
 
-    config_change = pyqtSignal(unicode, unicode, int)
+    config_change = pyqtSignal(unicode, unicode, int, bool)
 
     def __init__(self, parent, config):
         super(PreferenceWindow, self).__init__(
@@ -414,6 +420,7 @@ class PreferenceWindow(QWidget):
         self.wiki_page_path = config.get('pages_path',
                                          _(u'Choose path for wiki pages'))
         self.wiki_port = int(config.get('port', 8080))
+        self.should_announce = bool(config.get_bool('announce', 1))
 
         # Set up GUI code
         self.setWindowTitle(_(u'Hatta preferences'))
@@ -458,6 +465,14 @@ class PreferenceWindow(QWidget):
         grid_layout.addWidget(self.port_label, 2, 0)
         grid_layout.addWidget(self.port_spin, 2, 1)
 
+        # Announcement switch
+        tooltip = _(u'Should wiki announce itself to the neighbourhood'
+                    u' network?')
+        self.announce_checkbox = QCheckBox(_(u'Announce hatta'))
+        self.announce_checkbox.setToolTip(tooltip)
+        self.announce_checkbox.setChecked(self.should_announce)
+        grid_layout.addWidget(self.announce_checkbox, 3, 1)
+
         self.main_vbox.addLayout(grid_layout)
 
         # File choosing dialog for pages path
@@ -482,10 +497,12 @@ class PreferenceWindow(QWidget):
         self.wiki_name = self.name_edit.text()
         self.wiki_page_path = self.pages_edit.text()
         self.wiki_port = self.port_spin.value
+        self.should_announce = self.announce_checkbox.isChecked()
         self.config_change.emit(
             unicode(self.name_edit.text()),
             unicode(self.pages_edit.text()),
-            int(self.port_spin.value()))
+            int(self.port_spin.value()),
+            bool(self.should_announce))
 
 if __name__ == '__main__':
     try:

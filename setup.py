@@ -60,21 +60,25 @@ config = dict(
         'py2exe': {
 			'includes': ['sip'],
             'packages': ['werkzeug', 'dbhash', 'encodings'],
-            'excludes': ['_ssl', 'tcl', 'tkinter', 'Tkconstants' ,'Tkinter'],
-            'dll_excludes': ['tcl84.dll', 'tk84.dll',],
+            'excludes': ['_ssl', 'tcl', 'tkinter', 'Tkconstants' 
+                         ,'Tkinter'],
+            'dll_excludes': ['tcl84.dll', 'tk84.dll'],
             "compressed": 1,
             "optimize": 2,
 			"bundle_files": 1,
         },
         'py2app': {
             'argv_emulation': True,
-            'includes': ['werkzeug.routing', 'PyQt4.QtGui',
-                'PyQt4.QtCore', 'sip'],
 # When packaging with MacPorts PyQt add to includes:
 # PyQt4._qt
 # See README-MAC
             'iconfile': 'resources/hatta.icns',
             'resources': ['hatta.py'],
+            'includes': ['sip', 'PyQt4', 'PyQt4.QtCore', 'PyQt4.QtGui'],
+            'excludes': ['PyQt4.QtDesigner', 'PyQt4.QtNetwork', 
+                         'PyQt4.QtOpenGL', 'PyQt4.QtScript', 'PyQt4.QtSql', 
+                         'PyQt4.QtTest', 'PyQt4.QtWebKit', 'PyQt4.QtXml', 
+                         'PyQt4.phonon'],
         },
     },
 # for Mac
@@ -84,6 +88,49 @@ config = dict(
 if sys.platform == 'darwin':
     from setuptools import setup
     config['setup_requires'] = ['py2app']
+
+    # Add deleting Qt debug libs (like QtCore_debug) to the py2app build 
+    # command
+    from py2app.build_app import py2app as _py2app
+    class py2app(_py2app):
+        """py2app extensions to delete Qt debug libs."""
+        # Add dmg option
+        _py2app.user_options.append(
+            ('no-dmg', None,
+             'Do not build a dmg image from the bundle'),
+        )
+        _py2app.boolean_options.append('no-dmg')
+
+        def initialize_options(self):
+            _py2app.initialize_options(self)
+            self.no_dmg = False
+
+        def run(self):
+            """Runs original py2app and deletes all files containing 
+            'debug' in their name.
+            """
+            # First normal py2app run
+            _py2app.run(self)
+
+            # Then remove debuging files
+            print '*** removing Qt debug libs ***'
+            for root, dirs, files in os.walk(self.dist_dir):
+                for file in files:
+                    if 'debug' in file:
+                        print 'removing', file
+                        os.remove(os.path.join(root,file))
+
+            # And run macdeployqt to copy plugins and build a dmg
+            print '*** running macdeployqt ***'
+            macdeploy_cmd = 'macdeployqt %s.app' % (self.get_appname())
+            if self.no_dmg is False:
+                macdeploy_cmd += ' -dmg'
+            # The cd-ing is needed, since macdeploy with -dmg will name it 
+            # as it's first argument and we don't like dmg names like 
+            # dist/Hatta.app
+            os.system('cd %s; ' % (self.dist_dir,) + macdeploy_cmd)
+            
+    config['cmdclass'] = {'py2app': py2app}
 elif sys.platform == 'win32':
     ### Windows installer ###
 	# Hack to make py2exe import win32com

@@ -20,6 +20,7 @@ try:
     import pybonjour
 except ImportError:
     pybonjour = None
+pybonjour = None
 import sys
 import webbrowser
 
@@ -222,7 +223,7 @@ class HattaTrayIcon(QSystemTrayIcon):
         self.wiki_thread = HattaThread(self.config, self.on_error)
         self.wiki_thread.start()
 
-        if self.should_announce:
+        if self.should_announce and pybonjour is not None:
             def delay_zeroconf_start():
                 # This sleep is needed, as mdns server needs to change the 
                 # port on which wiki is registered.
@@ -439,7 +440,6 @@ class PreferenceWindow(QWidget):
                                          _(u'Choose path for wiki pages'))
         self.wiki_port = int(config.get('port', 8080))
         self.should_announce = bool(config.get_bool('announce', 1))
-
         # Set up GUI code
         self.setWindowTitle(_(u'Hatta preferences'))
         self.setWindowModality(Qt.WindowModal)
@@ -489,6 +489,8 @@ class PreferenceWindow(QWidget):
         self.announce_checkbox = QCheckBox(_(u'Announce hatta'))
         self.announce_checkbox.setToolTip(tooltip)
         self.announce_checkbox.setChecked(self.should_announce)
+        if pybonjour is None:
+            self.announce_checkbox.setVisible(False)
         grid_layout.addWidget(self.announce_checkbox, 3, 1)
 
         self.main_vbox.addLayout(grid_layout)

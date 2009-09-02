@@ -26,7 +26,7 @@ import webbrowser
 from PyQt4.QtGui import (QApplication, QSystemTrayIcon, QMenu, QIcon,
     QMessageBox, QAction, QKeySequence, QWidget, QVBoxLayout, QGridLayout,
     QLabel, QSpinBox, QToolTip, QLineEdit, QHBoxLayout, QPushButton,
-    QFileDialog)
+    QFileDialog, QPixmap)
 from PyQt4.QtCore import (QString, QThread, pyqtSignal, pyqtSlot, Qt,
     QPoint)
 
@@ -183,6 +183,9 @@ class HattaTrayIcon(QSystemTrayIcon):
     config_filename = user_config_file(
         name,
         organization)
+    dist_icon = os.path.join(sys.prefix, 
+                             'share/icons/hicolor/64x64/hatta.png')
+    debug_icon = 'resources/hatta.png'
 
     def save_config(self):
         """Saves a WikiConfig instance with custom data."""
@@ -197,6 +200,7 @@ class HattaTrayIcon(QSystemTrayIcon):
     @pyqtSlot(unicode, unicode, int)
     def reload_config(self, site_name, pages_path, port):
         """Change own config and realod the wiki."""
+        self.setDisabled(True)
         self.menu.setDisabled(True)
         self.menu.clear()
         self.menu.addAction(_(u'Restarting wiki...'))
@@ -233,6 +237,11 @@ class HattaTrayIcon(QSystemTrayIcon):
             # entries.
             self.on_new_services([])
 
+    def setDisabled(self, disabled=True):
+        """Change tray icon to between disabled or normal state."""
+        self.setIcon(QIcon(self.hatta_icon.pixmap(64, 64,
+            QIcon.Disabled if disabled else QIcon.Normal)))
+
     def __init__(self):
         """Initialize connection data and status menu GUI."""
         super(HattaTrayIcon, self).__init__()
@@ -240,8 +249,10 @@ class HattaTrayIcon(QSystemTrayIcon):
         self.menu = QMenu(QString(_(u'Hatta Wiki menu')))
         self.menu.setDisabled(True)
         self.menu.addAction(_(u'Starting wiki...'))
-        self.setIcon(QIcon(join(
-            sys.prefix, 'share/icons/hicolor/64x64/hatta.png')))
+        self.hatta_icon = QIcon(QPixmap(
+            self.dist_icon if os.path.isfile(self.dist_icon) else 
+            self.debug_icon))
+        self.setDisabled(True)
         self.setContextMenu(self.menu)
         self.setToolTip(QString(_(u'Click this icon to interact with'
                                   u' Hatta wiki.')))
@@ -365,6 +376,7 @@ class HattaTrayIcon(QSystemTrayIcon):
 
         self.menu.addActions(self.default_actions)
         self.menu.setDisabled(False)
+        self.setDisabled(False)
 
 default_config = WikiConfig(
     # Here you can modify the configuration: uncomment and change

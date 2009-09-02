@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 # -*- coding: utf-8 -*-
 
 """
@@ -27,12 +28,11 @@ import webbrowser
 from PyQt4.QtGui import (QApplication, QSystemTrayIcon, QMenu, QIcon,
     QMessageBox, QAction, QKeySequence, QWidget, QVBoxLayout, QGridLayout,
     QLabel, QSpinBox, QToolTip, QLineEdit, QHBoxLayout, QPushButton,
-    QFileDialog, QPixmap, QCheckBox)
+    QFileDialog, QPixmap, QCheckBox, QDesktopServices)
 from PyQt4.QtCore import (QString, QThread, pyqtSignal, pyqtSlot, Qt,
     QPoint)
 
 from hatta import WikiConfig, Wiki, WikiRequest, name, organization, url
-from path_utils import user_data_dir, user_cache_dir, user_config_file
 
 class HattaThread(QThread):
     """
@@ -181,10 +181,11 @@ class ZeroconfThread(QThread):
 
 class HattaTrayIcon(QSystemTrayIcon):
     """Extension of QSystemTrayIcon for customization towards Hatta."""
-
-    config_filename = user_config_file(
+    config_filename = join(
+        str(QDesktopServices.storageLocation(
+            QDesktopServices.DataLocation)),
         name,
-        organization)
+        name + u'.conf')
     dist_icon = os.path.join(sys.prefix, 
                              'share/icons/hicolor/64x64/hatta.png')
     debug_icon = 'resources/hatta.png'
@@ -415,6 +416,14 @@ class HattaTrayIcon(QSystemTrayIcon):
         self.menu.addActions(self.default_actions)
         self.menu.setDisabled(False)
         self.setDisabled(False)
+        self.refresh_menu()
+
+    def refresh_menu(self):
+        """Forces Qt to process events."""
+        self.menu.repaint()
+        global app
+        if app.hasPendingEvents():
+            app.processEvents()
 
 default_config = WikiConfig(
     # Here you can modify the configuration: uncomment and change
@@ -424,13 +433,15 @@ default_config = WikiConfig(
     interface='',
     port=8080,
     site_name='Hatta Wiki',
-    pages_path=join(user_data_dir(
+    pages_path=join(
+        str(QDesktopServices.storageLocation(
+            QDesktopServices.DataLocation)),
         name,
-        organization),
         u'pages'),
-    cache_path=user_cache_dir(
-        name,
-        organization),
+    cache_path=join(
+        str(QDesktopServices.storageLocation(
+            QDesktopServices.CacheLocation)),
+        name),
     # front_page = 'Home'
     # page_charset = 'UTF-8'
 )

@@ -76,7 +76,7 @@ import mercurial.util
 __version__ = '1.3.3dev'
 name = 'Hatta'
 url = 'http://hatta-wiki.org/'
-organization = 'org.hatta-wiki'
+description = 'Wiki engine that lives in Mercurial repository.'
 
 def external_link(addr):
     """

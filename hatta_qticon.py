@@ -32,7 +32,7 @@ from PyQt4.QtGui import (QApplication, QSystemTrayIcon, QMenu, QIcon,
 from PyQt4.QtCore import (QString, QThread, pyqtSignal, pyqtSlot, Qt,
     QPoint)
 
-from hatta import WikiConfig, Wiki, WikiRequest, name, organization, url
+from hatta import WikiConfig, Wiki, WikiRequest, name, url
 
 class HattaThread(QThread):
     """

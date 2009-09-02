@@ -14,13 +14,12 @@ config = dict(
     name=hatta.name,
     version=hatta.__version__,
     url=hatta.url,
-    organization=hatta.organization,
     download_url='http://download.hatta-wiki.org/hatta-%s/Hatta-%s.zip' % (
         hatta.__version__, hatta.__version__),
     license='GNU General Public License (GPL)',
     author='Radomir Dopieralski',
     author_email='hatta@sheep.art.pl',
-    description='Wiki engine that lives in Mercurial repository.',
+    description=hatta.description,
     long_description=hatta.__doc__,
     keywords='wiki wsgi web mercurial repository',
     py_modules=['hatta'],
@@ -81,13 +80,12 @@ config = dict(
                          'PyQt4.phonon'],
         },
     },
-# for Mac
-    app=['hatta_qticon.py'],
 )
 
 if sys.platform == 'darwin':
     from setuptools import setup
     config['setup_requires'] = ['py2app']
+    config['app'] = ['hatta_qticon.py']
 
     # Add deleting Qt debug libs (like QtCore_debug) to the py2app build 
     # command
@@ -155,18 +153,19 @@ elif sys.platform == 'win32':
 
     class InnoScript(object):
         def __init__(self, name, lib_dir, dist_dir, windows_exe_files = [],
-                     lib_files = [], version = "1.0"):
+                     lib_files = [], description = "", version = "1.0"):
             self.lib_dir = lib_dir
             self.dist_dir = dist_dir
             if not self.dist_dir[-1] in "\\/":
                 self.dist_dir += "\\"
-            self.name = name
+            self.name = name.capitalize()
             self.version = version
+            self.description = description
             self.windows_exe_files = [self.chop(p) for p in windows_exe_files]
-            self.lib_files = [self.chop(p) for p in lib_files]
+            self.lib_files = [self.chop(p) for p in lib_files
+                if p.startswith(self.dist_dir)]
 
         def chop(self, pathname):
-            assert pathname.startswith(self.dist_dir)
             return pathname[len(self.dist_dir):]
 
         def create(self, pathname="dist\\hatta.iss"):
@@ -179,6 +178,10 @@ elif sys.platform == 'win32':
             print >> ofi, r"AppVerName=%s %s" % (self.name, self.version)
             print >> ofi, r"DefaultDirName={pf}\%s" % self.name
             print >> ofi, r"DefaultGroupName=%s" % self.name
+            print >> ofi, r"InternalCompressLevel=ultra64"
+            print >> ofi, r"VersionInfoVersion=%s" % '.'.join(self.version.split('.')[:2])
+            print >> ofi, r"VersionInfoDescription=%s" % self.description
+            print >> ofi, r"OutputBaseFilename=%s" % self.name + 'Setup'
             print >> ofi
 
             print >> ofi, r"[Files]"
@@ -209,6 +212,7 @@ elif sys.platform == 'win32':
                 res = ctypes.windll.shell32.ShellExecuteA(0, "compile", self.pathname, None, None, 0)
                 if res < 32:
                     raise RuntimeError, "ShellExecute failed, error %d" % res
+    # class InnnoScript
 
     class BuildInstaller(py2exe.build_exe.py2exe):
         """
@@ -221,23 +225,61 @@ elif sys.platform == 'win32':
             py2exe.build_exe.py2exe.run(self)
             lib_dir = self.lib_dir
             dist_dir = self.dist_dir
+            version = hatta.__version__
+            if version.endswith('dev'):
+                from datetime import datetime
+                version = version[:-3] + '.' + datetime.now().strftime('%Y%m%d%H%M')
+                
             # create the Installer, using the files py2exe has created.
             script = InnoScript("hatta", lib_dir, dist_dir,
                                 self.console_exe_files+self.windows_exe_files,
-                                self.lib_files)
+                                self.lib_files,
+                                hatta.description, version)
             print "*** creating the inno setup script***"
-            script.create()
+            script.create(os.path.join(self.dist_dir, hatta.name + '.iss'))
             print "*** compiling the inno setup script***"
             script.compile()
             # Note: By default the final setup.exe will be in an
             # Output subdirectory.
+    # class BuildInstaller
+    
+	config['zipfile'] = None
     config['cmdclass'] = {"py2exe": BuildInstaller}
-    config['console'] = {
-#    config['windows'] = {
-#        'script': 'hatta.py',
+    config['windows'] = [{
 		'script': 'hatta_qticon.py',
         'icon_resources': [(1, "resources/hatta.ico")],
-    },
+    }]
+    
+    # Adding MS runtime C libraries
+    if sys.version.startswith('2.6'):
+        from win32com.shell import shellcon, shell
+        from glob import glob
+        windir = shell.SHGetFolderPath(0, shellcon.CSIDL_WINDOWS, 0, 0)
+        dlldir = glob(os.path.join(windir, u'WinSxS', '*Microsoft.VC90.CRT*'))[0]
+        dlls = glob(os.path.join(dlldir, '*.dll'))
+        dest_dir = 'Microsoft.VC90.CRT'
+        from tempfile import gettempdir
+        from shutil import copy
+        manifest = os.path.join(gettempdir(), 'Microsoft.VC90.CRT.manifest')
+        copy(glob(os.path.join(
+                windir, 'WinSxS', 'Manifests', '*VC90.CRT*manifest'))[0],
+            manifest)
+        config['data_files'].extend([
+            (dest_dir, glob(os.path.join(dlldir, '*.dll'))),
+            (dest_dir, [manifest]),
+        ])
+    else:
+        # For Python < 2.6 we don't need separate dir,
+        # so let's leave the work to py2app
+        origIsSystemDLL = py2exe.build_exe.isSystemDLL
+        def isSystemDLL(pathname):
+            if 'msvc' in os.path.basename(pathname).lower():
+                return 0
+            elif 'dwmapi' in os.path.basename(pathname).lower():
+                return 0
+            return origIsSystemDLL(pathname)
+        py2exe.build_exe.isSystemDLL = isSystemDLL    
+
 else: # Other UNIX-like
     config['scripts'] = ['hatta_qticon.py', 'hatta_gtkicon.py']
 

@@ -1,5 +1,3 @@
-* check Katarinas debug log
-* create page and cache dirs before accessing them
 * gray out status icon when starting/restarting server
 * make a preferecne option to not announce wiki (bonjour)
 * if bonjour server not present, display download info in menu

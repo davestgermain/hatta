@@ -121,7 +121,7 @@ elif sys.platform == 'win32':
         def chop(self, pathname):
             assert pathname.startswith(self.dist_dir)
             return pathname[len(self.dist_dir):]
-        
+
         def create(self, pathname="dist\\hatta.iss"):
             self.pathname = pathname
             ofi = self.file = open(pathname, "w")
@@ -143,7 +143,7 @@ elif sys.platform == 'win32':
             for path in self.windows_exe_files:
                 print >> ofi, r'Name: "{group}\%s"; Filename: "{app}\%s"' % \
                       (self.name, path)
-            print >> ofi, 'Name: "{group}\Uninstall %s"; Filename: "{uninstallexe}"' % self.name
+            print >> ofi, r'Name: "{group}\Uninstall %s"; Filename: "{uninstallexe}"' % self.name
 
         def compile(self):
             try:

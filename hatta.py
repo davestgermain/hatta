@@ -2581,7 +2581,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             min_pos = max(position - 60, 0)
             max_pos = min(position + 60, len(text))
             snippet = werkzeug.escape(text[min_pos:max_pos])
-            highlighted = werkzeug.html.b(match.group(0), _class="highlight")
+            highlighted = werkzeug.html.b(match.group(0), class_="highlight")
             html = regexp.sub(highlighted, snippet)
             return html
 

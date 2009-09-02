@@ -10,6 +10,7 @@ Uses Qt and PyQt in particular for this task.
 """
 
 from os.path import join
+from select import select
 from thread import start_new_thread
 from time import sleep
 from urllib import urlopen, unquote
@@ -20,7 +21,6 @@ try:
     import pybonjour
 except ImportError:
     pybonjour = None
-pybonjour = None
 import sys
 import webbrowser
 
@@ -79,19 +79,14 @@ class ZeroconfThread(QThread):
     A separate thread, as the pybonjour lib is polling."""
 
     new_services = pyqtSignal(set)
+    timeout = 5 # seconds
 
     def register_callback(self, sdRef, flags, error_code, name, regtype,
                           domain):
-        """Called when a response to Zeroconf register is given.
-
-        Exits the thread if something went wrong. This means no more 
-        resources won't be wasted and no Zeroconf info will be passed to 
-        the tray icon This means no more resources won't be wasted and no 
-        Zeroconf info will be passed to the tray icon."""
+        """Called when a response to Zeroconf register is given."""
         if error_code != pybonjour.kDNSServiceErr_NoError:
-            self.quit()
-
-        self.main_loop()
+            # TODO: Should give some error
+            pass
 
     def browse_callback(self, sdRef, flags, interface_index, error_code,
                         service_name, reg_type, reply_domain):
@@ -114,7 +109,7 @@ class ZeroconfThread(QThread):
                 host_target,
                 port))
 
-        resolve_sdRef = pybonjour.DNSServiceResolve(
+        self.resolve_sdRef = pybonjour.DNSServiceResolve(
             interfaceIndex=interface_index,
             name=service_name,
             regtype=reg_type,
@@ -122,18 +117,20 @@ class ZeroconfThread(QThread):
             callBack=resolve_callback)
         # Add timeout capability
         try:
-            pybonjour.DNSServiceProcessResult(resolve_sdRef)
-            if flags & pybonjour.kDNSServiceFlagsAdd:
-                self.services.add(self.resolved.pop())
-            else:
-                try:
-                    self.services.remove(self.resolved.pop())
-                except KeyError:
-                    pass
+            ready = select([self.resolve_sdRef], [], [], self.timeout)
+            if self.resolve_sdRef in ready[0]:
+                pybonjour.DNSServiceProcessResult(self.resolve_sdRef)
+                if flags & pybonjour.kDNSServiceFlagsAdd:
+                    self.services.add(self.resolved.pop())
+                else:
+                    try:
+                        self.services.remove(self.resolved.pop())
+                    except KeyError:
+                        pass
             if not flags & pybonjour.kDNSServiceFlagsMoreComing:
                 self.new_services.emit(list(self.services))
         finally:
-            resolve_sdRef.close()
+            self.resolve_sdRef.close()
 
     def __init__(self, config, services_handler):
         super(ZeroconfThread, self).__init__()
@@ -147,6 +144,18 @@ class ZeroconfThread(QThread):
         self.new_services.connect(services_handler)
 
     def run(self):
+        self.browse_sdRef = pybonjour.DNSServiceBrowse(
+            regtype=self.reg_type,
+            callBack=self.browse_callback)
+        try:
+            while True:
+                ready = select([self.browse_sdRef], [], [], self.timeout)
+                if self.browse_sdRef in ready[0]:
+                    pybonjour.DNSServiceProcessResult(self.browse_sdRef)
+        finally:
+            self.browse_sdRef.close()
+
+    def register_wiki(self):
         # Register Hatta instance
         self.service_ref = pybonjour.DNSServiceRegister(
             flags=pybonjour.kDNSServiceFlagsNoAutoRename,
@@ -154,28 +163,20 @@ class ZeroconfThread(QThread):
             regtype=self.reg_type,
             port=self.port,
             callBack=self.register_callback)
-        try:
-            pybonjour.DNSServiceProcessResult(self.service_ref)
-            self.main_loop()
-        finally:
-            self.service_ref.close()
 
-    def main_loop(self):
-        self.browse_sdRef = pybonjour.DNSServiceBrowse(
-            regtype=self.reg_type,
-            callBack=self.browse_callback)
-        try:
-            while True:
-                pybonjour.DNSServiceProcessResult(self.browse_sdRef)
-        finally:
-            self.browse_sdRef.close()
+        ready = select([self.service_ref], [], [], self.timeout)
+        if self.service_ref in ready[0]:
+            pybonjour.DNSServiceProcessResult(self.service_ref)
 
     def quit(self):
         """Close Zeroconf service connection."""
         # This is needed, as closing service_ref would emit this
         # signal.
         self.new_services.disconnect()
-        self.service_ref.close()
+        try:
+            self.service_ref.close()
+        except AttributeError:
+            pass
         super(ZeroconfThread, self).quit()
 
 class HattaTrayIcon(QSystemTrayIcon):
@@ -223,7 +224,7 @@ class HattaTrayIcon(QSystemTrayIcon):
         self.wiki_thread = HattaThread(self.config, self.on_error)
         self.wiki_thread.start()
 
-        if self.should_announce and pybonjour is not None:
+        if pybonjour is not None:
             def delay_zeroconf_start():
                 # This sleep is needed, as mdns server needs to change the 
                 # port on which wiki is registered.
@@ -233,14 +234,12 @@ class HattaTrayIcon(QSystemTrayIcon):
                     self.config,
                     self.on_new_services)
                 self.zeroconf_thread.start()
+                self.register_wiki()
 
             start_new_thread(delay_zeroconf_start, ())
-        else:
-            # Partial solution to race condition: only have a menu when 
-            # there's no zeroconf thread. If it's present, somehow the 
-            # preferences window doens't show until thread gives browsed 
-            # entries.
-            self.on_new_services([])
+
+        # Unfreeze GUI
+        self.on_new_services([])
 
     def setDisabled(self, disabled=True):
         """Change tray icon to between disabled or normal state."""
@@ -301,13 +300,24 @@ class HattaTrayIcon(QSystemTrayIcon):
 
         self._prepare_default_menu()
 
-        if pybonjour and self.should_announce:
+        # Start Zeroconf thread
+        if pybonjour:
             self.zeroconf_thread = ZeroconfThread(self.config,
                                                   self.on_new_services)
             self.zeroconf_thread.start()
+            self.register_wiki()
         else:
             self.zeroconf_thread = None
-            self.on_new_services([])
+
+        # Unfreeze the GUI
+        self.on_new_services([])
+
+    def register_wiki(self):
+        """Tells Zeroconf thread to register wiki in Bonjour if 
+        appropriate."""
+        if (pybonjour is not None and self.should_announce and
+            self.zeroconf_thread is not None):
+            self.zeroconf_thread.register_wiki()
 
     def _prepare_default_menu(self):
         """Creates and populates the context menu."""
@@ -366,9 +376,10 @@ class HattaTrayIcon(QSystemTrayIcon):
         """Displays discovered services in menu."""
         self.menu.clear()
 
-        self.menu.addAction(self.discovery_header)
         if len(services) > 0:
             # Apparently Zeroconf daemon works and returns results
+            self.menu.addAction(self.discovery_header)
+
             for name, host, port in services[:4]:
                 self.menu.addAction(self._make_discovery_action(name, host,
                                                                 port))
@@ -380,9 +391,11 @@ class HattaTrayIcon(QSystemTrayIcon):
                     submenu.addAction(self._make_discovery_action(name, host,
                                                                   port))
             self.menu.addSeparator()
-        else:
+        elif len(services) == 0 and pybonjour is None:
             # Seems Zeroconf returned no results. Probably no bonjour 
             # installed.
+            self.menu.addAction(self.discovery_header)
+
             if sys.platform.startswith('win32'):
                 info = QAction(_(
                     u'    Install Bonjour to view nearby wikis'),

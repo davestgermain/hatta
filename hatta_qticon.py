@@ -188,7 +188,9 @@ class HattaTrayIcon(QSystemTrayIcon):
         name + u'.conf')
     dist_icon = os.path.join(sys.prefix, 
                              'share/icons/hicolor/64x64/hatta.png')
-    debug_icon = 'resources/hatta.png'
+    debug_icon = os.path.join(os.path.dirname(
+        os.path.abspath(sys.argv[0])),
+        'resources/hatta.png')
 
     def save_config(self):
         """Saves a WikiConfig instance with custom data."""
@@ -204,7 +206,6 @@ class HattaTrayIcon(QSystemTrayIcon):
     def reload_config(self, site_name, pages_path, port, announce):
         """Change own config and realod the wiki."""
         self.setDisabled(True)
-        self.menu.setDisabled(True)
         self.menu.clear()
         self.menu.addAction(_(u'Restarting wiki...'))
 
@@ -214,7 +215,7 @@ class HattaTrayIcon(QSystemTrayIcon):
             # Necessary if turned off/on via preferences
             self.zeroconf_thread = None
 
-        self.url = 'http://%s:%d/' % ('', port)
+        self._modify_url(port)
         self.config.set('site_name', str(site_name))
         self.config.set('pages_path', str(pages_path))
         self.config.set('port', port)
@@ -244,6 +245,7 @@ class HattaTrayIcon(QSystemTrayIcon):
 
     def setDisabled(self, disabled=True):
         """Change tray icon to between disabled or normal state."""
+        self.menu.setDisabled(disabled)
         self.setIcon(QIcon(self.hatta_icon.pixmap(64, 64,
             QIcon.Disabled if disabled else QIcon.Normal)))
 
@@ -251,13 +253,13 @@ class HattaTrayIcon(QSystemTrayIcon):
         """Initialize connection data and status menu GUI."""
         super(HattaTrayIcon, self).__init__()
         # First setup tray icon and display inform user about starting
-        self.menu = QMenu(QString(_(u'Hatta Wiki menu')))
-        self.menu.setDisabled(True)
-        self.menu.addAction(_(u'Starting wiki...'))
         self.hatta_icon = QIcon(QPixmap(
             self.dist_icon if os.path.isfile(self.dist_icon) else 
             self.debug_icon))
+        self.menu = QMenu(QString(_(u'Hatta Wiki menu')))
         self.setDisabled(True)
+
+        self.menu.addAction(_(u'Starting wiki...'))
         self.setContextMenu(self.menu)
         self.setToolTip(QString(_(u'Click this icon to interact with'
                                   u' Hatta wiki.')))
@@ -273,12 +275,12 @@ class HattaTrayIcon(QSystemTrayIcon):
         self.config.parse_args()
 
         # Global wiki settings
-        host = self.config.get('interface')
         port = int(self.config.get('port'))
-        self.url = 'http://%s:%d/' % (host, port)
+        self._modify_url(port)
         self.should_announce = bool(self.config.get_bool('announce', 1))
 
-        self.preferences_window = PreferenceWindow(self, self.config)
+        self.preferences_window = PreferenceWindow(self, self.hatta_icon, 
+                                                   self.config)
         self.preferences_window.config_change.connect(
             self.reload_config,
             type=Qt.QueuedConnection)
@@ -339,6 +341,10 @@ class HattaTrayIcon(QSystemTrayIcon):
                               u' status icon.'))
         action.triggered.connect(self.on_wiki_quit)
         self.default_actions.append(action)
+
+    def _modify_url(self, port):
+        """Modifies port in URL."""
+        self.url = 'http://localhost:%d/' % (port,)
 
     def on_wiki_open(self):
         """Callback for opening wiki page in a browser."""
@@ -414,7 +420,6 @@ class HattaTrayIcon(QSystemTrayIcon):
             self.menu.addAction(info)
 
         self.menu.addActions(self.default_actions)
-        self.menu.setDisabled(False)
         self.setDisabled(False)
         self.refresh_menu()
 
@@ -451,11 +456,13 @@ class PreferenceWindow(QWidget):
 
     config_change = pyqtSignal(unicode, unicode, int, bool)
 
-    def __init__(self, parent, config):
+    def __init__(self, parent, icon, config):
         super(PreferenceWindow, self).__init__(
             None,
             Qt.Window | Qt.CustomizeWindowHint | Qt.WindowCloseButtonHint
             | Qt.WindowTitleHint)
+
+        self.setWindowIcon(icon)
 
         # Preferences data
         self.wiki_name = config.get('site_name',

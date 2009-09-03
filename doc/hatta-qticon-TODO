@@ -1,6 +1,5 @@
-* add icon to preferecnes window and status icon tooltip
 * make menu dynamic, i.e. gray in/out and add new services when menu is 
   opened (tried once --- seems impossible)
-* fix bug with no hostname in wiki open option, when no bonjour installed
+* write test for bug with no hostname in wiki open option
 * write test for non-existing config dir
 * generally write test for the GUI

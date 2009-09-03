@@ -1,3 +1,4 @@
+* add linux path finding
 * make menu dynamic, i.e. gray in/out and add new services when menu is 
   opened (tried once --- seems impossible)
 * write test for bug with no hostname in wiki open option

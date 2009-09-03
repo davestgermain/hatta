@@ -588,8 +588,6 @@ if __name__ == '__main__':
         app = QApplication(sys.argv)
         QApplication.setQuitOnLastWindowClosed(False)
         status_icon = HattaTrayIcon()
-        QMessageBox.critical(None, 'Debug',
-            'Locale found: %s\nPath: %s' % (lang, module_path()))
         app.exec_()
     except KeyboardInterrupt:
         pass

@@ -196,6 +196,10 @@ elif sys.platform == 'win32':
                 print >> ofi, r'Name: "{group}\%s"; Filename: "{app}\%s"' % \
                       (self.name, path)
             print >> ofi, r'Name: "{group}\Uninstall %s"; Filename: "{uninstallexe}"' % self.name
+            print >> ofi
+
+            print >> ofi, r"[UninstallDelete]"
+            print >> ofi, r"Name: {app}; Type: filesandordirs"
 
         def compile(self):
             try:

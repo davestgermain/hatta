@@ -30,9 +30,27 @@ from PyQt4.QtGui import (QApplication, QSystemTrayIcon, QMenu, QIcon,
     QLabel, QSpinBox, QToolTip, QLineEdit, QHBoxLayout, QPushButton,
     QFileDialog, QPixmap, QCheckBox, QDesktopServices)
 from PyQt4.QtCore import (QString, QThread, pyqtSignal, pyqtSlot, Qt,
-    QPoint)
+    QPoint, QLocale)
 
 from hatta import WikiConfig, Wiki, WikiRequest, name, url
+
+def we_are_frozen():
+    """Returns whether we are frozen via py2exe.
+    This will affect how we find out where we are located."""
+
+    return hasattr(sys, "frozen") and sys.frozen == "windows_exe"
+
+
+def module_path():
+    """ This will get us the program's directory,
+    even if we are frozen using py2exe"""
+
+    if we_are_frozen():
+        return os.path.dirname(unicode(
+            sys.executable, sys.getfilesystemencoding()))
+
+    return os.path.dirname(unicode(__file__, sys.getfilesystemencoding()))
+
 
 class HattaThread(QThread):
     """
@@ -186,11 +204,9 @@ class HattaTrayIcon(QSystemTrayIcon):
             QDesktopServices.DataLocation)),
         name,
         name + u'.conf')
-    dist_icon = os.path.join(sys.prefix, 
+    dist_icon = os.path.join(module_path(),
                              'share/icons/hicolor/64x64/hatta.png')
-    debug_icon = os.path.join(os.path.dirname(
-        os.path.abspath(sys.argv[0])),
-        'resources/hatta.png')
+    debug_icon = os.path.join(module_path(), 'resources/hatta.png')
 
     def save_config(self):
         """Saves a WikiConfig instance with custom data."""
@@ -557,12 +573,23 @@ class PreferenceWindow(QWidget):
 
 if __name__ == '__main__':
     try:
-        global _
-        _ = gettext.translation('hatta', fallback=True).ugettext
+        from locale import getlocale, getdefaultlocale, setlocale, LC_ALL
+        setlocale(LC_ALL, '')
+        lang = str(QLocale.system().name()).split('_')[0]
+        
+        localedir = os.path.join(module_path(), 'locale')
+        if not os.path.isdir(localedir):
+            # Already installed
+            localedir = os.path.join(module_path(), 'share', 'locale')
+        translation = gettext.translation('hatta', localedir,
+                languages=[lang], fallback=True)
+        translation.install(unicode=1)
 
         app = QApplication(sys.argv)
         QApplication.setQuitOnLastWindowClosed(False)
         status_icon = HattaTrayIcon()
+        QMessageBox.critical(None, 'Debug',
+            'Locale found: %s\nPath: %s' % (lang, module_path()))
         app.exec_()
     except KeyboardInterrupt:
         pass

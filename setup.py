@@ -44,7 +44,7 @@ config = dict(
     platforms='any',
     requires=['werkzeug (>=0.3)', 'mercurial (>=1.0)',
              'pybonjour (>=1.1.1)'],
-    setup_requires = ['pybonjour (>=1.1.1)'],
+    setup_requires = ['pybonjour'],
     classifiers=[
         'License :: OSI Approved :: GNU General Public License (GPL)',
         'Intended Audience :: Developers',

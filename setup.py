@@ -42,7 +42,9 @@ config = dict(
         ]),
     ],
     platforms='any',
-    requires=['werkzeug (>=0.3)', 'mercurial (>=1.0)'],
+    requires=['werkzeug (>=0.3)', 'mercurial (>=1.0)',
+             'pybonjour (>=1.1.1)'],
+    setup_requires = ['pybonjour (>=1.1.1)'],
     classifiers=[
         'License :: OSI Approved :: GNU General Public License (GPL)',
         'Intended Audience :: Developers',
@@ -84,7 +86,7 @@ config = dict(
 
 if sys.platform == 'darwin':
     from setuptools import setup
-    config['setup_requires'] = ['py2app']
+    config['setup_requires'].append('py2app')
     config['app'] = ['hatta_qticon.py']
 
     # Add deleting Qt debug libs (like QtCore_debug) to the py2app build 
@@ -285,3 +287,8 @@ else: # Other UNIX-like
 
 if __name__=='__main__':
     setup(**config)
+    try:
+        import pybonjour
+    except ImportError:
+        print u'*** Warning ***'
+        print u'Please install pybonjour to build a full-featured binary.'

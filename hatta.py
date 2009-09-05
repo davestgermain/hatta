@@ -347,7 +347,8 @@ class WikiStorage(object):
         return werkzeug.url_unquote(name)
 
     def __contains__(self, title):
-        return os.path.exists(self._file_path(title))
+        if title:
+            return os.path.exists(self._file_path(title))
 
     def __iter__(self):
         return self.all_pages()

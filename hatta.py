@@ -1602,16 +1602,6 @@ class WikiPage(object):
         yield html.a(html(_(u'Backlinks')), class_="backlinks",
                      href=self.get_url(self.title, self.wiki.backlinks))
 
-    def page(self, content, special_title, footer=False):
-        html = werkzeug.html
-        yield html.div(class_="header", *self.header(special_title))
-        yield u'<div class="content">'
-        for part in content:
-            yield part
-        if not special_title:
-            yield html.div(u" ".join(self.footer()), class_="footer")
-        yield u'</div>'
-
     def render_content(self, content, special_title=None):
         """The main page template."""
 
@@ -1679,6 +1669,8 @@ href="$atom_url">
 <%if script_url %><script type="application/javascript" src="$script_url">\
 <%endif%>
 </head><body>
+<div class="header">$header_content</div>
+<div class="content">
 """)
         style_url = None
         edit_url = None
@@ -1700,10 +1692,13 @@ href="$atom_url">
             rss_url=self.get_url(None, self.wiki.rss),
             atom_url=self.get_url(None, self.wiki.atom),
             script_url=script_url,
+            header_content = ''.join(self.header(special_title))
         )
-        for part in self.page(content, special_title):
+        for part in content:
             yield part
-        yield u'</body></html>'
+        if not special_title:
+            yield werkzeug.html.div(u" ".join(self.footer()), class_="footer")
+        yield u'</div></body></html>'
 
     def history_list(self):
         request = self.request

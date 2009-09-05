@@ -2648,11 +2648,10 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         """Serve the robots directives."""
 
         robots = ('User-agent: *\r\n'
-                  'Disallow: /edit\r\n'
-                  'Disallow: /rss\r\n'
-                  'Disallow: /feed\r\n'
-                  'Disallow: /history\r\n'
-                  'Disallow: /search\r\n'
+                  'Disallow: /+edit\r\n'
+                  'Disallow: /+feed\r\n'
+                  'Disallow: /+history\r\n'
+                  'Disallow: /+search\r\n'
                  )
         return werkzeug.Response(robots, mimetype='text/plain')
 
@@ -2660,14 +2659,16 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         """
         Ensures that special requests come from localhost only.
 
-        This seems reasonable to forbid remote URL requests to throw 
+        This seems reasonable to forbid remote URL requests to throw
         exceptions or kill the wiki :)
         """
+
         if not request.remote_addr.startswith('127.'):
             raise werkzeug.exceptions.Forbidden()
 
     def die(self, request):
         """Terminate the standalone server if invoked from localhost."""
+
         self._check_special(request)
         def agony():
             yield u'Oh dear!'

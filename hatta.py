@@ -1570,7 +1570,7 @@ abbr.date {border:none}
                 href = chunk
             else:
                 href = self.get_url(addr) + chunk
-            if addr in ('history', 'search'):
+            if addr in ('+history', '+search', '+feed/rss', '+feed/atom'):
                 class_ = 'special'
             elif addr not in self.storage:
                 class_ = 'nonexistent'
@@ -2628,7 +2628,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             yield u'<ul>'
             for link in self.index.page_backlinks(title):
                 yield '<li>%s</li>' % werkzeug.html.a(werkzeug.html(link),
-                                                      href=request.get_url(link))
+                                                     href=request.get_url(link))
             yield u'</ul>'
         self.storage.reopen()
         self.index.update()

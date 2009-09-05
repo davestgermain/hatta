@@ -1487,54 +1487,6 @@ class WikiPage(object):
         self.index = self.wiki.index
         self.config = self.wiki.config
 
-        self.default_style = self.config.get('default_style',
-u"""html { background: #fff; color: #2e3436;
-    font-family: sans-serif; font-size: 96% }
-body { margin: 1em auto; line-height: 1.3; width: 40em }
-a { color: #3465a4; text-decoration: none }
-a:hover { text-decoration: underline }
-a.wiki:visited { color: #204a87 }
-a.nonexistent { color: #a40000; }
-a.external { color: #3465a4; text-decoration: underline }
-a.external:visited { color: #75507b }
-a img { border: none }
-img.math, img.smiley { vertical-align: middle }
-pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word;
-    white-space: -moz-pre-wrap; white-space: -pre-wrap;
-    white-space: -o-pre-wrap; line-height: 1.2; color: #555753 }
-div.conflict pre.local { background: #fcaf3e; margin-bottom: 0; color: 000}
-div.conflict pre.other { background: #ffdd66; margin-top: 0; color: 000; border-top: #d80 dashed 1px; }
-pre.diff div.orig { font-size: 75%; color: #babdb6 }
-b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e;
-color: #ce5c00; text-decoration: none }
-pre.diff del { background: #eeeeec; color: #888a85; text-decoration: none }
-pre.diff div.change { border-left: 2px solid #fcaf3e }
-div.footer { border-top: solid 1px #babdb6; text-align: right }
-h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
-div.buttons { text-align: center }
-input.button, div.buttons input { font-weight: bold; font-size: 100%;
-    background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
-.history input.button { font-size: 75% }
-.editor textarea { width: 100%; display: block; font-size: 100%;
-    border: solid 1px #babdb6; }
-.editor label { display:block; text-align: right }
-.editor .upload { margin: 2em auto; text-align: center }
-form.search input.search, .editor label input { font-size: 100%;
-    border: solid 1px #babdb6; margin: 0.125em 0 }
-.editor label.comment input  { width: 32em }
-a.logo { float: left; display: block; margin: 0.25em }
-div.header h1 { margin: 0; }
-div.content { clear: left }
-form.search { margin:0; text-align: right; font-size: 80% }
-div.snippet { font-size: 80%; color: #888a85 }
-div.header div.menu { float: right; margin-top: 1.25em }
-div.header div.menu a.current { color: #000 }
-hr { background: transparent; border:none; height: 0;
-     border-bottom: 1px solid #babdb6; clear: both }
-blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}
-abbr.date {border:none}
-""")
-
     def date_html(self, datetime):
         """
         Create HTML for a date, according to recommendation at
@@ -1599,36 +1551,6 @@ abbr.date {border:none}
         else:
             return html.a(html(alt), href=self.get_url(addr))
 
-    def html_head(self, title, robots=False, edit_button=False):
-        html = werkzeug.html
-
-        yield html.title(html(u'%s - %s' % (title, self.wiki.site_name)))
-        if self.wiki.style_page in self.storage:
-            yield html.link(rel="stylesheet", type_="text/css",
-                href=self.get_download_url(self.wiki.style_page))
-        else:
-            yield html.style(html(self.default_style), type_="text/css")
-
-        if not robots:
-            yield html.meta(name="robots", content="NOINDEX,NOFOLLOW")
-
-        if edit_button:
-            yield html.link(rel="alternate", type_="application/wiki",
-                            href=self.get_url(self.title, self.wiki.edit))
-
-        yield html.link(rel="shortcut icon", type_="image/x-icon",
-                        href=self.get_url(None, self.wiki.favicon))
-        yield html.link(rel="alternate", type_="application/rss+xml",
-                        title=u"%s (RSS)" % self.wiki.site_name,
-                        href=self.get_url(None, self.wiki.rss))
-        yield html.link(rel="alternate", type_="application/rss+xml",
-                        title="%s (ATOM)" % self.wiki.site_name,
-                         href=self.get_url(None, self.wiki.atom))
-#        yield self.html_head
-        if self.wiki.script_page and self.wiki.script_page in self.wiki.storage:
-            src = self.get_download_url(self.wiki.script_page)
-            yield html.script(type_="application/javascript", src=src)
-
     def search_form(self):
         html = werkzeug.html
         return html.form(html.div(html.input(name="q", class_="search"),
@@ -1692,15 +1614,92 @@ abbr.date {border:none}
     def render_content(self, content, special_title=None):
         """The main page template."""
 
-        html = werkzeug.html
-        yield (u'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
-               '"http://www.w3.org/TR/html4/strict.dtd"><html>')
-        if special_title:
-            yield html.head(*self.html_head(special_title))
-        else:
-            yield html.head(*self.html_head(self.title, robots=True,
-                                            edit_button=True))
-        yield u'<body>'
+        template = werkzeug.Template("""\
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+<title>$title - $site_name</title>
+<%if style_url %><link rel="stylesheet" type="text/css" href="$style_url">\
+<%else%><style type="text/css">
+html { background: #fff; color: #2e3436;
+    font-family: sans-serif; font-size: 96% }
+body { margin: 1em auto; line-height: 1.3; width: 40em }
+a { color: #3465a4; text-decoration: none }
+a:hover { text-decoration: underline }
+a.wiki:visited { color: #204a87 }
+a.nonexistent { color: #a40000; }
+a.external { color: #3465a4; text-decoration: underline }
+a.external:visited { color: #75507b }
+a img { border: none }
+img.math, img.smiley { vertical-align: middle }
+pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word;
+    white-space: -moz-pre-wrap; white-space: -pre-wrap;
+    white-space: -o-pre-wrap; line-height: 1.2; color: #555753 }
+div.conflict pre.local { background: #fcaf3e; margin-bottom: 0; color: 000}
+div.conflict pre.other { background: #ffdd66; margin-top: 0; color: 000; border-top: #d80 dashed 1px; }
+pre.diff div.orig { font-size: 75%; color: #babdb6 }
+b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e;
+color: #ce5c00; text-decoration: none }
+pre.diff del { background: #eeeeec; color: #888a85; text-decoration: none }
+pre.diff div.change { border-left: 2px solid #fcaf3e }
+div.footer { border-top: solid 1px #babdb6; text-align: right }
+h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
+div.buttons { text-align: center }
+input.button, div.buttons input { font-weight: bold; font-size: 100%;
+    background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
+.history input.button { font-size: 75% }
+.editor textarea { width: 100%; display: block; font-size: 100%;
+    border: solid 1px #babdb6; }
+.editor label { display:block; text-align: right }
+.editor .upload { margin: 2em auto; text-align: center }
+form.search input.search, .editor label input { font-size: 100%;
+    border: solid 1px #babdb6; margin: 0.125em 0 }
+.editor label.comment input  { width: 32em }
+a.logo { float: left; display: block; margin: 0.25em }
+div.header h1 { margin: 0; }
+div.content { clear: left }
+form.search { margin:0; text-align: right; font-size: 80% }
+div.snippet { font-size: 80%; color: #888a85 }
+div.header div.menu { float: right; margin-top: 1.25em }
+div.header div.menu a.current { color: #000 }
+hr { background: transparent; border:none; height: 0;
+     border-bottom: 1px solid #babdb6; clear: both }
+blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}
+abbr.date {border:none}
+</style><%endif%>
+<%if not robots %><meta name="robots" content="NOINDEX,NOFOLLOW"><%endif%>
+<%if edit_url %><link rel="alternate" type="application/wiki" href="$edit_url">\
+<%endif%>
+<link rel="shortcut icon" type="image/x-icon" href="$favicon_url">
+<link rel="alternate" type="application/rss+xml" title="$site_name (RSS)" \
+href="$rss_url">
+<link rel="alternate" type="application/rss+xml" title="$site_name (ATOM)" \
+href="$atom_url">
+<%if script_url %><script type="application/javascript" src="$script_url">\
+<%endif%>
+</head><body>
+""")
+        style_url = None
+        edit_url = None
+        script_url = None
+        if self.wiki.style_page in self.storage:
+            style_url = self.get_download_url(self.wiki.style_page)
+        if not special_title:
+            edit_url = self.get_url(self.title, self.wiki.edit)
+        if self.wiki.script_page in self.wiki.storage:
+            script_url = self.get_download_url(self.wiki.script_page)
+
+        yield template.render(
+            title=werkzeug.escape(special_title or self.title, quote=True),
+            site_name=werkzeug.escape(self.wiki.site_name, quote=True),
+            style_url=style_url,
+            robots=not special_title,
+            edit_url=edit_url,
+            favicon_url=self.get_url(None, self.wiki.favicon),
+            rss_url=self.get_url(None, self.wiki.rss),
+            atom_url=self.get_url(None, self.wiki.atom),
+            script_url=script_url,
+        )
         for part in self.page(content, special_title):
             yield part
         yield u'</body></html>'

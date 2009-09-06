@@ -65,6 +65,11 @@ sys.stderr = sys.__stderr__
 import werkzeug
 import werkzeug.exceptions, werkzeug.routing
 
+try:
+    import jinja2
+except ImportError:
+    jinja2 = None
+
 # Note: we have to set these before importing Mercurial
 os.environ['HGENCODING'] = 'utf-8'
 os.environ['HGMERGE'] = "internal:merge"
@@ -1605,13 +1610,13 @@ class WikiPage(object):
     def render_content(self, content, special_title=None):
         """The main page template."""
 
-        template = werkzeug.Template("""\
+        template = """\
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
-<title>$title - $site_name</title>
-<%if style_url %><link rel="stylesheet" type="text/css" href="$style_url">\
-<%else%><style type="text/css">
+<title>${title} - ${site_name}</title>
+<% if style_url %><link rel="stylesheet" type="text/css" href="${style_url}">\
+<% else %><style type="text/css">
 html { background: #fff; color: #2e3436;
     font-family: sans-serif; font-size: 96% }
 body { margin: 1em auto; line-height: 1.3; width: 40em }
@@ -1659,19 +1664,29 @@ blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}
 abbr.date {border:none}
 </style><%endif%>
 <%if not robots %><meta name="robots" content="NOINDEX,NOFOLLOW"><%endif%>
-<%if edit_url %><link rel="alternate" type="application/wiki" href="$edit_url">\
-<%endif%>
-<link rel="shortcut icon" type="image/x-icon" href="$favicon_url">
-<link rel="alternate" type="application/rss+xml" title="$site_name (RSS)" \
-href="$rss_url">
-<link rel="alternate" type="application/rss+xml" title="$site_name (ATOM)" \
-href="$atom_url">
-<%if script_url %><script type="application/javascript" src="$script_url">\
+<%if edit_url %><link rel="alternate" type="application/wiki" \
+href="${edit_url}"><%endif%>
+<link rel="shortcut icon" type="image/x-icon" href="${favicon_url}">
+<link rel="alternate" type="application/rss+xml" title="${site_name} (RSS)" \
+href="${rss_url}">
+<link rel="alternate" type="application/rss+xml" title="${site_name} (ATOM)" \
+href="${atom_url}">
+<%if script_url %><script type="application/javascript" src="${script_url}">\
 <%endif%>
 </head><body>
-<div class="header">$header_content</div>
+<div class="header">${header_content}</div>
 <div class="content">
-""")
+"""
+        if jinja2:
+            t = jinja2.Environment(
+                block_start_string='<%',
+                block_end_string='%>',
+                variable_start_string='${',
+                variable_end_string='}',
+            ).from_string(template)
+        else:
+            t = werkzeug.Template(template)
+
         style_url = None
         edit_url = None
         script_url = None
@@ -1682,7 +1697,7 @@ href="$atom_url">
         if self.wiki.script_page in self.wiki.storage:
             script_url = self.get_download_url(self.wiki.script_page)
 
-        yield template.render(
+        yield t.render(
             title=werkzeug.escape(special_title or self.title, quote=True),
             site_name=werkzeug.escape(self.wiki.site_name, quote=True),
             style_url=style_url,

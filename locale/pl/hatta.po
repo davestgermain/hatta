@@ -5,14 +5,14 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Hatta 1.2.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2009-09-03 12:55+0200\n"
-"PO-Revision-Date: 2009-09-03 13:12+0100\n"
+"POT-Creation-Date: 2009-09-08 11:34+0200\n"
+"PO-Revision-Date: 2009-09-08 11:35+0100\n"
 "Last-Translator: Cezary Krzyżanowski <cezary.krzyzanowski@gmail.com>\n"
+"Language-Team: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
-"Generated-By: pygettext.py 1.5\n"
-"Language-Team: \n"
 "Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
 
 #: hatta.py:219
 #: hatta.py:391
@@ -275,116 +275,132 @@ msgid "This page is locked."
 msgstr "Ta strona jest zablokowana."
 
 #: hatta_qticon.py:210
+#: hatta_qticon.py:227
 msgid "Restarting wiki..."
 msgstr "Restartuję wiki..."
 
 #: hatta_qticon.py:259
+#: hatta_qticon.py:276
 msgid "Hatta Wiki menu"
 msgstr "Menu Hatta Wiki"
 
 #: hatta_qticon.py:262
+#: hatta_qticon.py:279
 msgid "Starting wiki..."
 msgstr "Uruchamiam wiki..."
 
 #: hatta_qticon.py:264
+#: hatta_qticon.py:281
 msgid "Click this icon to interact with Hatta wiki."
 msgstr "Kliknij tę iknokę aby kontrolować Hatta wiki."
 
 #: hatta_qticon.py:289
+#: hatta_qticon.py:306
 msgid "Nearby wikis:"
 msgstr "Okoliczne wiki:"
 
 #: hatta_qticon.py:291
+#: hatta_qticon.py:308
 msgid "Displays a list of nearby discovered wikis. Click one to view it."
 msgstr "Wyświetla listę odnalezionych wiki w okolicy. Kliknij na jedną aby ją obejrzeć."
 
 #: hatta_qticon.py:299
+#: hatta_qticon.py:316
 msgid "Welcome to Hatta Wiki"
 msgstr "Witaj w Hatta Wiki"
 
 #: hatta_qticon.py:300
+#: hatta_qticon.py:317
 msgid "Click the hat icon to start or quit the Hatta Wiki."
 msgstr "Kliknij na ikonkę kapelusza aby rozpocząć lub zakończyć Hatta Wiki."
 
 #: hatta_qticon.py:327
+#: hatta_qticon.py:344
 msgid "&Preferences"
 msgstr "&Ustawienia"
 
 #: hatta_qticon.py:328
+#: hatta_qticon.py:345
 msgid "Lets you configure the wiki."
 msgstr "Pozwala Ci skonfigurować wiki."
 
 #: hatta_qticon.py:333
+#: hatta_qticon.py:350
 msgid "&Open wiki"
 msgstr "&Otwórz wiki"
 
 #: hatta_qticon.py:335
+#: hatta_qticon.py:352
 msgid "Opens the wiki in the default browser."
 msgstr "Otwórz wiki w domyślnej przeglądarce."
 
 #: hatta_qticon.py:338
+#: hatta_qticon.py:355
 msgid "&Quit"
 msgstr "&Wyjdź"
 
 #: hatta_qticon.py:340
+#: hatta_qticon.py:357
 msgid "Stops the wiki and quits the status icon."
 msgstr "Zatrzynuje wiki i zamyka ikonkę statusu."
 
-#: hatta_qticon.py:374
-#, python-format
-msgid "%s on %s"
-msgstr "%s na %s"
-
-#: hatta_qticon.py:376
-#, python-format
-msgid "Opens %s in browser."
-msgstr "Otwórz %s w przeglądarce."
-
 #: hatta_qticon.py:394
+#: hatta_qticon.py:412
 msgid "More wikis"
 msgstr "Więcej wiki"
 
 #: hatta_qticon.py:396
+#: hatta_qticon.py:414
 msgid "Shows even more wikis discovered nearby!"
 msgstr "Pokazuje jeszcze więcej wiki odnalezionych w okolicy!"
 
 #: hatta_qticon.py:408
+#: hatta_qticon.py:426
 msgid "    Install Bonjour to view nearby wikis"
 msgstr "    Zainstaluj Bonjour aby widzieć okoliczne wiki"
 
 #: hatta_qticon.py:415
+#: hatta_qticon.py:433
 msgid "    Install libavahi-compat-libdnssd1 to view nearby wikis"
 msgstr "    Zainstaluj libavahi-compat-libdnssd1 aby zobaczyć okoliczne wiki"
 
 #: hatta_qticon.py:469
+#: hatta_qticon.py:487
 msgid "Enter the name of your wiki"
 msgstr "Wpisz nazwę Twojego wiki"
 
 #: hatta_qticon.py:471
+#: hatta_qticon.py:489
 msgid "Choose path for wiki pages"
 msgstr "Wybierz ścieżkę dla stron wiki"
 
 #: hatta_qticon.py:475
+#: hatta_qticon.py:493
 msgid "Hatta preferences"
 msgstr "Ustawienia Hatta"
 
 #: hatta_qticon.py:481
+#: hatta_qticon.py:499
 msgid "Sets the name of you wiki. The name will be visible all accross the wiki and in wiki discovery."
 msgstr "Ustawia nazwę Twojego wiki. Nazwa będzie widoczna na stronach wiki oraz przy rozgłaszaniu."
 
 #: hatta_qticon.py:483
+#: hatta_qticon.py:501
 msgid "Wiki name:"
 msgstr "Nazwa wiki:"
 
 #: hatta_qticon.py:491
+#: hatta_qticon.py:509
 msgid "Sets the pages directory, where wiki pages will beheld."
 msgstr "Ustawia ścieżkę stron, gdzie będą przechowywane strony wiki."
 
 #: hatta_qticon.py:493
+#: hatta_qticon.py:511
 msgid "Pages path:"
 msgstr "Ścieżka stron:"
 
 #: hatta_qticon.py:498
+#: hatta_qticon.py:516
 msgid "&Open..."
 msgstr "&Otwórz..."
 
@@ -393,18 +409,36 @@ msgid "Sets the port on which wiki is listening on."
 msgstr "Ustawia port na którym nasłuchuje wiki."
 
 #: hatta_qticon.py:508
+#: hatta_qticon.py:530
 msgid "Listen port:"
 msgstr "Port nasłuchu:"
 
 #: hatta_qticon.py:518
+#: hatta_qticon.py:540
 msgid "Should wiki announce itself to the neighbourhood network?"
 msgstr "Czy wiki powinno rozgłaszać swoja obecność do sąsiadujących sieci?"
 
 #: hatta_qticon.py:520
+#: hatta_qticon.py:542
 msgid "Announce hatta"
 msgstr "Rozgłaszaj hatta"
 
 #: hatta_qticon.py:531
+#: hatta_qticon.py:553
 msgid "Choose page directory"
 msgstr "Wybierz katalog dla stron"
 
+#: hatta_qticon.py:393
+#, python-format
+msgid "Opens %(wiki_name)s in browser."
+msgstr "Otwórz %(wiki_name)s w przeglądarce."
+
+#: hatta_qticon.py:527
+#, python-format
+msgid "Sets the port on which wiki is listening on. Valid ports: %(min_port)d to %(max_port)d."
+msgstr "Ustawia port na którym nasłuchuje wiki. Poprawne porty: %(min_port)d do %(max_port)d."
+
+#: hatta_qticon.py:391
+#, python-format
+msgid "    %(wiki_name)s on %(host_name)s"
+msgstr "    %(wiki_name)s na %(host_name)s"

@@ -388,9 +388,10 @@ class HattaTrayIcon(QSystemTrayIcon):
 
     def _make_discovery_action(self, name, host, port):
         """Creates a menu action from a discovered wiki."""
-        action = QAction(_(u'%s on %s') % (
-            '    ' + name, host), self)
-        action.setToolTip(_(u'Opens %s in browser.') % name)
+        action = QAction(_(u'    %(wiki_name)s on %(host_name)s') % dict(
+            wiki_name=name, host_name=host), self)
+        action.setToolTip(_(u'Opens %(wiki_name)s in browser.') 
+                          % dict(wiki_name=name))
         action.triggered.connect((lambda x, y: lambda: webbrowser.open(
                 'http://%s:%d' % (x, y)))(host, port))
         return action
@@ -521,11 +522,15 @@ class PreferenceWindow(QWidget):
         grid_layout.addLayout(pages_layout, 1, 1)
 
         # Listen port selection port
-        tooltip = _(u'Sets the port on which wiki is listening on.')
+        min_port = 1
+        max_port = 65535
+        tooltip = _(u'Sets the port on which wiki is listening on.'
+                    u' Valid ports: %(min_port)d to %(max_port)d.'
+                   ) % dict(min_port=min_port, max_port=max_port)
         self.port_label = QLabel(_(u'Listen port:'))
         self.port_label.setToolTip(tooltip)
         self.port_spin = QSpinBox(self)
-        self.port_spin.setRange(1025, 65536)
+        self.port_spin.setRange(min_port, max_port)
         self.port_spin.setValue(self.wiki_port)
         self.port_spin.setToolTip(tooltip)
         grid_layout.addWidget(self.port_label, 2, 0)

@@ -20,7 +20,8 @@ import gettext
 import os
 try:
     import pybonjour
-except ImportError:
+except Error: # Deliberately so, since pybonjour is bundled, but bonjour 
+              # itself isn't there always
     pybonjour = None
 import sys
 import webbrowser

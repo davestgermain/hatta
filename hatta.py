@@ -90,6 +90,7 @@ import mercurial.hg
 import mercurial.ui
 import mercurial.revlog
 import mercurial.util
+import mercurial.hgweb
 
 __version__ = '1.3.3dev'
 name = 'Hatta'
@@ -197,6 +198,8 @@ class WikiConfig(object):
             help='Include JavaScript from page PAGE.')
         add('-g', '--icon-page', dest='icon_page', metavar="PAGE",
             help='Read icons graphics from PAGE.')
+        add('-w', '--hgweb', dest='hgweb', default=False,
+            help='Enable hgweb access to the repository', action="store_true")
 
         options, args = parser.parse_args()
         for option, value in options.__dict__.iteritems():
@@ -2086,6 +2089,12 @@ class WikiTitleConverter(werkzeug.routing.PathConverter):
     def to_url(self, value):
         return werkzeug.url_quote(value, self.map.charset, safe="")
 
+class WikiAllConverter(werkzeug.routing.BaseConverter):
+    """Matches everything."""
+
+    regex='.*'
+
+
 class Wiki(object):
     """
     The main class of the wiki, handling initialization of the whole
@@ -2180,8 +2189,9 @@ class Wiki(object):
             R('/+search/<title:title>', endpoint=self.backlinks,
               methods=['GET', 'POST']),
             R('/off-with-his-head', endpoint=self.die, methods=['GET']),
-#            R('/throw-up-tey', endpoint=self.test_exception, methods=['GET']),
-        ], converters={'title':WikiTitleConverter})
+            R('/+hg<all:path>', endpoint=self.hgweb, strict_slashes=False,
+              methods=['GET', 'POST', 'HEAD']),
+        ], converters={'title':WikiTitleConverter, 'all':WikiAllConverter})
 
     def get_page(self, request, title):
         """Creates a page object based on page's mime type"""
@@ -2746,6 +2756,22 @@ ${page_link} . . . . ${author_link}
         """Serve the default favicon."""
 
         return werkzeug.Response(self.icon, mimetype='image/x-icon')
+
+    def hgweb(self, request, path=None):
+        """Serve the pages repository on the web like a normal hg repository."""
+
+        if not self.config.get_bool('hgweb', False):
+            raise werkzeug.exceptions.Forbidden('Repository access disabled.')
+        app = mercurial.hgweb.request.wsgiapplication(
+            lambda: mercurial.hgweb.hgweb(self.storage.repo, "hatta"))
+        def hg_app(env, start):
+            env = request.environ
+            prefix='/+hg'
+            if env['PATH_INFO'].startswith(prefix):
+                env["PATH_INFO"] = env["PATH_INFO"][len(prefix):]
+                env["SCRIPT_NAME"] += prefix
+            return app(env, start)
+        return hg_app
 
     def robots(self, request):
         """Serve the robots directives."""

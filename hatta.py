@@ -67,8 +67,15 @@ import werkzeug.exceptions, werkzeug.routing
 
 try:
     import jinja2
+    Template = jinja2.Environment(
+        block_start_string='<%',
+        block_end_string='%>',
+        variable_start_string='${',
+        variable_end_string='}',
+    ).from_string
 except ImportError:
     jinja2 = None
+    Template = werkzeug.Template
 
 # Note: we have to set these before importing Mercurial
 os.environ['HGENCODING'] = 'utf-8'
@@ -1610,7 +1617,7 @@ class WikiPage(object):
     def render_content(self, content, special_title=None):
         """The main page template."""
 
-        template = """\
+        header_template = """\
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
@@ -1677,16 +1684,6 @@ href="${atom_url}">
 <div class="header">${header_content}</div>
 <div class="content">
 """
-        if jinja2:
-            t = jinja2.Environment(
-                block_start_string='<%',
-                block_end_string='%>',
-                variable_start_string='${',
-                variable_end_string='}',
-            ).from_string(template)
-        else:
-            t = werkzeug.Template(template)
-
         style_url = None
         edit_url = None
         script_url = None
@@ -1697,7 +1694,7 @@ href="${atom_url}">
         if self.wiki.script_page in self.wiki.storage:
             script_url = self.get_download_url(self.wiki.script_page)
 
-        yield t.render(
+        yield Template(header_template).render(
             title=werkzeug.escape(special_title or self.title, quote=True),
             site_name=werkzeug.escape(self.wiki.site_name, quote=True),
             style_url=style_url,

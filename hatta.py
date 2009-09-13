@@ -1622,7 +1622,7 @@ class WikiPage(object):
     def render_content(self, content, special_title=None):
         """The main page template."""
 
-        header_template = """\
+        header_template = Template("""\
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
@@ -1688,7 +1688,7 @@ href="${atom_url}">
 </head><body>
 <div class="header">${header_content}</div>
 <div class="content">
-"""
+""")
         style_url = None
         edit_url = None
         script_url = None
@@ -1699,7 +1699,7 @@ href="${atom_url}">
         if self.wiki.script_page in self.wiki.storage:
             script_url = self.get_download_url(self.wiki.script_page)
 
-        yield Template(header_template).render(
+        yield header_template.render(
             title=werkzeug.escape(special_title or self.title, quote=True),
             site_name=werkzeug.escape(self.wiki.site_name, quote=True),
             style_url=style_url,

@@ -77,6 +77,11 @@ except ImportError:
     jinja2 = None
     Template = werkzeug.Template
 
+try:
+    import Image
+except ImportError:
+    Image = None
+
 # Note: we have to set these before importing Mercurial
 os.environ['HGENCODING'] = 'utf-8'
 os.environ['HGMERGE'] = "internal:merge"
@@ -1979,6 +1984,8 @@ class WikiPageFile(WikiPage):
 class WikiPageImage(WikiPageFile):
     """Pages of mime type image/* use this for display."""
 
+    render_file = '128x128.png'
+
     def view_content(self, lines=None):
         if self.title not in self.storage:
             raise werkzeug.exceptions.NotFound()
@@ -1987,18 +1994,27 @@ class WikiPageImage(WikiPageFile):
                       werkzeug.escape(self.title))]
         return content
 
-    def render_cache(self, cache_file, cache_path):
-        try:
-            import Image
-        except ImportError:
-            in_file = self.storage.open_page(self.title)
-            cache_file.write(in_file.read())
-            in_file.close()
-            return
-        im = Image.open(self.storage.open_page(self.title))
+    def render_mime(self):
+        """Give the filename and mime type of the rendered thumbnail."""
+
+        if not Image:
+            raise NotImplemented('No Image library available')
+        return  self.render_file, 'image/png'
+
+    def render_cache(self, cache_dir):
+        """Render the thumbnail and save in the cache."""
+
+        if not Image:
+            raise NotImplemented('No Image library available')
+        page_file = self.storage.open_page(self.title)
+        cache_path = os.path.join(cache_dir, self.render_file)
+        cache_file = open(cache_path, 'wb')
+        im = Image.open(page_file)
         im = im.convert('RGBA')
         im.thumbnail((128, 128), Image.ANTIALIAS)
         im.save(cache_file,'PNG')
+        cache_file.close()
+        return cache_path
 
 class WikiPageCSV(WikiPageFile):
     """Display class for type text/csv."""
@@ -2425,31 +2441,60 @@ xmlns:atom="http://www.w3.org/2005/Atom"
     def render(self, request, title):
         """Serve a thumbnail or otherwise rendered content."""
 
+        def file_time_and_size(file_path):
+            """Get file's modification timestamp and its size."""
+
+            try:
+                (st_mode, st_ino, st_dev, st_nlink, st_uid, st_gid, st_size,
+                 st_atime, st_mtime, st_ctime) = os.stat(file_path)
+            except OSError:
+                st_mtime = 0
+                st_size = None
+            return st_mtime, st_size
+
+        def rm_temp_dir(dir_path):
+            """Delete the directory with subdirectories."""
+
+            for root, dirs, files in os.walk(dir_path, topdown=False):
+                for name in files:
+                    try:
+                        os.remove(os.path.join(root, name))
+                    except OSError:
+                        pass
+                for name in dirs:
+                    try:
+                        os.rmdir(os.path.join(root, name))
+                    except OSError:
+                        pass
+            try:
+                os.rmdir(dir_path)
+            except OSError:
+                pass
+
         page = self.get_page(request, title)
         try:
+            cache_filename, cache_mime = page.render_mime()
             render = page.render_cache
-        except AttributeError:
+        except (AttributeError, NotImplemented):
             return self.download(request, title)
-        inode, size, mtime = self.storage.page_file_meta(title)
-        cache_dir = os.path.join(self.cache, 'render')
-        cache_path = os.path.join(cache_dir, werkzeug.url_quote(title, safe=''))
-        try:
-            (st_mode, st_ino, st_dev, st_nlink, st_uid, st_gid, st_size,
-             st_atime, st_mtime, st_ctime) = os.stat(cache_path)
-        except OSError:
-            st_mtime = 0
-            st_size = None
-        if mtime > st_mtime:
+
+        cache_dir = os.path.join(self.cache, 'render',
+                                  werkzeug.url_quote(title, safe=''))
+        cache_file = os.path.join(cache_dir, cache_filename)
+        page_inode, page_size, page_mtime = self.storage.page_file_meta(title)
+        cache_mtime, cache_size = file_time_and_size(cache_file)
+        if page_mtime > cache_mtime:
             if not os.path.exists(cache_dir):
                 os.makedirs(cache_dir)
-            cache_file = open(cache_path, 'wb')
             try:
-                render(cache_file, cache_path)
+                temp_dir = tempfile.mkdtemp(dir=cache_dir)
+                result_file = render(temp_dir)
+                mercurial.util.rename(result_file, cache_file)
             finally:
-                cache_file.close
-        cache_file = open(cache_path)
-        response = self.response(request, title, cache_file, '/render',
-                                 page.mime, size=st_size)
+                rm_temp_dir(temp_dir)
+        f = open(cache_file)
+        response = self.response(request, title, f, '/render', cache_mime,
+                                 size=cache_size)
         return response
 
     def undo(self, request, title):

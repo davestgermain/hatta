@@ -67,6 +67,7 @@ import werkzeug.exceptions, werkzeug.routing
 
 try:
     import jinja2
+    # Make jinja2 roughly compatible with werkzeug.Template
     Template = jinja2.Environment(
         block_start_string='<%',
         block_end_string='%>',
@@ -1518,10 +1519,11 @@ class WikiPage(object):
         return html
 
 
-    def wiki_link(self, addr, label, class_='wiki', image=None, lineno=0):
+    def wiki_link(self, addr, label=None, class_='wiki', image=None, lineno=0):
         """Create HTML for a wiki link."""
 
-        text = werkzeug.escape(label)
+        text = werkzeug.escape(label or addr)
+        chunk = ''
         if external_link(addr):
             if addr.startswith('mailto:'):
                 class_ = 'external email'
@@ -1533,19 +1535,19 @@ class WikiPage(object):
         else:
             if '#' in addr:
                 addr, chunk = addr.split('#', 1)
-                chunk = '#%s' % chunk
-            else:
-                chunk = ''
-            if addr == u'':
+                chunk = '#'+chunk
+            if addr.startswith('+'):
+                href = werkzeug.escape(addr, quote=True)
+                class_ = 'special'
+            elif addr == u'':
                 href = chunk
+                class_ = 'anchor'
             else:
                 href = self.get_url(addr) + chunk
-            if addr in ('+history', '+search', '+feed/rss', '+feed/atom'):
-                class_ = 'special'
-            elif addr not in self.storage:
-                class_ = 'nonexistent'
+                if addr not in self.storage:
+                    class_ = 'nonexistent'
         return werkzeug.html.a(image or text, href=href, class_=class_,
-                               title=addr)
+                               title=addr+chunk)
 
     def wiki_image(self, addr, alt, class_='wiki', lineno=0):
         """Create HTML for a wiki image."""
@@ -1606,23 +1608,7 @@ class WikiPage(object):
         yield html.div(u" ".join(self.menu()), class_="menu")
         yield html.h1(html(special_title or self.title))
 
-    def footer(self):
-        html = werkzeug.html
-        try:
-            self.wiki.check_lock(self.title)
-            yield html.a(html(_(u'Edit')), class_="edit",
-                         href=self.get_url(self.title, self.wiki.edit))
-        except werkzeug.exceptions.Forbidden:
-            pass
-        yield html.a(html(_(u'History')), class_="history",
-                     href=self.get_url(self.title, self.wiki.history))
-        yield html.a(html(_(u'Backlinks')), class_="backlinks",
-                     href=self.get_url(self.title, self.wiki.backlinks))
-
-    def render_content(self, content, special_title=None):
-        """The main page template."""
-
-        header_template = Template("""\
+    header_template = Template("""\
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
@@ -1689,17 +1675,30 @@ href="${atom_url}">
 <div class="header">${header_content}</div>
 <div class="content">
 """)
+    footer_template = Template("""<div class="footer">
+<%if edit_url%><a href="${edit_url}" class="edit">${_("Edit")}</a><%endif%>
+<a href="${history_url}" class="history">${_("History")}</a>
+<a href="${backlinks_url}" class="backlinks">${_("Backlinks")}</a>
+</div></div></body></html>""")
+
+    def render_content(self, content, special_title=None):
+        """The main page template."""
+
         style_url = None
         edit_url = None
         script_url = None
         if self.wiki.style_page in self.storage:
             style_url = self.get_download_url(self.wiki.style_page)
         if not special_title:
-            edit_url = self.get_url(self.title, self.wiki.edit)
+            try:
+                self.wiki.check_lock(self.title)
+                edit_url = self.get_url(self.title, self.wiki.edit)
+            except werkzeug.exceptions.Forbidden:
+                pass
         if self.wiki.script_page in self.wiki.storage:
             script_url = self.get_download_url(self.wiki.script_page)
 
-        yield header_template.render(
+        yield self.header_template.render(
             title=werkzeug.escape(special_title or self.title, quote=True),
             site_name=werkzeug.escape(self.wiki.site_name, quote=True),
             style_url=style_url,
@@ -1713,42 +1712,60 @@ href="${atom_url}">
         )
         for part in content:
             yield part
-        if not special_title:
-            yield werkzeug.html.div(u" ".join(self.footer()), class_="footer")
-        yield u'</div></body></html>'
+        if special_title:
+            yield "</div></body></html>"
+            return
+        yield self.footer_template.render(
+            edit_url=edit_url,
+            history_url=self.get_url(self.title, self.wiki.history),
+            backlinks_url=self.get_url(self.title, self.wiki.backlinks),
+            _=lambda s: werkzeug.escape(_(s), quote=True),
+        )
+
+    history_item_template = Template("""<li>
+<a href="${date_url}">${date_html}</a>
+<%if not read_only%>
+<input type="submit" name="${rev}" value="${undo}" class="button">
+<%endif%>
+. . . .  ${author_link}
+<div class="comment">${comment}</div>
+</li>""")
 
     def history_list(self):
-        request = self.request
-        title = self.title
+        """Generate the content of the history page."""
+
         max_rev = -1;
-        link = werkzeug.html.a(werkzeug.html(title),
-                               href=request.get_url(title))
-        yield werkzeug.html.p(
-            _(u'History of changes for %(link)s.') % {'link': link})
-        url = request.get_url(title, self.wiki.undo, method='POST')
+        title = self.title
+        link = self.wiki_link(title)
+        yield werkzeug.html.p(werkzeug.escape(
+            _(u'History of changes for %(link)s.')) % {'link': link})
+        url = self.request.get_url(title, self.wiki.undo, method='POST')
         yield u'<form action="%s" method="POST"><ul class="history">' % url
-        for rev, date, author, comment in self.storage.page_history(title):
+        try:
+            self.wiki.check_lock(title)
+            read_only = False
+        except werkzeug.exceptions.Forbidden:
+            read_only = True
+        for rev, date, author, comment in self.wiki.storage.page_history(title):
             if max_rev < rev:
                 max_rev = rev
             if rev > 0:
-                url = request.adapter.build(self.wiki.diff, {
+                date_url = self.request.adapter.build(self.wiki.diff, {
                     'title': title, 'from_rev': rev-1, 'to_rev': rev})
             else:
-                url = request.adapter.build(self.wiki.revision, {
+                date_url = self.request.adapter.build(self.wiki.revision, {
                     'title': title, 'rev': rev})
-            yield u'<li>'
-            yield werkzeug.html.a(self.date_html(date), href=url)
-            if not self.wiki.read_only:
-                yield (u'<input type="submit" name="%d" value="Undo" '
-                       u'class="button">' % rev)
-            yield u' . . . . '
-            yield werkzeug.html.a(werkzeug.html(author),
-                                  href=request.get_url(author))
-            yield u'<div class="comment">%s</div>' % werkzeug.escape(comment)
-            yield u'</li>'
-        yield u'</ul>'
-        yield u'<input type="hidden" name="parent" value="%d">' % max_rev
-        yield u'</form>'
+            yield self.history_item_template.render(
+                read_only=read_only,
+                rev=rev,
+                date_url=date_url,
+                date_html=self.date_html(date),
+                author_link=self.wiki_link(author),
+                comment=werkzeug.escape(comment),
+                undo=werkzeug.escape(_('Undo'), quote=True),
+            )
+        yield (u'</ul><input type="hidden" name="parent" value="%d"></form>'
+               % max_rev)
 
     def dependencies(self):
         dependencies = set()

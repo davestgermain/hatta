@@ -1591,6 +1591,8 @@ class WikiPage(object):
         return html.a(img, class_='logo', href=self.get_url(self.wiki.front_page))
 
     def menu(self):
+        """Generate the menu items"""
+
         html = werkzeug.html
         if self.wiki.menu_page in self.storage:
             items = self.index.page_links_and_labels(self.wiki.menu_page)
@@ -2577,12 +2579,15 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response = self.response(request, title, content, '/history')
         return response
 
+    recent_changes_item_template = Template("""<li>
+<a href="${date_url}">${date_html}</a>
+${page_link} . . . . ${author_link}
+<div class="comment">${comment}</div></li>""")
+
     def recent_changes(self, request):
         """Serve the recent changes page."""
 
-        page = self.get_page(request, u'history')
-
-        def changes_list():
+        def changes_list(page):
             yield u'<ul>'
             last = {}
             lastrev = {}
@@ -2594,32 +2599,31 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 if count > 100:
                     break
                 if rev > 0:
-                    url = request.adapter.build(self.diff, {
+                    date_url = request.adapter.build(self.diff, {
                         'title': title,
                         'from_rev': rev-1,
                         'to_rev': lastrev.get(title, rev)
                     })
                 elif rev == 0:
-                    url = request.adapter.build(self.revision, {
+                    date_url = request.adapter.build(self.revision, {
                         'title': title, 'rev': rev})
                 else:
-                    url = request.adapter.build(self.history, {
+                    date_url = request.adapter.build(self.history, {
                         'title': title})
                 last[title] = author, comment
                 lastrev[title] = rev
-                yield u'<li>'
-                yield werkzeug.html.a(page.date_html(date), href=url)
-                yield u' '
-                yield werkzeug.html.a(werkzeug.html(title),
-                                      href=request.get_url(title))
-                yield u' . . . . '
-                yield werkzeug.html.a(werkzeug.html(author),
-                                      href=request.get_url(author))
-                yield u'<div class="comment">%s</div>' % werkzeug.escape(comment)
-                yield u'</li>'
+
+                yield self.recent_changes_item_template.render(
+                    date_url=date_url,
+                    date_html=page.date_html(date),
+                    page_link=page.wiki_link(title),
+                    author_link=page.wiki_link(author),
+                    comment=werkzeug.escape(comment),
+                )
             yield u'</ul>'
 
-        content = page.render_content(changes_list(), _(u'Recent changes'))
+        page = self.get_page(request, u'history')
+        content = page.render_content(changes_list(page), _(u'Recent changes'))
         response = WikiResponse(content, mimetype='text/html')
         response.set_etag('/history/%d' % self.storage.repo_revision())
         response.make_conditional(request)

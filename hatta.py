@@ -1519,18 +1519,22 @@ class WikiPage(object):
         return html
 
 
-    def wiki_link(self, addr, label=None, class_='wiki', image=None, lineno=0):
+    def wiki_link(self, addr, label=None, class_=None, image=None, lineno=0):
         """Create HTML for a wiki link."""
 
         text = werkzeug.escape(label or addr)
         chunk = ''
+        if class_ is not None:
+            classes = [class_]
+        else:
+            classes = []
         if external_link(addr):
             if addr.startswith('mailto:'):
                 class_ = 'external email'
                 text = text.replace('@', '&#64;').replace('.', '&#46;')
                 href = addr.replace('@', '%40').replace('.', '%2E')
             else:
-                class_ = 'external'
+                classes.append('external')
                 href = werkzeug.escape(addr, quote=True)
         else:
             if '#' in addr:
@@ -1538,14 +1542,16 @@ class WikiPage(object):
                 chunk = '#'+chunk
             if addr.startswith('+'):
                 href = werkzeug.escape(addr, quote=True)
-                class_ = 'special'
+                classes.append('special')
             elif addr == u'':
                 href = chunk
-                class_ = 'anchor'
+                classes.append('anchor')
             else:
+                classes.append('wiki')
                 href = self.get_url(addr) + chunk
                 if addr not in self.storage:
-                    class_ = 'nonexistent'
+                    classes.append('nonexistent')
+        class_ = ' '.join(classes) or None
         return werkzeug.html.a(image or text, href=href, class_=class_,
                                title=addr+chunk)
 
@@ -1594,11 +1600,11 @@ class WikiPage(object):
                 ('+history', _(u'Recent changes')),
             ]
         for link, label in items:
-            url = self.get_url(link)
             if link == self.title:
-                yield html.a(label, href=url, class_="current")
+                class_="current"
             else:
-                yield html.a(label, href=url)
+                class_ = None
+            yield self.wiki_link(link, label, class_=class_)
 
     def header(self, special_title):
         html = werkzeug.html
@@ -1768,6 +1774,8 @@ href="${atom_url}">
                % max_rev)
 
     def dependencies(self):
+        """Refresh the page when any of those pages was changed."""
+
         dependencies = set()
         for link in [self.wiki.style_page, self.wiki.logo_page,
                      self.wiki.menu_page]:
@@ -1776,6 +1784,8 @@ href="${atom_url}">
         return dependencies
 
     def diff_content(self, from_rev, to_rev):
+        """Genrate HTML for the diff of revisions of a page."""
+
         return []
 
 class WikiPageText(WikiPage):

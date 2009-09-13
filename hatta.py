@@ -2755,6 +2755,9 @@ ${page_link} . . . . ${author_link}
     def favicon(self, request):
         """Serve the default favicon."""
 
+        title = 'favicon.ico'
+        if title in self.storage:
+            return self.download(request, title)
         return werkzeug.Response(self.icon, mimetype='image/x-icon')
 
     def hgweb(self, request, path=None):
@@ -2776,11 +2779,15 @@ ${page_link} . . . . ${author_link}
     def robots(self, request):
         """Serve the robots directives."""
 
+        title = 'robots.txt'
+        if title in self.storage:
+            return self.download(request, title)
         robots = ('User-agent: *\r\n'
                   'Disallow: /+edit\r\n'
                   'Disallow: /+feed\r\n'
                   'Disallow: /+history\r\n'
                   'Disallow: /+search\r\n'
+                  'Disallow: /+hg\r\n'
                  )
         return werkzeug.Response(robots, mimetype='text/plain')
 

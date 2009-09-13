@@ -1765,6 +1765,8 @@ class WikiPageText(WikiPage):
     """Pages of mime type text/* use this for display."""
 
     def view_content(self, lines=None):
+        """Generate HTML for the content."""
+
         if lines is None:
             text = self.storage.page_text(self.title)
         else:
@@ -1772,6 +1774,8 @@ class WikiPageText(WikiPage):
         return self.highlight(text, mime=self.mime)
 
     def editor_form(self, preview=None):
+        """Generate the HTML for the editor."""
+
         author = self.request.get_author()
         lines = []
         try:
@@ -1811,6 +1815,8 @@ class WikiPageText(WikiPage):
                 yield part
 
     def highlight(self, text, mime=None, syntax=None, line_no=0):
+        """Colorize the source code."""
+
         try:
             import pygments
             import pygments.util
@@ -1826,7 +1832,10 @@ class WikiPageText(WikiPage):
             style = 'friendly'
         formatter = pygments.formatters.HtmlFormatter(style=style)
         formatter.line_no = line_no
+
         def wrapper(source, outfile):
+            """Wrap each line of formatted output."""
+
             yield 0, '<div class="highlight"><pre>'
             for lineno, line in source:
                 if line.strip():
@@ -1839,6 +1848,7 @@ class WikiPageText(WikiPage):
                                              formatter.line_no))
                 formatter.line_no += 1
             yield 0, '</pre></div>'
+
         formatter.wrap = wrapper
         try:
             if mime:
@@ -1858,19 +1868,21 @@ class WikiPageText(WikiPage):
         yield html
 
     def diff_content(self, from_rev, to_rev):
-        title = self.title
-        text = self.storage.revision_text(title, from_rev)
-        other_text = self.storage.revision_text(title, to_rev)
-        return self.differences(text, other_text)
+        """Generate the HTML markup for a diff."""
 
-    def differences(self, text, other_text):
-        diff = difflib._mdiff(text.split('\n'), other_text.split('\n'))
-        stack = []
         def infiniter(iterator):
+            """Turn an iterator into an infinite one, padding it with None"""
+
             for i in iterator:
                 yield i
             while True:
                 yield None
+
+        text = self.storage.revision_text(self.title, from_rev)
+        other_text = self.storage.revision_text(self.title, to_rev)
+        diff = difflib._mdiff(text.split('\n'), other_text.split('\n'))
+        stack = []
+
         mark_re = re.compile('\0[-+^]([^\1\0]*)\1|([^\0\1])')
         yield u'<pre class="diff">'
         for old_line, new_line, changed in diff:
@@ -1927,7 +1939,7 @@ class WikiPageWiki(WikiPageText):
 
     def wiki_math(self, math):
         math_url = self.config.get('math_url',
-                                   'http://www.mathtran.org/cgi-bin/mathtran?tex=')
+                            'http://www.mathtran.org/cgi-bin/mathtran?tex=')
         if '%s' in math_url:
             url = math_url % werkzeug.url_quote(math)
         else:

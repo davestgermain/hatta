@@ -1616,7 +1616,7 @@ class WikiPage(object):
         yield html.div(u" ".join(self.menu()), class_="menu")
         yield html.h1(html(special_title or self.title))
 
-    header_template = Template("""\
+    header_template = Template(u"""\
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
@@ -1683,7 +1683,7 @@ href="${atom_url}">
 <div class="header">${header_content}</div>
 <div class="content">
 """)
-    footer_template = Template("""<div class="footer">
+    footer_template = Template(u"""<div class="footer">
 <%if edit_url%><a href="${edit_url}" class="edit">${_("Edit")}</a><%endif%>
 <a href="${history_url}" class="history">${_("History")}</a>
 <a href="${backlinks_url}" class="backlinks">${_("Backlinks")}</a>
@@ -1730,7 +1730,7 @@ href="${atom_url}">
             _=lambda s: werkzeug.escape(_(s), quote=True),
         )
 
-    history_item_template = Template("""<li>
+    history_item_template = Template(u"""<li>
 <a href="${date_url}">${date_html}</a>
 <%if not read_only%>
 <input type="submit" name="${rev}" value="${undo}" class="button">
@@ -2579,7 +2579,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response = self.response(request, title, content, '/history')
         return response
 
-    recent_changes_item_template = Template("""<li>
+    recent_changes_item_template = Template(u"""<li>
 <a href="${date_url}">${date_html}</a>
 ${page_link} . . . . ${author_link}
 <div class="comment">${comment}</div></li>""")
@@ -2588,6 +2588,8 @@ ${page_link} . . . . ${author_link}
         """Serve the recent changes page."""
 
         def changes_list(page):
+            """Generate the content of the recent changes page."""
+
             yield u'<ul>'
             last = {}
             lastrev = {}
@@ -2630,7 +2632,7 @@ ${page_link} . . . . ${author_link}
         return response
 
     def diff(self, request, title, from_rev, to_rev):
-        """Serve the differences between specified revisions."""
+        """Show the differences between specified revisions."""
 
         page = self.get_page(request, title)
         diff = page.diff_content(from_rev, to_rev)
@@ -2651,24 +2653,31 @@ ${page_link} . . . . ${author_link}
         response = werkzeug.Response(html, mimetype='text/html')
         return response
 
+    search_item_template = Template(u"""<li>
+<b>${link}</b> <i>(${score})</i><div class="snippet">${snippet}</div>
+</li>""")
+
     def search(self, request):
         """Serve the search results page."""
 
-        def page_index():
-            yield u'<p>%s</p>' % werkzeug.escape(_(u'Index of all pages.'))
-            yield u'<ul>'
+        def page_index(page):
+            """Display the index of all pages"""
+
+            yield u'<p>%s</p><ul class="index">' % werkzeug.escape(
+                _(u'Index of all pages.'))
             for title in sorted(self.storage.all_pages()):
-                link = werkzeug.html.a(werkzeug.html(title),
-                                       href=request.get_url(title))
-                yield werkzeug.html.li(link)
+                yield werkzeug.html.li(page.wiki_link(title))
             yield u'</ul>'
 
         def search_snippet(title, words):
             """Extract a snippet of text for search results."""
 
-            text = unicode(self.storage.open_page(title).read(), "utf-8",
-                           "replace")
-            regexp = re.compile(u"|".join(re.escape(w) for w in words), re.U|re.I)
+            try:
+                text = self.storage.page_text(title)
+            except werkzeug.exceptions.NotFound:
+                return u''
+            regexp = re.compile(u"|".join(re.escape(w) for w in words),
+                                re.U|re.I)
             match = regexp.search(text)
             if match is None:
                 return u""
@@ -2680,55 +2689,54 @@ ${page_link} . . . . ${author_link}
             html = regexp.sub(highlighted, snippet)
             return html
 
-        def page_search(words):
+        def page_search(words, page):
+            """Display the search results."""
+
             self.storage.reopen()
             self.index.update()
             result = sorted(self.index.find(words), key=lambda x:-x[0])
-            yield werkzeug.html.p(
+            yield u'<p>%s</p><ul class="search">' % werkzeug.escape(
                 _(u'%d page(s) containing all words:') % len(result))
-            yield u'<ul>'
             for score, title in result:
-                try:
-                    snippet = search_snippet(title, words)
-                    link = werkzeug.html.a(werkzeug.html(title),
-                                           href=request.get_url(title))
-                    yield ('<li><b>%s</b> <i>(%d)</i><div class="snippet">%s</div></li>'
-                           % (link, score, snippet))
-                except werkzeug.exceptions.NotFound:
-                    pass
+                yield self.search_item_template.render(
+                    link=page.wiki_link(title),
+                    score=score,
+                    snippet=search_snippet(title, words),
+                )
             yield u'</ul>'
 
         query = request.values.get('q', u'').strip()
+        page = self.get_page(request, '')
         if not query:
-            content = page_index()
+            content = page_index(page)
             title = _(u'Page index')
         else:
             words = tuple(self.index.split_text(query, stop=False))
             if not words:
                 words = (query,)
             title = _(u'Searching for "%s"') % u" ".join(words)
-            content = page_search(words)
-        page = self.get_page(request, '')
+            content = page_search(words, page)
         html = page.render_content(content, title)
         return WikiResponse(html, mimetype='text/html')
-
 
     def backlinks(self, request, title):
         """Serve the page with backlinks."""
 
-        def content():
-            yield u'<p>%s</p>' % (_(u'Pages that contain a link to %s.')
-                % werkzeug.html.a(werkzeug.html(title),
-                                  href=request.get_url(title)))
-            yield u'<ul>'
+        def backlink_list(page):
+            """Generate html for the backlinks list"""
+
+            yield u'<p>%s</p><ul class="backlinks">' % (
+                _(u'Pages that contain a link to %s.')
+                % page.wiki_link(title))
             for link in self.index.page_backlinks(title):
-                yield '<li>%s</li>' % werkzeug.html.a(werkzeug.html(link),
-                                                     href=request.get_url(link))
+                yield werkzeug.html.li(page.wiki_link(link))
             yield u'</ul>'
+
         self.storage.reopen()
         self.index.update()
         page = self.get_page(request, title)
-        html = page.render_content(content(), _(u'Links to "%s"') % title)
+        html = page.render_content(backlink_list(page),
+                                   _(u'Links to "%s"') % title)
         response = WikiResponse(html, mimetype='text/html')
         response.set_etag('/search/%d' % self.storage.repo_revision())
         response.make_conditional(request)

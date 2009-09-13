@@ -2763,7 +2763,7 @@ ${page_link} . . . . ${author_link}
         if not self.config.get_bool('hgweb', False):
             raise werkzeug.exceptions.Forbidden('Repository access disabled.')
         app = mercurial.hgweb.request.wsgiapplication(
-            lambda: mercurial.hgweb.hgweb(self.storage.repo, "hatta"))
+            lambda: mercurial.hgweb.hgweb(self.storage.repo, self.site_name))
         def hg_app(env, start):
             env = request.environ
             prefix='/+hg'

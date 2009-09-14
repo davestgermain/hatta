@@ -1680,7 +1680,8 @@ href="${edit_url}"><%endif%>
 href="${rss_url}">
 <link rel="alternate" type="application/rss+xml" title="${site_name} (ATOM)" \
 href="${atom_url}">
-<%if script_url %><script type="application/javascript" src="${script_url}">\
+<%if script_url %>
+<script type="application/javascript" src="${script_url}"></script>\
 <%endif%>
 </head><body>
 <div class="header">${header_content}</div>

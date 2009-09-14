@@ -2842,10 +2842,8 @@ ${page_link} . . . . ${author_link}
             del request
             del adapter
 
-def main():
-    """Start a standalone WSGI server."""
-
-    import wsgiref.simple_server
+def read_config():
+    """Read and parse the config."""
 
     config = WikiConfig(
         # Here you can modify the configuration: uncomment and change the ones
@@ -2863,22 +2861,44 @@ def main():
     config.parse_args()
     config.parse_files()
     # config.sanitize()
-    host, port = config.get('interface', ''), int(config.get('port', 8080))
+    return config
+
+def application(env, start):
+    """Detect that we are being run as WSGI application."""
+
+    global application
+    config = read_config()
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    if config.get('pages_path') == None:
+        config.set('pages_path', os.path.join(script_dir, 'docs'))
+    if config.get('pages_cache') == None:
+        config.set('cache_path', os.path.join(script_dir, 'cache'))
     wiki = Wiki(config)
+    application = wiki.application
+    return application(env, start)
+
+def main():
+    """Start a standalone WSGI server."""
+
+    config = read_config()
+    wiki = Wiki(config)
+    app = wiki.application
+
+    host, port = config.get('interface', ''), int(config.get('port', 8080))
     try:
         from cherrypy import wsgiserver
     except ImportError:
         try:
             from cherrypy import _cpwsgiserver as wsgiserver
         except ImportError:
-            server = wsgiref.simple_server.make_server(host, port,
-                                                       wiki.application)
+            import wsgiref.simple_server
+            server = wsgiref.simple_server.make_server(host, port, app)
             try:
                 server.serve_forever()
             except KeyboardInterrupt:
                 pass
             return
-    apps = [('', wiki.application)]
+    apps = [('', app)]
     name = wiki.site_name
     server = wsgiserver.CherryPyWSGIServer((host, port), apps, server_name=name)
     try:

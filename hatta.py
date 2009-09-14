@@ -1473,10 +1473,15 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
     def get_author(self):
         """Try to guess the author name. Use IP address as last resort."""
 
-        author = (self.form.get("author")
-                  or werkzeug.url_unquote(self.cookies.get("author", ""))
-                  or werkzeug.url_unquote(self.environ.get('REMOTE_USER', ""))
-                  or self.remote_addr)
+        try:
+            cookie = werkzeug.url_unquote(self.cookies.get("author", ""))
+        except UnicodeError:
+            cookie = None
+        try:
+            auth = werkzeug.url_unquote(self.environ.get('REMOTE_USER', ""))
+        except UnicodeError:
+            auth = None
+        author = (self.form.get("author") or cookie or auth or self.remote_addr)
         return author
 
     def _get_file_stream(self, total_content_length=None, content_type=None,

@@ -2048,14 +2048,14 @@ class WikiPageImage(WikiPageFile):
         """Give the filename and mime type of the rendered thumbnail."""
 
         if not Image:
-            raise NotImplemented('No Image library available')
+            raise NotImplementedError('No Image library available')
         return  self.render_file, 'image/png'
 
     def render_cache(self, cache_dir):
         """Render the thumbnail and save in the cache."""
 
         if not Image:
-            raise NotImplemented('No Image library available')
+            raise NotImplementedError('No Image library available')
         page_file = self.storage.open_page(self.title)
         cache_path = os.path.join(cache_dir, self.render_file)
         cache_file = open(cache_path, 'wb')
@@ -2532,7 +2532,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         try:
             cache_filename, cache_mime = page.render_mime()
             render = page.render_cache
-        except (AttributeError, NotImplemented):
+        except (AttributeError, NotImplementedError):
             return self.download(request, title)
 
         cache_dir = os.path.join(self.cache, 'render',

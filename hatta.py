@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # @copyright: 2008-2009 Radomir Dopieralski <hatta@sheep.art.pl>

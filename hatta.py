@@ -1549,7 +1549,8 @@ class WikiPage(object):
                 addr, chunk = addr.split('#', 1)
                 chunk = '#'+chunk
             if addr.startswith('+'):
-                href = werkzeug.escape(addr, quote=True)
+                href = '/'.join([self.request.script_root,
+                                 '+'+werkzeug.escape(addr[1:], quote=True)])
                 classes.append('special')
             elif addr == u'':
                 href = chunk

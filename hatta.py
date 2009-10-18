@@ -657,7 +657,7 @@ class WikiParser(object):
         "macro": ur"^<<\w+\s*$",
         "quote": quote_pat,
         "rule": ur"^\s*---+\s*$",
-        "syntax": ur"^\{\{\{\#![\w+]+\s*$",
+        "syntax": ur"^\{\{\{\#![\w+#.-]+\s*$",
         "table": ur"^\|",
     } # note that the priority is alphabetical
     image_pat = (ur"\{\{(?P<image_target>([^|}]|}[^|}])*)"

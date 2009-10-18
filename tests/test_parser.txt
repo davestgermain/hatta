@@ -160,10 +160,11 @@ This might be considered a bug, but impossible to detect in general.
 >>> parse(u'[[http://example.com|test]]')
 <p id="line_0"><a href="http://example.com">test</a></p>
 
->>> import lxml.html.usedoctest
->>> parser = WikiParser([], None, None)
->>> print u''.join(parser.parse_line(u'some **bold** words'))
-some <b>bold</b> words
->>> print u''.join(parser.parse_line(u'some **bold words'))
-some <b>bold words
+>>> parse(u'{{{\nlorem ipsum\n}}}')
+<pre id="line_1" class="code">lorem ipsum</pre> 
 
+>>> parse(u'{{{#!text\nlorem ipsum\n}}}')
+<div class="highlight"><pre id="line_1">lorem ipsum</pre></div> 
+
+>>> parse(u'{{{#!text+text\nlorem ipsum\n}}}')
+<div class="highlight"><pre id="line_1">lorem ipsum</pre></div> 

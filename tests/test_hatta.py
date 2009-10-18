@@ -284,7 +284,7 @@ abbr.date {border:none}
         </div></form>
         <div class="menu">
           <a href="/" title="Home" class="wiki nonexistent">Home</a>
-          <a href="+history" title="+history" class="special">Recent changes</a>
+          <a href="/+history" title="+history" class="special">Recent changes</a>
         </div>
         <h1>page &lt;title&gt;</h1>
     </div>
@@ -363,7 +363,7 @@ abbr.date {border:none}
         </div></form>
         <div class="menu">
           <a href="/" title="Home" class="wiki nonexistent">Home</a>
-          <a href="+history" title="+history" class="special">Recent changes</a>
+          <a href="/+history" title="+history" class="special">Recent changes</a>
         </div>
         <h1>different &lt;title&gt;</h1>
     </div>

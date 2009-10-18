@@ -14,35 +14,7 @@ project's "docs" directory to keep documentation. The files can be edited both
 from the wiki or with a text editor -- in either case the changes committed to
 the repository will appear in the recent changes and in page's history.
 
-Usage: hatta.py [options]
-
-Options:
-  -h, --help            show this help message and exit
-  -d DIR, --pages-dir=DIR
-                        Store pages in DIR
-  -t DIR, --cache-dir=DIR
-                        Store cache in DIR
-  -i INT, --interface=INT
-                        Listen on interface INT
-  -p PORT, --port=PORT  Listen on port PORT
-  -s NAME, --script-name=NAME
-                        Override SCRIPT_NAME to NAME
-  -n NAME, --site-name=NAME
-                        Set the name of the site to NAME
-  -m PAGE, --front-page=PAGE
-                        Use PAGE as the front page
-  -e ENC, --encoding=ENC
-                        Use encoding ENS to read and write pages
-  -c FILE, --config-file=FILE
-                        Read configuration from FILE
-  -l LANG, --language=LANG
-                        Translate interface to LANG
-  -r, --read-only       Whether the wiki should be read-only
-  -j, --script-page=PAGE
-                        Use PAGE as Javascript script on all pages
-  -g, --icon-page=PAGE
-                        Read icons graphics from page PAGE
-
+See hatta.py --help for usage.
 """
 
 import base64
@@ -685,7 +657,7 @@ class WikiParser(object):
         "macro": ur"^<<\w+\s*$",
         "quote": quote_pat,
         "rule": ur"^\s*---+\s*$",
-        "syntax": ur"^\{\{\{\#!\w+\s*$",
+        "syntax": ur"^\{\{\{\#![\w+]+\s*$",
         "table": ur"^\|",
     } # note that the priority is alphabetical
     image_pat = (ur"\{\{(?P<image_target>([^|}]|}[^|}])*)"

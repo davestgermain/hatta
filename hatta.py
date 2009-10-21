@@ -703,6 +703,7 @@ class WikiParser(object):
         "newline": ur"\n",
         "punct": (ur'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+])|\b|$)' %
                   ur"|".join(re.escape(k) for k in punct)),
+        "table": ur"=?\|=?",
         "text": ur".+?",
     } # note that the priority is alphabetical
 
@@ -814,6 +815,9 @@ class WikiParser(object):
             line_no, line = self.enumerated_lines.next()
 
 # methods for the markup inside lines:
+
+    def _line_table(self, groups):
+        return groups["table"]
 
     def _line_linebreak(self, groups):
         return u'<br>'
@@ -959,12 +963,34 @@ class WikiParser(object):
                 in_head = False
                 yield '</thead>'
             yield '<tr>'
-            for cell in table_row.strip('|').split('|'):
-                if cell.startswith('='):
-                    head = cell.strip('=')
-                    yield '<th>%s</th>' % u"".join(self.parse_line(head))
+            in_cell = False
+            in_th = False
+
+            for part in self.parse_line(table_row):
+                if part in ('=|', '|', '=|=', '|='):
+                    if in_cell:
+                        if in_th:
+                            yield '</th>'
+                        else:
+                            yield '</td>'
+                        in_cell = False
+                    if part in ('=|=', '|='):
+                        in_th = True
+                    else:
+                        in_th = False
                 else:
-                    yield '<td>%s</td>' % u"".join(self.parse_line(cell))
+                    if not in_cell:
+                        if in_th:
+                            yield '<th>'
+                        else:
+                            yield '<td>'
+                        in_cell = True
+                    yield part
+            if in_cell:
+                if in_th:
+                    yield '</th>'
+                else:
+                    yield '</td>'
             yield '</tr>'
         yield u'</table>'
 

@@ -175,3 +175,23 @@ This might be considered a bug, but impossible to detect in general.
 >>> parse(u'{{{#!c++\nint eger;\n}}}')
 <div class="highlight"><pre><div id="line_1"><span class="kt">int</span> <span class="n">eger</span><span class="p">;</span></div></pre></div>
 
+>>> parse(u'|table|')
+<table id="line_0"><tr><td>table</td></tr></table>
+
+>>> parse(u'|table| cell |')
+<table id="line_0"><tr><td>table</td><td> cell </td></tr></table>
+
+>>> parse(u'|table|=head=|')
+<table id="line_0"><tr><td>table</td><th>head</th></tr></table>
+
+>>> parse(u'|=table=|=head=|')
+<table id="line_0"><thead><tr><th>table</th><th>head</th></tr></thead></table>
+
+>>> parse(u'|table|[[link|link]]|')
+<table id="line_0"><tr><td>table</td><td><a href="link">link</a></td></tr></table>
+
+>>> parse(u'|table|{{img|img}}|')
+<table id="line_0"><tr><td>table</td><td><img src="img" alt="img"></td></tr></table>
+
+>>> parse(u'|table|{{{code|code}}}|')
+<table id="line_0"><tr><td>table</td><td><code>code|code</code></td></tr></table>

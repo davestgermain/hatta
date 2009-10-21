@@ -1692,7 +1692,7 @@ href="${atom_url}">
 <div class="content">
 """)
     footer_template = Template(u"""<div class="footer">
-<%if edit_url%><a href="${edit_url}" class="edit">${_("Edit")}</a><%endif%>
+<%if edit_url%><a href="${edit_url}" class="edit">${_("Edit")}</a> <%endif%>
 <a href="${history_url}" class="history">${_("History")}</a>
 <a href="${backlinks_url}" class="backlinks">${_("Backlinks")}</a>
 </div></div></body></html>""")

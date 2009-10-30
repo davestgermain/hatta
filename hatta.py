@@ -48,6 +48,7 @@ try:
     ).from_string
 except ImportError:
     jinja2 = None
+    import werkzeug.templates
     Template = werkzeug.Template
 
 try:

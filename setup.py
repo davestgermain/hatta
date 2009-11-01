@@ -60,7 +60,8 @@ config = dict(
     options = {
         'py2exe': {
 			'includes': ['sip'],
-            'packages': ['werkzeug', 'dbhash', 'encodings'],
+            'packages': ['werkzeug', 'dbhash', 'encodings',
+                         'Image', 'pygments'],
             'excludes': ['_ssl', 'tcl', 'tkinter', 'Tkconstants' 
                          ,'Tkinter'],
             'dll_excludes': ['tcl84.dll', 'tk84.dll'],
@@ -75,11 +76,12 @@ config = dict(
 # See README-MAC
             'iconfile': 'resources/hatta.icns',
             'resources': ['hatta.py'],
-            'includes': ['sip', 'PyQt4', 'PyQt4.QtCore', 'PyQt4.QtGui'],
+            'includes': ['sip', 'PyQt4', 'PyQt4.QtCore', 'PyQt4.QtGui',
+                        'Image', 'pygments'],
             'excludes': ['PyQt4.QtDesigner', 'PyQt4.QtNetwork', 
-                         'PyQt4.QtOpenGL', 'PyQt4.QtScript', 'PyQt4.QtSql', 
-                         'PyQt4.QtTest', 'PyQt4.QtWebKit', 'PyQt4.QtXml', 
-                         'PyQt4.phonon'],
+                         'PyQt4.QtOpenGL', 'PyQt4.QtScript', 
+                         'PyQt4.QtSql', 'PyQt4.QtTest', 'PyQt4.QtWebKit', 
+                         'PyQt4.QtXml', 'PyQt4.phonon'],
         },
     },
 )

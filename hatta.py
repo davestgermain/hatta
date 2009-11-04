@@ -2059,10 +2059,13 @@ class WikiPageImage(WikiPageFile):
         page_file = self.storage.open_page(self.title)
         cache_path = os.path.join(cache_dir, self.render_file)
         cache_file = open(cache_path, 'wb')
-        im = Image.open(page_file)
-        im = im.convert('RGBA')
-        im.thumbnail((128, 128), Image.ANTIALIAS)
-        im.save(cache_file,'PNG')
+        try:
+            im = Image.open(page_file)
+            im = im.convert('RGBA')
+            im.thumbnail((128, 128), Image.ANTIALIAS)
+            im.save(cache_file,'PNG')
+        except IOError:
+            raise werkzeug.exceptions.UnsupportedMediaType('Image corrupted')
         cache_file.close()
         return cache_path
 

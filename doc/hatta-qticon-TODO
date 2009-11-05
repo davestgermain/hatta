@@ -1,3 +1,4 @@
+* automatic upstream bug reporting
 * add linux path finding
 * make menu dynamic, i.e. gray in/out and add new services when menu is 
   opened (tried once --- seems impossible)

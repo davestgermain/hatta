@@ -2887,7 +2887,8 @@ def main():
     wiki = Wiki(config)
     app = wiki.application
 
-    host, port = config.get('interface', ''), int(config.get('port', 8080))
+    host, port = (config.get('interface', '0.0.0.0'),
+                  int(config.get('port', 8080)))
     try:
         from cherrypy import wsgiserver
     except ImportError:

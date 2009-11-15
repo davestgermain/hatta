@@ -60,7 +60,7 @@ class HattaThread(QThread):
     """
 
     # For passing multithread exception in Qt.
-    exception_signal = pyqtSignal(Exception)
+    exception_signal = pyqtSignal(int, str)
 
     def __init__(self, config, error_handler):
         """Create a wiki instance and a server for it."""
@@ -82,8 +82,8 @@ class HattaThread(QThread):
     def application_wrapper(self, *args, **kwargs):
         try:
             return self.wiki.application(*args, **kwargs)
-        except Exception, e:
-            self.exception_signal.emit(e)
+        except Exception as (errno, strerror):
+            self.exception_signal.emit(errno, strerror)
 
     def quit(self):
         self.wiki.daed = True
@@ -381,10 +381,12 @@ class HattaTrayIcon(QSystemTrayIcon):
         global app
         app.quit()
 
-    pyqtSlot(Exception)
-    def on_error(self, erro):
+    pyqtSlot(int, str)
+    def on_error(self, errno, strerror):
         """Displays errors from exceptions."""
-        QMessageBox.critical(None, 'Test title', 'Test content', 1, 2)
+        QMessageBox.critical(None, 'Exception',
+            _(u'Error %(error_number)d: %(error_string)s') %
+                dict(error_number=errno, error_string=strerror), 1, 2)
 
     def _make_discovery_action(self, name, host, port):
         """Creates a menu action from a discovered wiki."""

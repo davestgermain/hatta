@@ -29,6 +29,7 @@ import sqlite3
 import sys
 import tempfile
 import thread
+import unicodedata
 
 # Avoid WSGI errors, see http://mercurial.selenic.com/bts/issue1095
 sys.stdout = sys.__stdout__
@@ -687,8 +688,13 @@ class WikiParser(object):
         r"''": "&rdquo;",
         r",,": "&bdquo;",
     }
+    camel_link = ur"\w+[%s]\w+" % re.escape(
+        u''.join(unichr(i) for i in xrange(120779)
+        if unicodedata.category(unichr(i))=='Lu'))
     markup = {
         "bold": ur"[*][*]",
+        "camel_link": camel_link,
+        "camel_nolink": ur"[!~](?P<camel_text>%s)" % camel_link,
         "code": ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
                 ur"*[}]*)[}][}][}]",
         "free_link": ur"""(http|https|ftp)://\S+[^\s.,:;!?()'"=+<>-]""",
@@ -864,6 +870,13 @@ class WikiParser(object):
     def _line_free_link(self, groups):
         groups['link_target'] = groups['free_link']
         return self._line_link(groups)
+
+    def _line_camel_link(self, groups):
+            groups['link_target'] = groups['camel_link']
+            return self._line_link(groups)
+
+    def _line_camel_nolink(self, groups):
+        return werkzeug.escape(groups["camel_text"])
 
     def _line_mail(self, groups):
         addr = groups['mail']

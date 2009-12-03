@@ -689,7 +689,7 @@ class WikiParser(object):
         r",,": "&bdquo;",
     }
     camel_link = ur"\w+[%s]\w+" % re.escape(
-        u''.join(unichr(i) for i in xrange(120779)
+        u''.join(unichr(i) for i in xrange(sys.maxunicode)
         if unicodedata.category(unichr(i))=='Lu'))
     markup = {
         "bold": ur"[*][*]",

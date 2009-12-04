@@ -658,19 +658,19 @@ class WikiParser(object):
     bullets_pat = ur"^\s*[*]+\s+"
     heading_pat = ur"^\s*=+"
     quote_pat = ur"^[>]+\s+"
-    block = {
-        "bullets": bullets_pat,
-        "code": ur"^[{][{][{]+\s*$",
-        "conflict": ur"^<<<<<<< local\s*$",
-        "empty": ur"^\s*$",
-        "heading": heading_pat,
-        "indent": ur"^[ \t]+",
-        "macro": ur"^<<\w+\s*$",
-        "quote": quote_pat,
-        "rule": ur"^\s*---+\s*$",
-        "syntax": ur"^\{\{\{\#![\w+#.-]+\s*$",
-        "table": ur"^\|",
-    } # note that the priority is alphabetical
+    block = [
+        ("bullets", bullets_pat),
+        ("code", ur"^[{][{][{]+\s*$"),
+        ("conflict", ur"^<<<<<<< local\s*$"),
+        ("empty", ur"^\s*$"),
+        ("heading", heading_pat),
+        ("indent", ur"^[ \t]+"),
+        ("macro", ur"^<<\w+\s*$"),
+        ("quote", quote_pat),
+        ("rule", ur"^\s*---+\s*$"),
+        ("syntax", ur"^\{\{\{\#![\w+#.-]+\s*$"),
+        ("table", ur"^\|"),
+    ]
     image_pat = (ur"\{\{(?P<image_target>([^|}]|}[^|}])*)"
                  ur"(\|(?P<image_text>([^}]|}[^}])*))?}}")
     smilies = {
@@ -700,28 +700,28 @@ class WikiParser(object):
     camel_link = ur"\w+[%s]\w+" % re.escape(
         u''.join(unichr(i) for i in xrange(sys.maxunicode)
         if unicodedata.category(unichr(i))=='Lu'))
-    markup = {
-        "bold": ur"[*][*]",
-        "camel_link": camel_link,
-        "camel_nolink": ur"[!~](?P<camel_text>%s)" % camel_link,
-        "code": ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
-                ur"*[}]*)[}][}][}]",
-        "free_link": ur"""(http|https|ftp)://\S+[^\s.,:;!?()'"=+<>-]""",
-        "italic": ur"//",
-        "link": ur"\[\[(?P<link_target>([^|\]]|\][^|\]])+)"
-                ur"(\|(?P<link_text>([^\]]|\][^\]])+))?\]\]",
-        "image": image_pat,
-        "linebreak": ur"\\\\",
-        "macro": ur"[<][<](?P<macro_name>\w+)\s+"
-                 ur"(?P<macro_text>([^>]|[^>][>])+)[>][>]",
-        "mail": ur"""(mailto:)?\S+@\S+(\.[^\s.,:;!?()'"/=+<>-]+)+""",
-        "math": ur"\$\$(?P<math_text>[^$]+)\$\$",
-        "newline": ur"\n",
-        "punct": (ur'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+])|\b|$)' %
-                  ur"|".join(re.escape(k) for k in punct)),
-        "table": ur"=?\|=?",
-        "text": ur".+?",
-    } # note that the priority is alphabetical
+    markup = [
+        ("bold", ur"[*][*]"),
+        ("camel_link", camel_link),
+        ("camel_nolink", ur"[!~](?P<camel_text>%s)" % camel_link),
+        ("code", ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
+                ur"*[}]*)[}][}][}]"),
+        ("free_link", ur"""(http|https|ftp)://\S+[^\s.,:;!?()'"=+<>-]"""),
+        ("italic", ur"//"),
+        ("link", ur"\[\[(?P<link_target>([^|\]]|\][^|\]])+)"
+                ur"(\|(?P<link_text>([^\]]|\][^\]])+))?\]\]"),
+        ("image", image_pat),
+        ("linebreak", ur"\\\\"),
+        ("macro", ur"[<][<](?P<macro_name>\w+)\s+"
+                 ur"(?P<macro_text>([^>]|[^>][>])+)[>][>]"),
+        ("mail", ur"""(mailto:)?\S+@\S+(\.[^\s.,:;!?()'"/=+<>-]+)+"""),
+        ("math", ur"\$\$(?P<math_text>[^$]+)\$\$"),
+        ("newline", ur"\n"),
+        ("punct", (ur'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+])|\b|$)' %
+                  ur"|".join(re.escape(k) for k in punct))),
+        ("table", ur"=?\|=?"),
+        ("text", ur".+?"),
+    ]
 
 
     def __init__(self, lines, wiki_link, wiki_image,
@@ -743,19 +743,21 @@ class WikiParser(object):
         self.heading_re = re.compile(self.heading_pat, re.U)
         self.bullets_re = re.compile(self.bullets_pat, re.U)
         self.block_re = re.compile(ur"|".join("(?P<%s>%s)" % kv
-                                   for kv in sorted(self.block.iteritems())))
+                                   for kv in self.block))
         self.code_close_re = re.compile(ur"^\}\}\}\s*$", re.U)
         self.macro_close_re = re.compile(ur"^>>\s*$", re.U)
         self.conflict_close_re = re.compile(ur"^>>>>>>> other\s*$", re.U)
         self.conflict_sep_re = re.compile(ur"^=======\s*$", re.U)
         self.image_re = re.compile(self.image_pat, re.U)
-        self.markup['smiley'] = (ur"(^|\b|(?<=\s))"
+        self.markup = [(name, pattern) for (name, pattern) in self.markup
+                       if name != 'smiley']
+        self.markup.insert(-2, ('smiley', ur"(^|\b|(?<=\s))"
                                  ur"(?P<smiley_face>%s)"
                                  ur"((?=[\s.,:;!?)/&=+-])|$)"
                                  % ur"|".join(re.escape(k)
-                                              for k in self.smilies))
+                                              for k in self.smilies)))
         self.markup_re = re.compile(ur"|".join("(?P<%s>%s)" % kv
-                                    for kv in sorted(self.markup.iteritems())))
+                                    for kv in self.markup))
 
     def __iter__(self):
         return self.parse()
@@ -840,7 +842,7 @@ class WikiParser(object):
 
     def _line_smiley(self, groups):
         smiley = groups["smiley_face"]
-        return self.wiki_image(self.smilies[smiley], alt=smiley,
+        return self.wiki_image(self.smilies[smiley], smiley,
                                class_="smiley")
 
     def _line_bold(self, groups):

@@ -36,7 +36,8 @@ sys.stdout = sys.__stdout__
 sys.stderr = sys.__stderr__
 
 import werkzeug
-import werkzeug.exceptions, werkzeug.routing
+import werkzeug.exceptions
+import werkzeug.routing
 
 try:
     import jinja2
@@ -60,6 +61,7 @@ except ImportError:
 # Note: we have to set these before importing Mercurial
 os.environ['HGENCODING'] = 'utf-8'
 os.environ['HGMERGE'] = "internal:merge"
+
 import mercurial.hg
 import mercurial.ui
 import mercurial.revlog
@@ -448,7 +450,7 @@ class WikiStorage(object):
         return text
 
     def page_lines(self, page):
-        for data in page:
+        for data in page.xreadlines():
             yield unicode(data, self.charset, 'replace')
 
     @locked_repo
@@ -465,6 +467,8 @@ class WikiStorage(object):
         self._commit([repo_file], text, user)
 
     def open_page(self, title):
+        """Open the page and return a file-like object with its contents."""
+
         try:
             return open(self._file_path(title), "rb")
         except IOError:
@@ -496,6 +500,8 @@ class WikiStorage(object):
         return rev, date, author, comment
 
     def repo_revision(self):
+        """Give the latest revision of the repository."""
+
         return self._changectx().rev()
 
     def page_mime(self, title):
@@ -527,6 +533,7 @@ class WikiStorage(object):
 
     def _changectx(self):
         """Get the changectx of the tip."""
+
         try:
             # This is for Mercurial 1.0
             return self.repo.changectx()
@@ -566,7 +573,7 @@ class WikiStorage(object):
             yield rev, date, author, comment
 
     def page_revision(self, title, rev):
-        """Get unicode contents of specified revision of the page."""
+        """Get binary content of the specified revision of the page."""
 
         filectx_tip = self._find_filectx(title)
         if filectx_tip is None:
@@ -578,6 +585,8 @@ class WikiStorage(object):
         return data
 
     def revision_text(self, title, rev):
+        """Get unicode text of the specified revision of the page."""
+
         data = self.page_revision(title, rev)
         text = unicode(data, self.charset, 'replace')
         return text

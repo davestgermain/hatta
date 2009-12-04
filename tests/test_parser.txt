@@ -204,3 +204,6 @@ This might be considered a bug, but impossible to detect in general.
 
 >>> parse(u'lol:)')
 <p id="line_0">lol<img src="smile.png" alt=":)"></p>
+
+>>> parse(u'This is ##monotyped## text.')
+<p id="line_0">This is <tt>monotyped</tt> text.</p>

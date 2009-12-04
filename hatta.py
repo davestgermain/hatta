@@ -716,6 +716,7 @@ class WikiParser(object):
                  ur"(?P<macro_text>([^>]|[^>][>])+)[>][>]"),
         ("mail", ur"""(mailto:)?\S+@\S+(\.[^\s.,:;!?()'"/=+<>-]+)+"""),
         ("math", ur"\$\$(?P<math_text>[^$]+)\$\$"),
+        ("mono", ur"##"),
         ("newline", ur"\n"),
         ("punct", (ur'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+])|\b|$)' %
                   ur"|".join(re.escape(k) for k in punct))),
@@ -858,6 +859,13 @@ class WikiParser(object):
         else:
             self.stack.append('i')
             return u"<i>"
+
+    def _line_mono(self, groups):
+        if 'tt' in self.stack:
+            return self.pop_to('tt')
+        else:
+            self.stack.append('tt')
+            return u"<tt>"
 
     def _line_punct(self, groups):
         text = groups["punct"]

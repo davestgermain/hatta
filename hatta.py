@@ -368,12 +368,6 @@ class WikiStorage(object):
         except mercurial.util.Abort:
             unresolved = 1, 1, 1, 1
             msg = _(u'failed merge of edit conflict')
-#        if unresolved[3]:
-#            msg = _(u'forced merge of edit conflict')
-#            try:
-#                mercurial.merge.update(self.repo, tip_node, True, True,
-#                                       partial)
-#            except mercurial.util.Abort:
         self.repo.dirstate.setparents(tip_node, node)
         # Mercurial 1.1 and later need updating the merge state
         try:

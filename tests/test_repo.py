@@ -53,11 +53,10 @@ class TestMercurialStorage(object):
         saved = repo.open_page(title).read()
         assert saved == text
 
-    @py.test.mark.xfail
     def test_save_merge_line_conflict(self, repo):
-        text = u"test\ntest"
-        text1 = u"test\ntext"
-        text2 = u"text\ntest"
+        text = u"123\n456\n789"
+        text1 = u"123\n000\n789"
+        text2 = u"123\n111\n789"
         title = u"test title"
         author = u"test author"
         comment = u"test comment"
@@ -65,7 +64,7 @@ class TestMercurialStorage(object):
         repo.save_text(title, text1, author, comment, parent=0)
         repo.save_text(title, text2, author, comment, parent=0)
         saved = repo.open_page(title).read()
-        assert saved == u'text\ntext'
+        assert saved == "123\n<<<<<<< local\n111\n=======\n000\n>>>>>>> other\n789"
 
     def test_delete(self, repo):
         text = u"text test"

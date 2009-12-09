@@ -363,17 +363,17 @@ class WikiStorage(object):
         partial = lambda filename: repo_file == filename
         try:
             unresolved = mercurial.merge.update(self.repo, tip_node,
-                                                True, False, partial)
+                                                True, True, partial)
+            msg = _(u'merge of edit conflict')
         except mercurial.util.Abort:
             unresolved = 1, 1, 1, 1
-        msg = _(u'merge of edit conflict')
-        if unresolved[3]:
-            msg = _(u'forced merge of edit conflict')
-            try:
-                mercurial.merge.update(self.repo, tip_node, True, True,
-                                       partial)
-            except mercurial.util.Abort:
-                msg = _(u'failed merge of edit conflict')
+            msg = _(u'failed merge of edit conflict')
+#        if unresolved[3]:
+#            msg = _(u'forced merge of edit conflict')
+#            try:
+#                mercurial.merge.update(self.repo, tip_node, True, True,
+#                                       partial)
+#            except mercurial.util.Abort:
         self.repo.dirstate.setparents(tip_node, node)
         # Mercurial 1.1 and later need updating the merge state
         try:

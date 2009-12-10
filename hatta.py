@@ -31,6 +31,7 @@ import tempfile
 import thread
 import unicodedata
 
+
 # Avoid WSGI errors, see http://mercurial.selenic.com/bts/issue1095
 sys.stdout = sys.__stdout__
 sys.stderr = sys.__stderr__
@@ -2357,12 +2358,12 @@ To edit this page remove it from the script_page option first."""))
         special_title = _(u'Editing "%(title)s"') % {'title': title}
         html = page.render_content(content, special_title)
         if title not in self.storage:
-            return werkzeug.Response(html, mimetype="text/html",
+            response = werkzeug.Response(html, mimetype="text/html",
                                      status='404 Not found')
-        elif preview:
-            return werkzeug.Response(html, mimetype="text/html")
         else:
-            return self.response(request, title, html, '/edit')
+            response = werkzeug.Response(html, mimetype="text/html")
+        response.headers.add('Cache-Control', 'no-cache')
+        return response
 
     def atom(self, request):
         date_format = "%Y-%m-%dT%H:%M:%SZ"

@@ -2366,11 +2366,14 @@ To edit this page remove it from the script_page option first."""))
 
     def edit(self, request, title, preview=None):
         self.check_lock(title)
+        exists = title in self.storage
+        if exists:
+            self.storage.reopen()
         page = self.get_page(request, title)
         content = page.editor_form(preview)
         special_title = _(u'Editing "%(title)s"') % {'title': title}
         html = page.render_content(content, special_title)
-        if title not in self.storage:
+        if not exists:
             response = werkzeug.Response(html, mimetype="text/html",
                                      status='404 Not found')
         else:

@@ -739,7 +739,7 @@ class WikiParser(object):
         self.heading_re = re.compile(self.heading_pat, re.U)
         self.bullets_re = re.compile(self.bullets_pat, re.U)
         self.block_re = re.compile(ur"|".join("(?P<%s>%s)" % kv
-                                   for kv in self.block))
+                                   for kv in self.block), re.U)
         self.code_close_re = re.compile(ur"^\}\}\}\s*$", re.U)
         self.macro_close_re = re.compile(ur"^>>\s*$", re.U)
         self.conflict_close_re = re.compile(ur"^>>>>>>> other\s*$", re.U)
@@ -753,7 +753,7 @@ class WikiParser(object):
                                  % ur"|".join(re.escape(k)
                                               for k in self.smilies)))
         self.markup_re = re.compile(ur"|".join("(?P<%s>%s)" % kv
-                                    for kv in self.markup))
+                                    for kv in self.markup), re.U)
 
     def __iter__(self):
         return self.parse()

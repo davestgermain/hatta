@@ -2212,6 +2212,9 @@ class Wiki(object):
               methods=['GET']),
             R('/+history/<title:title>', endpoint=self.history,
               methods=['GET', 'HEAD']),
+            R('/+version/', endpoint=self.version, methods=['GET']),
+            R('/+version/<title:title>', endpoint=self.version,
+              methods=['GET']),
             R('/+download/<title:title>', endpoint=self.download,
               methods=['GET', 'HEAD']),
             R('/+render/<title:title>', endpoint=self.render,
@@ -2283,6 +2286,16 @@ class Wiki(object):
         html = page.render_content(content, special_title)
         response = self.response(request, title, html, rev=rev, etag='/old')
         return response
+
+    def version(self, request, title=None):
+        if title is None:
+            version = self.storage.repo_revision()
+        else:
+            try:
+                version, x, x, x = self.storage.page_history(title).next()
+            except StopIteration:
+                version = 0
+        return werkzeug.Response('%d' % version, mimetype="text/plain")
 
     def check_lock(self, title):
         if self.read_only:

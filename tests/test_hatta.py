@@ -232,7 +232,7 @@ body { margin: 1em auto; line-height: 1.3; width: 40em }
 a { color: #3465a4; text-decoration: none }
 a:hover { text-decoration: underline }
 a.wiki:visited { color: #204a87 }
-a.nonexistent { color: #a40000; }
+a.nonexistent, a.nonexistent:visited { color: #a40000; }
 a.external { color: #3465a4; text-decoration: underline }
 a.external:visited { color: #75507b }
 a img { border: none }
@@ -311,7 +311,7 @@ body { margin: 1em auto; line-height: 1.3; width: 40em }
 a { color: #3465a4; text-decoration: none }
 a:hover { text-decoration: underline }
 a.wiki:visited { color: #204a87 }
-a.nonexistent { color: #a40000; }
+a.nonexistent, a.nonexistent:visited { color: #a40000; }
 a.external { color: #3465a4; text-decoration: underline }
 a.external:visited { color: #75507b }
 a img { border: none }

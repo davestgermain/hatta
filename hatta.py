@@ -1182,7 +1182,7 @@ whence whenever where whereafter whereas whereby wherein whereupon wherever
 whether which while whither who whoever whole whom whose why will with within
 without would yet you your yours yourself yourselves""")).split())
 +ur')$|.*\d.*', re.U|re.I|re.X)
-        self.update()
+        self.update(self)
 
 
 
@@ -1328,7 +1328,7 @@ without would yet you your yours yourself yourselves""")).split())
         finally:
             con.commit()
 
-    def reindex_page(self, title, cursor, text=None):
+    def reindex_page(self, page, title, cursor, text=None):
         """Updates the content of the database, needs locks around."""
 
         mime = self.storage.page_mime(title)
@@ -1340,12 +1340,13 @@ without would yet you your yours yourself yourselves""")).split())
                 text = self.storage.page_text(title)
             except werkzeug.exceptions.NotFound:
                 text = u''
-        if mime == 'text/x-wiki':
-            links = WikiParser.extract_links(text)
+        extract_links = getattr(page, 'extract_links')
+        if extract_links:
+            links = extract_links(text)
             self.update_links(title, links, cursor=cursor)
         self.update_words(title, text, cursor=cursor)
 
-    def update_page(self, title, data=None, text=None):
+    def update_page(self, page, title, data=None, text=None):
         """Updates the index with new page content, for a single page."""
 
         if text is None and data is not None:
@@ -1354,20 +1355,21 @@ without would yet you your yours yourself yourselves""")).split())
         cursor.execute('BEGIN IMMEDIATE TRANSACTION;')
         try:
             self.set_last_revision(self.storage.repo_revision())
-            self.reindex_page(title, cursor, text)
+            self.reindex_page(page, title, cursor, text)
             cursor.execute('COMMIT TRANSACTION;')
         except:
             cursor.execute('ROLLBACK;')
             raise
 
-    def reindex(self, pages):
+    def reindex(self, wiki, pages):
         """Updates specified pages in bulk."""
 
         cursor = self.con.cursor()
         cursor.execute('BEGIN IMMEDIATE TRANSACTION;')
         try:
             for title in pages:
-                self.reindex_page(title, cursor)
+                page = wiki.get_page(request, title)
+                self.reindex_page(page, title, cursor)
             cursor.execute('COMMIT TRANSACTION;')
             self.empty = False
         except:
@@ -1390,7 +1392,7 @@ without would yet you your yours yourself yourselves""")).split())
         # -1 means "no revision", 1 means revision 0, 2 means revision 1, etc.
         return rev-1
 
-    def update(self):
+    def update(self, wiki):
         """Reindex al pages that changed since last indexing."""
 
         last_rev = self.get_last_revision()
@@ -1398,7 +1400,7 @@ without would yet you your yours yourself yourselves""")).split())
             changed = self.storage.all_pages()
         else:
             changed = self.storage.changed_since(last_rev)
-        self.reindex(changed)
+        self.reindex(wiki, changed)
         rev = self.storage.repo_revision()
         self.set_last_revision(rev)
 
@@ -1989,6 +1991,18 @@ class WikiPageText(WikiPage):
 class WikiPageWiki(WikiPageText):
     """Pages of with wiki markup use this for display."""
 
+    parser = WikiParser
+
+    def extract_links(self, text=None):
+        """Extract all links from the page."""
+
+        if text is None:
+            try:
+                text = self.storage.page_text(self.title)
+            except werkzeug.exceptions.NotFound:
+                text = u''
+        return self.parser.extract_links(text)
+
     def view_content(self, lines=None):
         if lines is None:
             f = self.storage.open_page(self.title)
@@ -1998,7 +2012,7 @@ class WikiPageWiki(WikiPageText):
             smilies = dict((emo, link) for (link, emo) in icons)
         else:
             smilies = None
-        content = WikiParser(lines, self.wiki_link, self.wiki_image,
+        content = self.parser(lines, self.wiki_link, self.wiki_image,
                              self.highlight, self.wiki_math, smilies)
         return content
 
@@ -2330,10 +2344,11 @@ To edit this page remove it from the script_page option first."""))
             except (ValueError, TypeError):
                 parent = None
             self.storage.reopen()
-            self.index.update()
+            self.index.update(self)
+            page = self.get_page(request, title)
             if text is not None:
                 if title == self.locked_page:
-                    for link, label in WikiParser.extract_links(text):
+                    for link, label in page.extract_links(text):
                         if title == link:
                             raise werkzeug.exceptions.Forbidden()
                 if u'href="' in comment or u'http:' in comment:
@@ -2357,7 +2372,7 @@ To edit this page remove it from the script_page option first."""))
                 else:
                     self.storage.delete_page(title, author, comment)
                     url = request.get_url(self.front_page)
-            self.index.update_page(title, text=text)
+            self.index.update_page(page, title, text=text)
         response = werkzeug.routing.redirect(url, code=303)
         response.set_cookie('author',
                             werkzeug.url_quote(request.get_author()),
@@ -2617,7 +2632,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             except (ValueError, TypeError):
                 parent = None
             self.storage.reopen()
-            self.index.update()
+            self.index.update(self)
             if rev == 0:
                 comment = _(u'Delete page %(title)s') % {'title': title}
                 data = ''
@@ -2627,7 +2642,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                     'rev': rev, 'title': title}
                 data = self.storage.page_revision(title, rev-1)
                 self.storage.save_data(title, data, author, comment, parent)
-            self.index.update_page(title, data=data)
+            page = self.get_page(request, title)
+            self.index.update_page(page, title, data=data)
         url = request.adapter.build(self.history, {'title': title},
                                     method='GET', force_external=True)
         return werkzeug.redirect(url, 303)
@@ -2755,7 +2771,7 @@ ${page_link} . . . . ${author_link}
             """Display the search results."""
 
             self.storage.reopen()
-            self.index.update()
+            self.index.update(self)
             result = sorted(self.index.find(words), key=lambda x:-x[0])
             yield u'<p>%s</p><ul class="search">' % werkzeug.escape(
                 _(u'%d page(s) containing all words:') % len(result))

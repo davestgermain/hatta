@@ -2939,11 +2939,11 @@ def application(env, start):
     application = wiki.application
     return application(env, start)
 
-def main():
+def main(config=None, wiki=None):
     """Start a standalone WSGI server."""
 
-    config = read_config()
-    wiki = Wiki(config)
+    config = config or read_config()
+    wiki = wiki or Wiki(config)
     app = wiki.application
 
     host, port = (config.get('interface', '0.0.0.0'),

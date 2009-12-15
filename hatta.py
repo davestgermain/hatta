@@ -179,6 +179,8 @@ class WikiConfig(object):
             help='Enable hgweb access to the repository', action="store_true")
         add('-W', '--wiki-words', dest='wiki_words', default=False,
             help='Enable WikiWord links', action="store_true")
+        add('-I', '--ignore-indent', dest='ignore_indent', default=False,
+            help='Treat indented lines as normal text', action="store_true")
 
         options, args = parser.parse_args()
         for option, value in options.__dict__.iteritems():
@@ -655,19 +657,20 @@ class WikiParser(object):
     bullets_pat = ur"^\s*[*]+\s+"
     heading_pat = ur"^\s*=+"
     quote_pat = ur"^[>]+\s+"
-    block = [
-        ("bullets", bullets_pat),
-        ("code", ur"^[{][{][{]+\s*$"),
-        ("conflict", ur"^<<<<<<< local\s*$"),
-        ("empty", ur"^\s*$"),
-        ("heading", heading_pat),
-        ("indent", ur"^[ \t]+"),
-        ("macro", ur"^<<\w+\s*$"),
-        ("quote", quote_pat),
-        ("rule", ur"^\s*---+\s*$"),
-        ("syntax", ur"^\{\{\{\#![\w+#.-]+\s*$"),
-        ("table", ur"^\|"),
-    ]
+    block = {
+        # "name": (priority, ur"pattern"),
+        "bullets": (10, bullets_pat),
+        "code": (20, ur"^[{][{][{]+\s*$"),
+        "conflict": (30, ur"^<<<<<<< local\s*$"),
+        "empty": (40, ur"^\s*$"),
+        "heading": (50, heading_pat),
+        "indent": (60, ur"^[ \t]+"),
+        "macro":(70, ur"^<<\w+\s*$"),
+        "quote": (80, quote_pat),
+        "rule": (90, ur"^\s*---+\s*$"),
+        "syntax": (100, ur"^\{\{\{\#![\w+#.-]+\s*$"),
+        "table": (110, ur"^\|"),
+    }
     image_pat = (ur"\{\{(?P<image_target>([^|}]|}[^|}])*)"
                  ur"(\|(?P<image_text>([^}]|}[^}])*))?}}")
     smilies = {
@@ -736,8 +739,10 @@ class WikiParser(object):
         self.quote_re = re.compile(self.quote_pat, re.U)
         self.heading_re = re.compile(self.heading_pat, re.U)
         self.bullets_re = re.compile(self.bullets_pat, re.U)
-        self.block_re = re.compile(ur"|".join("(?P<%s>%s)" % kv
-                                   for kv in self.block), re.U)
+        patterns = ((k, p) for (k, (x, p)) in
+                    sorted(self.block.iteritems(), key=lambda x: x[1][0]))
+        self.block_re = re.compile(ur"|".join("(?P<%s>%s)" % pat
+                                   for pat in patterns), re.U)
         self.code_close_re = re.compile(ur"^\}\}\}\s*$", re.U)
         self.macro_close_re = re.compile(ur"^>>\s*$", re.U)
         self.conflict_close_re = re.compile(ur"^>>>>>>> other\s*$", re.U)
@@ -2009,6 +2014,11 @@ class WikiPageWiki(WikiPageText):
             self.parser = WikiWikiParser
         else:
             self.parser = WikiParser
+        if self.config.get_bool('ignore_indent', False):
+            try:
+                del self.parser.block['indent']
+            except KeyError:
+                pass
 
     def extract_links(self, text=None):
         """Extract all links from the page."""

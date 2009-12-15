@@ -177,6 +177,8 @@ class WikiConfig(object):
             help='Read icons graphics from PAGE.')
         add('-w', '--hgweb', dest='hgweb', default=False,
             help='Enable hgweb access to the repository', action="store_true")
+        add('-W', '--wiki-words', dest='wiki_words', default=False,
+            help='Enable WikiWord links', action="store_true")
 
         options, args = parser.parse_args()
         for option, value in options.__dict__.iteritems():
@@ -692,32 +694,28 @@ class WikiParser(object):
         r"''": "&rdquo;",
         r",,": "&bdquo;",
     }
-    camel_link = ur"\w+[%s]\w+" % re.escape(
-        u''.join(unichr(i) for i in xrange(sys.maxunicode)
-        if unicodedata.category(unichr(i))=='Lu'))
-    markup = [
-        ("bold", ur"[*][*]"),
-        ("camel_link", camel_link),
-        ("camel_nolink", ur"[!~](?P<camel_text>%s)" % camel_link),
-        ("code", ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
+    markup = {
+        # "name": (priority, ur"pattern"),
+        "bold": (10, ur"[*][*]"),
+        "code": (20, ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
                 ur"*[}]*)[}][}][}]"),
-        ("free_link", ur"""(http|https|ftp)://\S+[^\s.,:;!?()'"=+<>-]"""),
-        ("italic", ur"//"),
-        ("link", ur"\[\[(?P<link_target>([^|\]]|\][^|\]])+)"
+        "free_link": (30, ur"""(http|https|ftp)://\S+[^\s.,:;!?()'"=+<>-]"""),
+        "italic": (40 , ur"//"),
+        "link": (50, ur"\[\[(?P<link_target>([^|\]]|\][^|\]])+)"
                 ur"(\|(?P<link_text>([^\]]|\][^\]])+))?\]\]"),
-        ("image", image_pat),
-        ("linebreak", ur"\\\\"),
-        ("macro", ur"[<][<](?P<macro_name>\w+)\s+"
+        "image": (60, image_pat),
+        "linebreak": (70, ur"\\\\"),
+        "macro": (80, ur"[<][<](?P<macro_name>\w+)\s+"
                  ur"(?P<macro_text>([^>]|[^>][>])+)[>][>]"),
-        ("mail", ur"""(mailto:)?\S+@\S+(\.[^\s.,:;!?()'"/=+<>-]+)+"""),
-        ("math", ur"\$\$(?P<math_text>[^$]+)\$\$"),
-        ("mono", ur"##"),
-        ("newline", ur"\n"),
-        ("punct", (ur'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+])|\b|$)' %
-                  ur"|".join(re.escape(k) for k in punct))),
-        ("table", ur"=?\|=?"),
-        ("text", ur".+?"),
-    ]
+        "mail": (90, ur"""(mailto:)?\S+@\S+(\.[^\s.,:;!?()'"/=+<>-]+)+"""),
+        "math": (100, ur"\$\$(?P<math_text>[^$]+)\$\$"),
+        "mono": (110, ur"##"),
+        "newline": (120, ur"\n"),
+        "punct": (130, ur'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+])|\b|$)' %
+                  ur"|".join(re.escape(k) for k in punct)),
+        "table": (140, ur"=?\|=?"),
+        "text": (150, ur".+?"),
+    }
 
 
     def __init__(self, lines, wiki_link, wiki_image,
@@ -745,15 +743,14 @@ class WikiParser(object):
         self.conflict_close_re = re.compile(ur"^>>>>>>> other\s*$", re.U)
         self.conflict_sep_re = re.compile(ur"^=======\s*$", re.U)
         self.image_re = re.compile(self.image_pat, re.U)
-        self.markup = [(name, pattern) for (name, pattern) in self.markup
-                       if name != 'smiley']
-        self.markup.insert(-2, ('smiley', ur"(^|\b|(?<=\s))"
-                                 ur"(?P<smiley_face>%s)"
-                                 ur"((?=[\s.,:;!?)/&=+-])|$)"
-                                 % ur"|".join(re.escape(k)
-                                              for k in self.smilies)))
-        self.markup_re = re.compile(ur"|".join("(?P<%s>%s)" % kv
-                                    for kv in self.markup), re.U)
+        smileys = ur"|".join(re.escape(k) for k in self.smilies)
+        smiley_pat = (ur"(^|\b|(?<=\s))(?P<smiley_face>%s)"
+                      ur"((?=[\s.,:;!?)/&=+-])|$)" % smileys)
+        self.markup['smiley'] = (125, smiley_pat)
+        patterns = ((k, p) for (k, (x, p)) in
+                    sorted(self.markup.iteritems(), key=lambda x: x[1][0]))
+        self.markup_re = re.compile(ur"|".join("(?P<%s>%s)" % pat
+                                    for pat in patterns), re.U)
 
     def __iter__(self):
         return self.parse()
@@ -884,13 +881,6 @@ class WikiParser(object):
     def _line_free_link(self, groups):
         groups['link_target'] = groups['free_link']
         return self._line_link(groups)
-
-    def _line_camel_link(self, groups):
-            groups['link_target'] = groups['camel_link']
-            return self._line_link(groups)
-
-    def _line_camel_nolink(self, groups):
-        return werkzeug.escape(groups["camel_text"])
 
     def _line_mail(self, groups):
         addr = groups['mail']
@@ -1102,6 +1092,28 @@ class WikiParser(object):
                                     class_="other",
                                     id="line_%d" % self.line_no)
             yield u'</div>'
+
+
+class WikiWikiParser(WikiParser):
+    """A version of WikiParser that recognizes WikiWord links."""
+
+    def __init__(self, *args, **kw):
+        if 'camel_link' not in self.markup:
+            camel_link = ur"\w+[%s]\w+" % re.escape(
+                u''.join(unichr(i) for i in xrange(sys.maxunicode)
+                if unicodedata.category(unichr(i))=='Lu'))
+            self.markup["camel_link"] = (105, camel_link)
+            self.markup["camel_nolink"] = (106,
+                ur"[!~](?P<camel_text>%s)" % camel_link)
+        super(WikiWikiParser, self).__init__(*args, **kw)
+
+    def _line_camel_link(self, groups):
+        groups['link_target'] = groups['camel_link']
+        return self._line_link(groups)
+
+    def _line_camel_nolink(self, groups):
+        return werkzeug.escape(groups["camel_text"])
+
 
 class WikiSearch(object):
     """
@@ -1991,7 +2003,12 @@ class WikiPageText(WikiPage):
 class WikiPageWiki(WikiPageText):
     """Pages of with wiki markup use this for display."""
 
-    parser = WikiParser
+    def __init__(self, *args, **kw):
+        super(WikiPageWiki, self).__init__(*args, **kw)
+        if self.config.get_bool('wiki_words', False):
+            self.parser = WikiWikiParser
+        else:
+            self.parser = WikiParser
 
     def extract_links(self, text=None):
         """Extract all links from the page."""

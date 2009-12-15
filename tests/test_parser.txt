@@ -17,6 +17,9 @@
 >>> def parse(text):
 ...     lines = '\n\r'.join(text.split('\n')).split('\r')
 ...     print u''.join(WikiParser(lines, link, img, hgh))
+>>> def wiki_parse(text):
+...     lines = '\n\r'.join(text.split('\n')).split('\r')
+...     print u''.join(WikiWikiParser(lines, link, img, hgh))
 
 >>> parse(u"ziew")
 <p id="line_0">ziew</p>
@@ -196,10 +199,10 @@ This might be considered a bug, but impossible to detect in general.
 >>> parse(u'|table|{{{code|code}}}|')
 <table id="line_0"><tr><td>table</td><td><code>code|code</code></td></tr></table>
 
->>> parse(u'some wikiWord, here')
+>>> wiki_parse(u'some wikiWord, here')
 <p id="line_0">some <a href="wikiWord">wikiWord</a>, here</p>
 
->>> parse(u'no !wikiWord here, ~wikiWord')
+>>> wiki_parse(u'no !wikiWord here, ~wikiWord')
 <p id="line_0">no wikiWord here, wikiWord</p>
 
 >>> parse(u'lol:)')

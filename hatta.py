@@ -1102,15 +1102,13 @@ class WikiParser(object):
 class WikiWikiParser(WikiParser):
     """A version of WikiParser that recognizes WikiWord links."""
 
-    def __init__(self, *args, **kw):
-        if 'camel_link' not in self.markup:
-            camel_link = ur"\w+[%s]\w+" % re.escape(
-                u''.join(unichr(i) for i in xrange(sys.maxunicode)
-                if unicodedata.category(unichr(i))=='Lu'))
-            self.markup["camel_link"] = (105, camel_link)
-            self.markup["camel_nolink"] = (106,
-                ur"[!~](?P<camel_text>%s)" % camel_link)
-        super(WikiWikiParser, self).__init__(*args, **kw)
+    markup = dict(WikiParser.markup)
+    camel_link = ur"\w+[%s]\w+" % re.escape(
+        u''.join(unichr(i) for i in xrange(sys.maxunicode)
+        if unicodedata.category(unichr(i))=='Lu'))
+    markup["camel_link"] = (105, camel_link)
+    markup["camel_nolink"] = (106,
+        ur"[!~](?P<camel_text>%s)" % camel_link)
 
     def _line_camel_link(self, groups):
         groups['link_target'] = groups['camel_link']

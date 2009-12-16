@@ -1107,8 +1107,7 @@ class WikiWikiParser(WikiParser):
         u''.join(unichr(i) for i in xrange(sys.maxunicode)
         if unicodedata.category(unichr(i))=='Lu'))
     markup["camel_link"] = (105, camel_link)
-    markup["camel_nolink"] = (106,
-        ur"[!~](?P<camel_text>%s)" % camel_link)
+    markup["camel_nolink"] = (106, ur"[!~](?P<camel_text>%s)" % camel_link)
 
     def _line_camel_link(self, groups):
         groups['link_target'] = groups['camel_link']
@@ -1197,7 +1196,6 @@ whence whenever where whereafter whereas whereby wherein whereupon wherever
 whether which while whither who whoever whole whom whose why will with within
 without would yet you your yours yourself yourselves""")).split())
 +ur')$|.*\d.*', re.U|re.I|re.X)
-        self.update(self)
 
 
 
@@ -1376,7 +1374,7 @@ without would yet you your yours yourself yourselves""")).split())
             cursor.execute('ROLLBACK;')
             raise
 
-    def reindex(self, wiki, pages):
+    def reindex(self, wiki, request,  pages):
         """Updates specified pages in bulk."""
 
         cursor = self.con.cursor()
@@ -1407,7 +1405,7 @@ without would yet you your yours yourself yourselves""")).split())
         # -1 means "no revision", 1 means revision 0, 2 means revision 1, etc.
         return rev-1
 
-    def update(self, wiki):
+    def update(self, wiki, request):
         """Reindex al pages that changed since last indexing."""
 
         last_rev = self.get_last_revision()
@@ -1415,7 +1413,7 @@ without would yet you your yours yourself yourselves""")).split())
             changed = self.storage.all_pages()
         else:
             changed = self.storage.changed_since(last_rev)
-        self.reindex(wiki, changed)
+        self.reindex(wiki, request, changed)
         rev = self.storage.repo_revision()
         self.set_last_revision(rev)
 
@@ -2369,7 +2367,7 @@ To edit this page remove it from the script_page option first."""))
             except (ValueError, TypeError):
                 parent = None
             self.storage.reopen()
-            self.index.update(self)
+            self.index.update(self, request)
             page = self.get_page(request, title)
             if text is not None:
                 if title == self.locked_page:
@@ -2657,7 +2655,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             except (ValueError, TypeError):
                 parent = None
             self.storage.reopen()
-            self.index.update(self)
+            self.index.update(self, request)
             if rev == 0:
                 comment = _(u'Delete page %(title)s') % {'title': title}
                 data = ''
@@ -2792,11 +2790,11 @@ ${page_link} . . . . ${author_link}
             html = regexp.sub(highlighted, snippet)
             return html
 
-        def page_search(words, page):
+        def page_search(words, page, resuest):
             """Display the search results."""
 
             self.storage.reopen()
-            self.index.update(self)
+            self.index.update(self, request)
             result = sorted(self.index.find(words), key=lambda x:-x[0])
             yield u'<p>%s</p><ul class="search">' % werkzeug.escape(
                 _(u'%d page(s) containing all words:') % len(result))
@@ -2818,7 +2816,7 @@ ${page_link} . . . . ${author_link}
             if not words:
                 words = (query,)
             title = _(u'Searching for "%s"') % u" ".join(words)
-            content = page_search(words, page)
+            content = page_search(words, page, request)
         html = page.render_content(content, title)
         return WikiResponse(html, mimetype='text/html')
 

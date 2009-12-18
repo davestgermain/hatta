@@ -2834,7 +2834,7 @@ ${page_link} . . . . ${author_link}
             yield u'</ul>'
 
         self.storage.reopen()
-        self.index.update()
+        self.index.update(self, request)
         page = self.get_page(request, title)
         html = page.render_content(backlink_list(page),
                                    _(u'Links to "%s"') % title)

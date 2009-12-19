@@ -1267,6 +1267,18 @@ without would yet you your yours yourself yourselves""")).split())
             cursor.execute('INSERT INTO links VALUES (?, ?, ?, ?);',
                              (title_id, link, label, number))
 
+    def orphaned_pages(self):
+        con = self.con
+        try:
+            sql = ('SELECT title FROM titles '
+                   'WHERE NOT EXISTS '
+                   '(SELECT * FROM links WHERE target=title) '
+                   'ORDER BY title;')
+            for (title,) in con.execute(sql):
+                yield title
+        finally:
+            con.commit()
+
     def page_backlinks(self, title):
         con = self.con # sqlite3.connect(self.filename)
         try:
@@ -1283,7 +1295,7 @@ without would yet you your yours yourself yourselves""")).split())
         con = self.con # sqlite3.connect(self.filename)
         try:
             title_id = self.title_id(title, con)
-            sql = 'SELECT TARGET from links where src=? ORDER BY number;'
+            sql = 'SELECT target FROM links WHERE src=? ORDER BY number;'
             for (link,) in con.execute(sql, (title_id,)):
                 yield link
         finally:
@@ -2271,6 +2283,7 @@ class Wiki(object):
             R('/favicon.ico', endpoint=self.favicon, methods=['GET', 'HEAD']),
             R('/robots.txt', endpoint=self.robots, methods=['GET', 'HEAD']),
             R('/+index', endpoint=self.all_pages, methods=['GET', 'HEAD']),
+            R('/+orphaned', endpoint=self.orphaned, methods=['GET', 'HEAD']),
             R('/+search', endpoint=self.search, methods=['GET', 'POST']),
             R('/+search/<title:title>', endpoint=self.backlinks,
               methods=['GET', 'POST']),
@@ -2780,6 +2793,19 @@ ${page_link} . . . . ${author_link}
         response.make_conditional(request)
         return response
 
+    def orphaned(self, request):
+        """Show all pages that don't have backlinks."""
+
+        page = self.get_page(request, '')
+        pages = self.index.orphaned_pages()
+        content = page.pages_list(pages,
+                                  _(u'List of pages with no links to them'))
+        html = page.render_content(content, _(u'Orphaned pages'))
+        response = WikiResponse(html, mimetype='text/html')
+        response.set_etag('/+index/%d' % self.storage.repo_revision())
+        response.make_conditional(request)
+        return response
+
     def search(self, request):
         """Serve the search results page."""
 
@@ -2879,7 +2905,7 @@ ${page_link} . . . . ${author_link}
             return self.download(request, title)
         robots = ('User-agent: *\r\n'
                   'Disallow: /+*\r\n'
-                  'Disallow: /%5B*\r\n'
+                  'Disallow: /%2B*\r\n'
                   'Disallow: /+edit\r\n'
                   'Disallow: /+feed\r\n'
                   'Disallow: /+history\r\n'

@@ -1700,31 +1700,33 @@ class WikiPage(object):
         yield html.div(u" ".join(self.menu()), class_="menu")
         yield html.h1(html(special_title or self.title))
 
-    header_template = Template(u"""\
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-"http://www.w3.org/TR/html4/strict.dtd">
-<html><head>
-<title>${title} - ${site_name}</title>
-<link rel="stylesheet" type="text/css" href="${style_url}">
-<%if not robots %><meta name="robots" content="NOINDEX,NOFOLLOW"><%endif%>
-<%if edit_url %><link rel="alternate" type="application/wiki" \
-href="${edit_url}"><%endif%>
-<link rel="shortcut icon" type="image/x-icon" href="${favicon_url}">
-<link rel="alternate" type="application/rss+xml" title="${site_name} (RSS)" \
-href="${rss_url}">
-<link rel="alternate" type="application/rss+xml" title="${site_name} (ATOM)" \
-href="${atom_url}">
-<script type="text/javascript" src="${script_url}"></script>
-</head><body>
-<div class="header">${header_content}</div>
-<div class="content">
-""")
+    def html_header(self, special_title, edit_url):
+        e = lambda x: werkzeug.escape(x, quote=True)
+        h = werkzeug.html
+        yield h.title(u'%s - %s' % (e(special_title or self.title),
+                                    e(self.wiki.site_name)))
+        yield h.link(rel="stylesheet", type_="text/css",
+                     href=self.get_url(None, self.wiki.style_css))
+        if special_title:
+            yield h.meta(name="robots", content="NOINDEX,NOFOLLOW")
+        if edit_url:
+            yield h.link(rel="alternate", type_="application/wiki",
+                         href=edit_url)
+        yield h.link(rel="shortcut icon", type_="image/x-icon",
+                     href=self.get_url(None, self.wiki.favicon_ico))
+        yield h.link(rel="alternate", type_="application/rss+xml",
+                     title=e("%s (RSS)" % self.wiki.site_name),
+                     href=self.get_url(None, self.wiki.rss))
+        yield h.link(rel="alternate", type_="application/rss+xml",
+                     title=e("%s (ATOM)" % self.wiki.site_name),
+                     href=self.get_url(None, self.wiki.atom))
+        yield h.script(type_="text/javascript",
+                     src=self.get_url(None, self.wiki.scripts_js))
 
-    def footer(self, special, edit, edit_url):
+    def footer(self, special_title, edit, edit_url):
         if edit:
             return
-        yield u'<div class="footer">'
-        if special:
+        if special_title:
             footer_links = [
                 (_(u'Changes'), 'changes',
                  self.get_url(None, self.wiki.recent_changes)),
@@ -1745,15 +1747,12 @@ href="${atom_url}">
             ]
         for label, class_, url in footer_links:
             yield werkzeug.html.a(werkzeug.html(label), href=url, class_=class_)
-        yield u'</div>'
+            yield u'\n'
 
     def render_content(self, content, special_title=None, edit=False):
         """The main page template."""
 
-        style_url = None
         edit_url = None
-        script_url = self.get_url(None, self.wiki.scripts_js)
-        style_url = self.get_url(None, self.wiki.style_css)
         if not special_title:
             try:
                 self.wiki._check_lock(self.title)
@@ -1761,23 +1760,22 @@ href="${atom_url}">
             except werkzeug.exceptions.Forbidden:
                 pass
 
-        yield self.header_template.render(
-            title=werkzeug.escape(special_title or self.title, quote=True),
-            site_name=werkzeug.escape(self.wiki.site_name, quote=True),
-            style_url=style_url,
-            robots=not special_title,
-            edit_url=edit_url,
-            favicon_url=self.get_url(None, self.wiki.favicon_ico),
-            rss_url=self.get_url(None, self.wiki.rss),
-            atom_url=self.get_url(None, self.wiki.atom),
-            script_url=script_url,
-            header_content = ''.join(self.header(special_title))
-        )
+        yield u"""\
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html><head>\n"""
+        for part in self.html_header(special_title, edit_url):
+            yield part
+        yield u'\n</head><body><div class="header">\n'
+        for part in self.header(special_title):
+            yield part
+        yield u'\n</div><div class="content">\n'
         for part in content:
             yield part
+        yield u'\n<div class="footer">\n'
         for part in self.footer(special_title, edit, edit_url):
             yield part
-        yield u'</div></body></html>'
+        yield u'</div></div></body></html>'
 
     history_item_template = Template(u"""<li>
 <a href="${date_url}">${date_html}</a>

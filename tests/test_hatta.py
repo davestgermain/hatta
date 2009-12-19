@@ -225,57 +225,12 @@ class TestHTML(object):
 "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
     <title>page &lt;title&gt; - Hatta Wiki</title>
-    <style type="text/css">
-html { background: #fff; color: #2e3436;
-    font-family: sans-serif; font-size: 96% }
-body { margin: 1em auto; line-height: 1.3; width: 40em }
-a { color: #3465a4; text-decoration: none }
-a:hover { text-decoration: underline }
-a.wiki:visited { color: #204a87 }
-a.nonexistent, a.nonexistent:visited { color: #a40000; }
-a.external { color: #3465a4; text-decoration: underline }
-a.external:visited { color: #75507b }
-a img { border: none }
-img.math, img.smiley { vertical-align: middle }
-pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word;
-    white-space: -moz-pre-wrap; white-space: -pre-wrap;
-    white-space: -o-pre-wrap; line-height: 1.2; color: #555753 }
-div.conflict pre.local { background: #fcaf3e; margin-bottom: 0; color: 000}
-div.conflict pre.other { background: #ffdd66; margin-top: 0; color: 000; border-top: #d80 dashed 1px; }
-pre.diff div.orig { font-size: 75%; color: #babdb6 }
-b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e;
-color: #ce5c00; text-decoration: none }
-pre.diff del { background: #eeeeec; color: #888a85; text-decoration: none }
-pre.diff div.change { border-left: 2px solid #fcaf3e }
-div.footer { border-top: solid 1px #babdb6; text-align: right }
-h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
-div.buttons { text-align: center }
-input.button, div.buttons input { font-weight: bold; font-size: 100%;
-    background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
-.history input.button { font-size: 75% }
-.editor textarea { width: 100%; display: block; font-size: 100%;
-    border: solid 1px #babdb6; }
-.editor label { display:block; text-align: right }
-.editor .upload { margin: 2em auto; text-align: center }
-form.search input.search, .editor label input { font-size: 100%;
-    border: solid 1px #babdb6; margin: 0.125em 0 }
-.editor label.comment input  { width: 32em }
-a.logo { float: left; display: block; margin: 0.25em }
-div.header h1 { margin: 0; }
-div.content { clear: left }
-form.search { margin:0; text-align: right; font-size: 80% }
-div.snippet { font-size: 80%; color: #888a85 }
-div.header div.menu { float: right; margin-top: 1.25em }
-div.header div.menu a.current { color: #000 }
-hr { background: transparent; border:none; height: 0;
-     border-bottom: 1px solid #babdb6; clear: both }
-blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}
-abbr.date {border:none}
-    </style>
+    <link type="text/css" href="/+download/style.css" rel="stylesheet">
     <link type="application/wiki" href="/+edit/page%20%3Ctitle%3E" rel="alternate">
     <link type="image/x-icon" href="/favicon.ico" rel="shortcut icon">
     <link type="application/rss+xml" href="/+feed/rss" rel="alternate" title="Hatta Wiki (RSS)">
     <link type="application/rss+xml" href="/+feed/atom" rel="alternate" title="Hatta Wiki (ATOM)">
+    <script src="/+download/scripts.js" type="text/javascript"></script>
 </head><body>
     <div class="header">
         <form action="/+search" class="search" method="GET"><div>
@@ -304,57 +259,12 @@ abbr.date {border:none}
 "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
     <title>different &lt;title&gt; - Hatta Wiki</title>
-    <style type="text/css">
-html { background: #fff; color: #2e3436;
-    font-family: sans-serif; font-size: 96% }
-body { margin: 1em auto; line-height: 1.3; width: 40em }
-a { color: #3465a4; text-decoration: none }
-a:hover { text-decoration: underline }
-a.wiki:visited { color: #204a87 }
-a.nonexistent, a.nonexistent:visited { color: #a40000; }
-a.external { color: #3465a4; text-decoration: underline }
-a.external:visited { color: #75507b }
-a img { border: none }
-img.math, img.smiley { vertical-align: middle }
-pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word;
-    white-space: -moz-pre-wrap; white-space: -pre-wrap;
-    white-space: -o-pre-wrap; line-height: 1.2; color: #555753 }
-div.conflict pre.local { background: #fcaf3e; margin-bottom: 0; color: 000}
-div.conflict pre.other { background: #ffdd66; margin-top: 0; color: 000; border-top: #d80 dashed 1px; }
-pre.diff div.orig { font-size: 75%; color: #babdb6 }
-b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e;
-color: #ce5c00; text-decoration: none }
-pre.diff del { background: #eeeeec; color: #888a85; text-decoration: none }
-pre.diff div.change { border-left: 2px solid #fcaf3e }
-div.footer { border-top: solid 1px #babdb6; text-align: right }
-h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
-div.buttons { text-align: center }
-input.button, div.buttons input { font-weight: bold; font-size: 100%;
-    background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
-.history input.button { font-size: 75% }
-.editor textarea { width: 100%; display: block; font-size: 100%;
-    border: solid 1px #babdb6; }
-.editor label { display:block; text-align: right }
-.editor .upload { margin: 2em auto; text-align: center }
-form.search input.search, .editor label input { font-size: 100%;
-    border: solid 1px #babdb6; margin: 0.125em 0 }
-.editor label.comment input  { width: 32em }
-a.logo { float: left; display: block; margin: 0.25em }
-div.header h1 { margin: 0; }
-div.content { clear: left }
-form.search { margin:0; text-align: right; font-size: 80% }
-div.snippet { font-size: 80%; color: #888a85 }
-div.header div.menu { float: right; margin-top: 1.25em }
-div.header div.menu a.current { color: #000 }
-hr { background: transparent; border:none; height: 0;
-     border-bottom: 1px solid #babdb6; clear: both }
-blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}
-abbr.date {border:none}
-    </style>
+    <link type="text/css" href="/+download/style.css" rel="stylesheet">
     <meta content="NOINDEX,NOFOLLOW" name="robots">
     <link type="image/x-icon" href="/favicon.ico" rel="shortcut icon">
     <link type="application/rss+xml" href="/+feed/rss" rel="alternate" title="Hatta Wiki (RSS)">
     <link type="application/rss+xml" href="/+feed/atom" rel="alternate" title="Hatta Wiki (ATOM)">
+    <script src="/+download/scripts.js" type="text/javascript"></script>
 </head><body>
     <div class="header">
         <form action="/+search" class="search" method="GET"><div>

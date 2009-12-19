@@ -1281,6 +1281,22 @@ without would yet you your yours yourself yourselves""")).split())
         finally:
             con.commit()
 
+    def wanted_pages(self):
+        """Gives all pages that are linked to, but don't exist."""
+
+        con = self.con
+        try:
+            sql = ('SELECT target FROM links '
+                   'WHERE NOT EXISTS '
+                   '(SELECT * FROM titles WHERE target=title) '
+                   'ORDER BY target;')
+            for (title,) in con.execute(sql):
+                #if not external_link(title):
+                    yield title
+        finally:
+            con.commit()
+
+
     def page_backlinks(self, title):
         """Gives a list of pages linking to specified page."""
 
@@ -2290,6 +2306,7 @@ class Wiki(object):
             R('/robots.txt', endpoint=self.robots, methods=['GET', 'HEAD']),
             R('/+index', endpoint=self.all_pages, methods=['GET', 'HEAD']),
             R('/+orphaned', endpoint=self.orphaned, methods=['GET', 'HEAD']),
+            R('/+wanted', endpoint=self.wanted, methods=['GET', 'HEAD']),
             R('/+search', endpoint=self.search, methods=['GET', 'POST']),
             R('/+search/<title:title>', endpoint=self.backlinks,
               methods=['GET', 'POST']),
@@ -2809,6 +2826,19 @@ ${page_link} . . . . ${author_link}
         html = page.render_content(content, _(u'Orphaned pages'))
         response = WikiResponse(html, mimetype='text/html')
         response.set_etag('/+index/%d' % self.storage.repo_revision())
+        response.make_conditional(request)
+        return response
+
+    def wanted(self, request):
+        """Show all pages that don't exist yet, but are linked."""
+
+        page = self.get_page(request, '')
+        pages = self.index.wanted_pages()
+        content = page.pages_list(pages,
+            _(u"List of pages that are linked to, but don't exist yet."))
+        html = page.render_content(content, _(u'Wanted pages'))
+        response = WikiResponse(html, mimetype='text/html')
+        response.set_etag('/+wanted/%d' % self.storage.repo_revision())
         response.make_conditional(request)
         return response
 

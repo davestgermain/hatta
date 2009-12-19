@@ -157,8 +157,6 @@ class WikiConfig(object):
             help='Translate interface to LANG', metavar='LANG')
         add('-r', '--read-only', dest='read_only', default=False,
             help='Whether the wiki should be read-only', action="store_true")
-        add('-j', '--script-page', dest='script_page', metavar="PAGE",
-            help='Include JavaScript from page PAGE.')
         add('-g', '--icon-page', dest='icon_page', metavar="PAGE",
             help='Read icons graphics from PAGE.')
         add('-w', '--hgweb', dest='hgweb', default=False,
@@ -1814,8 +1812,7 @@ class WikiPage(object):
         """Refresh the page when any of those pages was changed."""
 
         dependencies = set()
-        for link in [self.wiki.style_page, self.wiki.logo_page,
-                     self.wiki.menu_page]:
+        for link in [self.wiki.logo_page, self.wiki.menu_page]:
             if link not in self.storage:
                 dependencies.add(werkzeug.url_quote(link))
         return dependencies
@@ -2254,9 +2251,7 @@ abbr.date {border:none}"""
         self.logo_page = self.config.get('logo_page', u'logo.png')
         self.locked_page = self.config.get('locked_page', u'Locked')
         self.site_name = self.config.get('site_name', u'Hatta Wiki')
-        self.style_page = self.config.get('style_page', u'style.css')
         self.read_only = self.config.get_bool('read_only', False)
-        self.script_page = self.config.get('script_page', None)
         self.icon_page = self.config.get('icon_page', None)
 
         self.storage = self.storage_class(self.path, self.page_charset)

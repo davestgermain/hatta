@@ -1893,7 +1893,7 @@ href="${atom_url}">
                 dependencies.add(werkzeug.url_quote(link))
         return dependencies
 
-    def diff_content(self, from_rev, to_rev):
+    def diff_content(self, from_rev, to_rev, message=u''):
         """Genrate HTML for the diff of revisions of a page."""
 
         return []
@@ -2004,7 +2004,7 @@ class WikiPageText(WikiPage):
         html = pygments.highlight(text, lexer, formatter)
         yield html
 
-    def diff_content(self, from_rev, to_rev):
+    def diff_content(self, from_rev, to_rev, message=u''):
         """Generate the HTML markup for a diff."""
 
         def infiniter(iterator):
@@ -2019,8 +2019,8 @@ class WikiPageText(WikiPage):
         other_text = self.storage.revision_text(self.title, to_rev)
         diff = difflib._mdiff(text.split('\n'), other_text.split('\n'))
         stack = []
-
         mark_re = re.compile('\0[-+^]([^\1\0]*)\1|([^\0\1])')
+        yield message
         yield u'<pre class="diff">'
         for old_line, new_line, changed in diff:
             old_no, old_text = old_line
@@ -2799,19 +2799,19 @@ ${page_link} . . . . ${author_link}
         """Show the differences between specified revisions."""
 
         page = self.get_page(request, title)
-        diff = page.diff_content(from_rev, to_rev)
-        from_url = request.adapter.build(self.revision,
-                                         {'title': title, 'rev': from_rev})
-        to_url = request.adapter.build(self.revision,
-                                       {'title': title, 'rev': to_rev})
-        content = itertools.chain(
-            [werkzeug.html.p(werkzeug.html(_(u'Differences between revisions '
-                u'%(link1)s and %(link2)s of page %(link)s.')) % {
-                'link1': werkzeug.html.a(str(from_rev), href=from_url),
-                'link2': werkzeug.html.a(str(to_rev), href=to_url),
-                'link': werkzeug.html.a(werkzeug.html(title),
-                                        href=request.get_url(title))
-            })], diff)
+        build = request.adapter.build
+        from_url = build(self.revision, {'title': title, 'rev': from_rev})
+        to_url = build(self.revision, {'title': title, 'rev': to_rev})
+        a = werkzeug.html.a
+        links = {
+            'link1': a(str(from_rev), href=from_url),
+            'link2': a(str(to_rev), href=to_url),
+            'link': a(werkzeug.html(title), href=request.get_url(title)),
+        }
+        message = werkzeug.html(_(
+            u'Differences between revisions %(link1)s and %(link2)s '
+            u'of page %(link)s.')) % links
+        content = page.diff_content(from_rev, to_rev, message)
         special_title = _(u'Diff for "%(title)s"') % {'title': title}
         html = page.render_content(content, special_title)
         response = werkzeug.Response(html, mimetype='text/html')

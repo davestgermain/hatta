@@ -2833,21 +2833,14 @@ ${page_link} . . . . ${author_link}
     def backlinks(self, request, title):
         """Serve the page with backlinks."""
 
-        def backlink_list(page):
-            """Generate html for the backlinks list"""
-
-            yield u'<p>%s</p><ul class="backlinks">' % (
-                _(u'Pages that contain a link to %s.')
-                % page.wiki_link(title))
-            for link in self.index.page_backlinks(title):
-                yield werkzeug.html.li(page.wiki_link(link))
-            yield u'</ul>'
-
         self.storage.reopen()
         self.index.update(self, request)
         page = self.get_page(request, title)
-        html = page.render_content(backlink_list(page),
-                                   _(u'Links to "%s"') % title)
+        message = _(u'Pages that contain a link to %(link)s.')
+        link = page.wiki_link(title)
+        pages = self.index.page_backlinks(title)
+        content = page.pages_list(pages, message, link, _class='backlinks')
+        html = page.render_content(content, _(u'Links to "%s"') % title)
         response = WikiResponse(html, mimetype='text/html')
         response.set_etag('/+search/%d' % self.storage.repo_revision())
         response.make_conditional(request)

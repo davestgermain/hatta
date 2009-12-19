@@ -1740,7 +1740,7 @@ href="${atom_url}">
         style_url = self.get_url(None, self.wiki.style_css)
         if not special_title:
             try:
-                self.wiki.check_lock(self.title)
+                self.wiki._check_lock(self.title)
                 edit_url = self.get_url(self.title, self.wiki.edit)
             except werkzeug.exceptions.Forbidden:
                 pass
@@ -1806,7 +1806,7 @@ href="${atom_url}">
         url = self.request.get_url(title, self.wiki.undo, method='POST')
         yield u'<form action="%s" method="POST"><ul class="history">' % url
         try:
-            self.wiki.check_lock(title)
+            self.wiki._check_lock(title)
             read_only = False
         except werkzeug.exceptions.Forbidden:
             read_only = True
@@ -2327,7 +2327,8 @@ abbr.date {border:none}"""
             R('/robots.txt', endpoint=self.robots_txt, methods=['GET', 'HEAD']),
             R('/+download/style.css', endpoint=self.style_css,
               methods=['GET', 'HEAD']),
-            R('/scripts.js', endpoint=self.scripts_js, methods=['GET', 'HEAD']),
+            R('/+download/scripts.js', endpoint=self.scripts_js,
+              methods=['GET', 'HEAD']),
         ], converters={'title':WikiTitleConverter, 'all':WikiAllConverter})
 
     def get_page(self, request, title):
@@ -2395,18 +2396,21 @@ abbr.date {border:none}"""
                 version = 0
         return werkzeug.Response('%d' % version, mimetype="text/plain")
 
-    def check_lock(self, title):
+    def _check_lock(self, title):
+        restricted_pages = [
+            'scripts.js',
+            'robots.txt',
+        ]
         if self.read_only:
             raise werkzeug.exceptions.Forbidden(_("This site is read-only."))
-        if self.script_page and title == self.script_page:
-            raise werkzeug.exceptions.Forbidden(_("""Can't edit live scripts.
-To edit this page remove it from the script_page option first."""))
-        if self.locked_page in self.storage:
-            if title in self.index.page_links(self.locked_page):
-                raise werkzeug.exceptions.Forbidden(_("This page is locked."))
+        if title in restricted_pages:
+            raise werkzeug.exceptions.Forbidden(_("""Can't edit this page.
+It can only be edited by the site admin directly on the disk."""))
+        if title in self.index.page_links(self.locked_page):
+            raise werkzeug.exceptions.Forbidden(_("This page is locked."))
 
     def save(self, request, title):
-        self.check_lock(title)
+        self._check_lock(title)
         url = request.get_url(title)
         if request.form.get('cancel'):
             if title not in self.storage:
@@ -2464,7 +2468,7 @@ To edit this page remove it from the script_page option first."""))
         return response
 
     def edit(self, request, title, preview=None):
-        self.check_lock(title)
+        self._check_lock(title)
         exists = title in self.storage
         if exists:
             self.storage.reopen()
@@ -2705,7 +2709,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
     def undo(self, request, title):
         """Revert a change to a page."""
 
-        self.check_lock(title)
+        self._check_lock(title)
         rev = None
         for key in request.form:
             try:

@@ -1780,7 +1780,7 @@ href="${atom_url}">
 <a href="${wanted_url}" class="wanted">${_("Wanted")}</a>
 </div></div></body></html>""")
 
-    def render_content(self, content, special_title=None):
+    def render_content(self, content, special_title=None, edit=False):
         """The main page template."""
 
         style_url = None
@@ -1811,7 +1811,9 @@ href="${atom_url}">
         )
         for part in content:
             yield part
-        if special_title:
+        if edit:
+            yield u'</div></body></html>'
+        elif special_title:
             yield self.special_footer_template.render(
                 changes_url=self.get_url(None, self.wiki.recent_changes),
                 index_url=self.get_url(None, self.wiki.all_pages),
@@ -2468,12 +2470,15 @@ To edit this page remove it from the script_page option first."""))
         page = self.get_page(request, title)
         content = page.editor_form(preview)
         special_title = _(u'Editing "%(title)s"') % {'title': title}
-        html = page.render_content(content, special_title)
+        html = page.render_content(content, special_title, edit=True)
         if not exists:
             response = werkzeug.Response(html, mimetype="text/html",
                                      status='404 Not found')
-        else:
+
+        elif preview:
             response = werkzeug.Response(html, mimetype="text/html")
+        else:
+            response = self.response(request, title, html, '/edit')
         response.headers.add('Cache-Control', 'no-cache')
         return response
 

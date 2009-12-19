@@ -1705,54 +1705,7 @@ class WikiPage(object):
 "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
 <title>${title} - ${site_name}</title>
-<% if style_url %><link rel="stylesheet" type="text/css" href="${style_url}">\
-<% else %><style type="text/css">
-html { background: #fff; color: #2e3436;
-    font-family: sans-serif; font-size: 96% }
-body { margin: 1em auto; line-height: 1.3; width: 40em }
-a { color: #3465a4; text-decoration: none }
-a:hover { text-decoration: underline }
-a.wiki:visited { color: #204a87 }
-a.nonexistent, a.nonexistent:visited { color: #a40000; }
-a.external { color: #3465a4; text-decoration: underline }
-a.external:visited { color: #75507b }
-a img { border: none }
-img.math, img.smiley { vertical-align: middle }
-pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word;
-    white-space: -moz-pre-wrap; white-space: -pre-wrap;
-    white-space: -o-pre-wrap; line-height: 1.2; color: #555753 }
-div.conflict pre.local { background: #fcaf3e; margin-bottom: 0; color: 000}
-div.conflict pre.other { background: #ffdd66; margin-top: 0; color: 000; border-top: #d80 dashed 1px; }
-pre.diff div.orig { font-size: 75%; color: #babdb6 }
-b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e;
-color: #ce5c00; text-decoration: none }
-pre.diff del { background: #eeeeec; color: #888a85; text-decoration: none }
-pre.diff div.change { border-left: 2px solid #fcaf3e }
-div.footer { border-top: solid 1px #babdb6; text-align: right }
-h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
-div.buttons { text-align: center }
-input.button, div.buttons input { font-weight: bold; font-size: 100%;
-    background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
-.history input.button { font-size: 75% }
-.editor textarea { width: 100%; display: block; font-size: 100%;
-    border: solid 1px #babdb6; }
-.editor label { display:block; text-align: right }
-.editor .upload { margin: 2em auto; text-align: center }
-form.search input.search, .editor label input { font-size: 100%;
-    border: solid 1px #babdb6; margin: 0.125em 0 }
-.editor label.comment input  { width: 32em }
-a.logo { float: left; display: block; margin: 0.25em }
-div.header h1 { margin: 0; }
-div.content { clear: left }
-form.search { margin:0; text-align: right; font-size: 80% }
-div.snippet { font-size: 80%; color: #888a85 }
-div.header div.menu { float: right; margin-top: 1.25em }
-div.header div.menu a.current { color: #000 }
-hr { background: transparent; border:none; height: 0;
-     border-bottom: 1px solid #babdb6; clear: both }
-blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}
-abbr.date {border:none}
-</style><%endif%>
+<link rel="stylesheet" type="text/css" href="${style_url}">
 <%if not robots %><meta name="robots" content="NOINDEX,NOFOLLOW"><%endif%>
 <%if edit_url %><link rel="alternate" type="application/wiki" \
 href="${edit_url}"><%endif%>
@@ -1761,9 +1714,7 @@ href="${edit_url}"><%endif%>
 href="${rss_url}">
 <link rel="alternate" type="application/rss+xml" title="${site_name} (ATOM)" \
 href="${atom_url}">
-<%if script_url %>
-<script type="application/javascript" src="${script_url}"></script>\
-<%endif%>
+<script type="text/javascript" src="${script_url}"></script>
 </head><body>
 <div class="header">${header_content}</div>
 <div class="content">
@@ -1785,17 +1736,14 @@ href="${atom_url}">
 
         style_url = None
         edit_url = None
-        script_url = None
-        if self.wiki.style_page in self.storage:
-            style_url = self.get_download_url(self.wiki.style_page)
+        script_url = self.get_url(None, self.wiki.scripts_js)
+        style_url = self.get_url(None, self.wiki.style_css)
         if not special_title:
             try:
                 self.wiki.check_lock(self.title)
                 edit_url = self.get_url(self.title, self.wiki.edit)
             except werkzeug.exceptions.Forbidden:
                 pass
-        if self.wiki.script_page in self.wiki.storage:
-            script_url = self.get_download_url(self.wiki.script_page)
 
         yield self.header_template.render(
             title=werkzeug.escape(special_title or self.title, quote=True),
@@ -1803,7 +1751,7 @@ href="${atom_url}">
             style_url=style_url,
             robots=not special_title,
             edit_url=edit_url,
-            favicon_url=self.get_url(None, self.wiki.favicon),
+            favicon_url=self.get_url(None, self.wiki.favicon_ico),
             rss_url=self.get_url(None, self.wiki.rss),
             atom_url=self.get_url(None, self.wiki.atom),
             script_url=script_url,
@@ -2256,6 +2204,54 @@ class Wiki(object):
 'C74VCoZcodvnxux5Msg+THCSKHy2R48YgIb/crITrreZlEYl33MKrYycvvnx88p2BUkkpRyGSEBmDi'
 'WI6QcC95UUqM9PBzdqN99fbzc9EJNwBKKUoFw+8NDY8/sFQ/8CE57l5pZRdX6kHqxurW43mv98urM9'
 'fjJPouohE8NQ1dkEayAJ5wAe2gRawJSKmO/c/aERMn5m9/ksAAAAASUVORK5CYII=')
+    scripts = """\
+"""
+    style = """\
+html { background: #fff; color: #2e3436;
+    font-family: sans-serif; font-size: 96% }
+body { margin: 1em auto; line-height: 1.3; width: 40em }
+a { color: #3465a4; text-decoration: none }
+a:hover { text-decoration: underline }
+a.wiki:visited { color: #204a87 }
+a.nonexistent, a.nonexistent:visited { color: #a40000; }
+a.external { color: #3465a4; text-decoration: underline }
+a.external:visited { color: #75507b }
+a img { border: none }
+img.math, img.smiley { vertical-align: middle }
+pre { font-size: 100%; white-space: pre-wrap; word-wrap: break-word;
+    white-space: -moz-pre-wrap; white-space: -pre-wrap;
+    white-space: -o-pre-wrap; line-height: 1.2; color: #555753 }
+div.conflict pre.local { background: #fcaf3e; margin-bottom: 0; color: 000}
+div.conflict pre.other { background: #ffdd66; margin-top: 0; color: 000; border-top: #d80 dashed 1px; }
+pre.diff div.orig { font-size: 75%; color: #babdb6 }
+b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e;
+color: #ce5c00; text-decoration: none }
+pre.diff del { background: #eeeeec; color: #888a85; text-decoration: none }
+pre.diff div.change { border-left: 2px solid #fcaf3e }
+div.footer { border-top: solid 1px #babdb6; text-align: right }
+h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
+div.buttons { text-align: center }
+input.button, div.buttons input { font-weight: bold; font-size: 100%;
+    background: #eee; border: solid 1px #babdb6; margin: 0.25em; color: #888a85}
+.history input.button { font-size: 75% }
+.editor textarea { width: 100%; display: block; font-size: 100%;
+    border: solid 1px #babdb6; }
+.editor label { display:block; text-align: right }
+.editor .upload { margin: 2em auto; text-align: center }
+form.search input.search, .editor label input { font-size: 100%;
+    border: solid 1px #babdb6; margin: 0.125em 0 }
+.editor label.comment input  { width: 32em }
+a.logo { float: left; display: block; margin: 0.25em }
+div.header h1 { margin: 0; }
+div.content { clear: left }
+form.search { margin:0; text-align: right; font-size: 80% }
+div.snippet { font-size: 80%; color: #888a85 }
+div.header div.menu { float: right; margin-top: 1.25em }
+div.header div.menu a.current { color: #000 }
+hr { background: transparent; border:none; height: 0;
+     border-bottom: 1px solid #babdb6; clear: both }
+blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}
+abbr.date {border:none}"""
 
     def __init__(self, config):
         self.dead = False
@@ -2316,8 +2312,6 @@ class Wiki(object):
             R('/<title:title>', endpoint=self.view, methods=['GET', 'HEAD']),
             R('/+feed/rss', endpoint=self.rss, methods=['GET', 'HEAD']),
             R('/+feed/atom', endpoint=self.atom, methods=['GET', 'HEAD']),
-            R('/favicon.ico', endpoint=self.favicon, methods=['GET', 'HEAD']),
-            R('/robots.txt', endpoint=self.robots, methods=['GET', 'HEAD']),
             R('/+index', endpoint=self.all_pages, methods=['GET', 'HEAD']),
             R('/+orphaned', endpoint=self.orphaned, methods=['GET', 'HEAD']),
             R('/+wanted', endpoint=self.wanted, methods=['GET', 'HEAD']),
@@ -2327,6 +2321,13 @@ class Wiki(object):
             R('/off-with-his-head', endpoint=self.die, methods=['GET']),
             R('/+hg<all:path>', endpoint=self.hgweb, strict_slashes=False,
               methods=['GET', 'POST', 'HEAD']),
+            # Pages with default content
+            R('/favicon.ico', endpoint=self.favicon_ico,
+              methods=['GET', 'HEAD']),
+            R('/robots.txt', endpoint=self.robots_txt, methods=['GET', 'HEAD']),
+            R('/+download/style.css', endpoint=self.style_css,
+              methods=['GET', 'HEAD']),
+            R('/scripts.js', endpoint=self.scripts_js, methods=['GET', 'HEAD']),
         ], converters={'title':WikiTitleConverter, 'all':WikiAllConverter})
 
     def get_page(self, request, title):
@@ -2923,13 +2924,46 @@ ${page_link} . . . . ${author_link}
         response.make_conditional(request)
         return response
 
-    def favicon(self, request):
-        """Serve the default favicon."""
+    def _serve_default(self, request, title, content, mime):
+        """Some pages have their default content."""
 
-        title = 'favicon.ico'
         if title in self.storage:
             return self.download(request, title)
-        return werkzeug.Response(self.icon, mimetype='image/x-icon')
+        response = werkzeug.Response(content, mimetype=mime)
+        return response
+
+    def scripts_js(self, request):
+        """Server the default scripts"""
+
+        return self._serve_default(request, 'scripts.js', self.scripts,
+                                   'text/javascript')
+
+    def style_css(self, request):
+        """Serve the default style"""
+
+        return self._serve_default(request, 'style.css', self.style,
+                                   'text/css')
+
+    def favicon_ico(self, request):
+        """Serve the default favicon."""
+
+        return self._serve_default(request, 'favicon.ico', self.icon,
+                                   'image/x-icon')
+
+    def robots_txt(self, request):
+        """Serve the robots directives."""
+
+        robots = ('User-agent: *\r\n'
+                  'Disallow: /+*\r\n'
+                  'Disallow: /%2B*\r\n'
+                  'Disallow: /+edit\r\n'
+                  'Disallow: /+feed\r\n'
+                  'Disallow: /+history\r\n'
+                  'Disallow: /+search\r\n'
+                  'Disallow: /+hg\r\n'
+                 )
+        return self._serve_default(request, 'robots.txt', robots,
+                                   'text/plain')
 
     def hgweb(self, request, path=None):
         """Serve the pages repository on the web like a normal hg repository."""
@@ -2947,35 +2981,11 @@ ${page_link} . . . . ${author_link}
             return app(env, start)
         return hg_app
 
-    def robots(self, request):
-        """Serve the robots directives."""
-
-        title = 'robots.txt'
-        if title in self.storage:
-            return self.download(request, title)
-        robots = ('User-agent: *\r\n'
-                  'Disallow: /+*\r\n'
-                  'Disallow: /%2B*\r\n'
-                  'Disallow: /+edit\r\n'
-                  'Disallow: /+feed\r\n'
-                  'Disallow: /+history\r\n'
-                  'Disallow: /+search\r\n'
-                  'Disallow: /+hg\r\n'
-                 )
-        return werkzeug.Response(robots, mimetype='text/plain')
-
-    def _check_localhost(self, request):
-        """
-        Ensures that special requests come from localhost only.
-        """
-
-        if not request.remote_addr.startswith('127.'):
-            raise werkzeug.exceptions.Forbidden()
-
     def die(self, request):
         """Terminate the standalone server if invoked from localhost."""
 
-        self._check_localhost(request)
+        if not request.remote_addr.startswith('127.'):
+            raise werkzeug.exceptions.Forbidden()
         def agony():
             yield u'Oh dear!'
             self.dead = True

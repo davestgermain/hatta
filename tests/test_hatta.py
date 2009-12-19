@@ -212,7 +212,7 @@ class TestHTML(object):
         assert request.get_url('title') == u'/title'
         assert request.get_download_url('title') == u'/+download/title'
         assert request.get_url('title', wiki.edit) == u'/+edit/title'
-        assert request.get_url(None, wiki.favicon) == u'/favicon.ico'
+        assert request.get_url(None, wiki.favicon_ico) == u'/favicon.ico'
 
     def test_html_page(self, req):
         wiki, request = req

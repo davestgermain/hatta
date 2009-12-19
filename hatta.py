@@ -2774,7 +2774,10 @@ ${page_link} . . . . ${author_link}
         all_pages = sorted(self.storage.all_pages())
         content = page.pages_list(all_pages, _(u'Index of all pages'))
         html = page.render_content(content, _(u'Page Index'))
-        return WikiResponse(html, mimetype='text/html')
+        response = WikiResponse(html, mimetype='text/html')
+        response.set_etag('/+index/%d' % self.storage.repo_revision())
+        response.make_conditional(request)
+        return response
 
     def search(self, request):
         """Serve the search results page."""
@@ -2846,7 +2849,7 @@ ${page_link} . . . . ${author_link}
         html = page.render_content(backlink_list(page),
                                    _(u'Links to "%s"') % title)
         response = WikiResponse(html, mimetype='text/html')
-        response.set_etag('/search/%d' % self.storage.repo_revision())
+        response.set_etag('/+search/%d' % self.storage.repo_revision())
         response.make_conditional(request)
         return response
 

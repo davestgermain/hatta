@@ -2877,6 +2877,8 @@ ${page_link} . . . . ${author_link}
         if title in self.storage:
             return self.download(request, title)
         robots = ('User-agent: *\r\n'
+                  'Disallow: /+*\r\n'
+                  'Disallow: /%5B*\r\n'
                   'Disallow: /+edit\r\n'
                   'Disallow: /+feed\r\n'
                   'Disallow: /+history\r\n'

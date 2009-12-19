@@ -2825,7 +2825,7 @@ ${page_link} . . . . ${author_link}
                                   _(u'List of pages with no links to them'))
         html = page.render_content(content, _(u'Orphaned pages'))
         response = WikiResponse(html, mimetype='text/html')
-        response.set_etag('/+index/%d' % self.storage.repo_revision())
+        response.set_etag('/+orphaned/%d' % self.storage.repo_revision())
         response.make_conditional(request)
         return response
 

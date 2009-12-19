@@ -1268,6 +1268,8 @@ without would yet you your yours yourself yourselves""")).split())
                              (title_id, link, label, number))
 
     def orphaned_pages(self):
+        """Gives all pages with no links to them."""
+
         con = self.con
         try:
             sql = ('SELECT title FROM titles '
@@ -1280,6 +1282,8 @@ without would yet you your yours yourself yourselves""")).split())
             con.commit()
 
     def page_backlinks(self, title):
+        """Gives a list of pages linking to specified page."""
+
         con = self.con # sqlite3.connect(self.filename)
         try:
             sql = ('SELECT DISTINCT(titles.title) '
@@ -1292,6 +1296,8 @@ without would yet you your yours yourself yourselves""")).split())
             con.commit()
 
     def page_links(self, title):
+        """Gives a list of links on specified page."""
+
         con = self.con # sqlite3.connect(self.filename)
         try:
             title_id = self.title_id(title, con)

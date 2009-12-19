@@ -2884,7 +2884,8 @@ ${page_link} . . . . ${author_link}
         query = request.values.get('q', u'').strip()
         page = self.get_page(request, '')
         if not query:
-            return self.all_pages(request)
+            url = request.get_url(view=self.all_pages, external=True)
+            return werkzeug.routing.redirect(url, code=303)
         words = tuple(self.index.split_text(query, stop=False))
         if not words:
             words = (query,)

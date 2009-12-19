@@ -1790,6 +1790,15 @@ href="${atom_url}">
 <div class="comment">${comment}</div>
 </li>""")
 
+    def pages_list(self, pages, message=None, link=None, _class=None):
+        """Generate the content of a page list page."""
+
+        yield werkzeug.html.p(werkzeug.escape(message) % {'link': link})
+        yield u'<ul class="%s">' % werkzeug.escape(_class or 'pagelist')
+        for title in pages:
+            yield werkzeug.html.li(self.wiki_link(title))
+        yield u'</ul>'
+
     def history_list(self):
         """Generate the content of the history page."""
 
@@ -2758,17 +2767,17 @@ ${page_link} . . . . ${author_link}
 <b>${link}</b> <i>(${score})</i><div class="snippet">${snippet}</div>
 </li>""")
 
+    def all_pages(self, request):
+        """Show index of all pages in the wiki."""
+
+        page = self.get_page(request, '')
+        all_pages = sorted(self.storage.all_pages())
+        content = page.pages_list(all_pages, _(u'Index of all pages'))
+        html = page.render_content(content, _(u'Page Index'))
+        return WikiResponse(html, mimetype='text/html')
+
     def search(self, request):
         """Serve the search results page."""
-
-        def page_index(page):
-            """Display the index of all pages"""
-
-            yield u'<p>%s</p><ul class="index">' % werkzeug.escape(
-                _(u'Index of all pages.'))
-            for title in sorted(self.storage.all_pages()):
-                yield werkzeug.html.li(page.wiki_link(title))
-            yield u'</ul>'
 
         def search_snippet(title, words):
             """Extract a snippet of text for search results."""
@@ -2809,14 +2818,12 @@ ${page_link} . . . . ${author_link}
         query = request.values.get('q', u'').strip()
         page = self.get_page(request, '')
         if not query:
-            content = page_index(page)
-            title = _(u'Page index')
-        else:
-            words = tuple(self.index.split_text(query, stop=False))
-            if not words:
-                words = (query,)
-            title = _(u'Searching for "%s"') % u" ".join(words)
-            content = page_search(words, page, request)
+            return self.all_pages(request)
+        words = tuple(self.index.split_text(query, stop=False))
+        if not words:
+            words = (query,)
+        title = _(u'Searching for "%s"') % u" ".join(words)
+        content = page_search(words, page, request)
         html = page.render_content(content, title)
         return WikiResponse(html, mimetype='text/html')
 

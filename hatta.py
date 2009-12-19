@@ -2817,9 +2817,6 @@ ${page_link} . . . . ${author_link}
         response = werkzeug.Response(html, mimetype='text/html')
         return response
 
-    search_item_template = Template(u"""<li>
-<b>${link}</b> <i>(${score})</i><div class="snippet">${snippet}</div>
-</li>""")
 
     def all_pages(self, request):
         """Show index of all pages in the wiki."""
@@ -2885,17 +2882,16 @@ ${page_link} . . . . ${author_link}
         def page_search(words, page, resuest):
             """Display the search results."""
 
+            search_item = (u'<li><b>%s</b> <i>(%s)</i><div '
+                           u'class="snippet">%s</div></li>')
             self.storage.reopen()
             self.index.update(self, request)
             result = sorted(self.index.find(words), key=lambda x:-x[0])
             yield u'<p>%s</p><ul class="search">' % werkzeug.escape(
                 _(u'%d page(s) containing all words:') % len(result))
             for score, title in result:
-                yield self.search_item_template.render(
-                    link=page.wiki_link(title),
-                    score=score,
-                    snippet=search_snippet(title, words),
-                )
+                yield search_item % (page.wiki_link(title), score,
+                                     search_snippet(title, words))
             yield u'</ul>'
 
         query = request.values.get('q', u'').strip()

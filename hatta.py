@@ -2968,12 +2968,9 @@ ${page_link} . . . . ${author_link}
                  )
         return werkzeug.Response(robots, mimetype='text/plain')
 
-    def _check_special(self, request):
+    def _check_localhost(self, request):
         """
         Ensures that special requests come from localhost only.
-
-        This seems reasonable to forbid remote URL requests to throw
-        exceptions or kill the wiki :)
         """
 
         if not request.remote_addr.startswith('127.'):
@@ -2982,19 +2979,11 @@ ${page_link} . . . . ${author_link}
     def die(self, request):
         """Terminate the standalone server if invoked from localhost."""
 
-        self._check_special(request)
+        self._check_localhost(request)
         def agony():
             yield u'Oh dear!'
             self.dead = True
         return werkzeug.Response(agony(), mimetype='text/plain')
-
-#    def test_exception(self, request):
-#        """Used to test multi-thread thread exception handling."""
-#        self._check_special(request)
-#        def throw_up():
-#            yield u'Bleeee *hyk*'
-#            raise RuntimeError('This is a test exception.')
-#        return werkzeug.Response(throw_up(), mimetype='text/plain')
 
     @werkzeug.responder
     def application(self, environ, start):

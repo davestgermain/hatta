@@ -1773,6 +1773,12 @@ href="${atom_url}">
 <a href="${history_url}" class="history">${_("History")}</a>
 <a href="${backlinks_url}" class="backlinks">${_("Backlinks")}</a>
 </div></div></body></html>""")
+    special_footer_template = Template(u"""<div class="footer">
+<a href="${changes_url}" class="changes">${_("Changes")}</a>
+<a href="${index_url}" class="index">${_("Index")}</a>
+<a href="${orphaned_url}" class="orphaned">${_("Orphaned")}</a>
+<a href="${wanted_url}" class="wanted">${_("Wanted")}</a>
+</div></div></body></html>""")
 
     def render_content(self, content, special_title=None):
         """The main page template."""
@@ -1806,14 +1812,20 @@ href="${atom_url}">
         for part in content:
             yield part
         if special_title:
-            yield "</div></body></html>"
-            return
-        yield self.footer_template.render(
-            edit_url=edit_url,
-            history_url=self.get_url(self.title, self.wiki.history),
-            backlinks_url=self.get_url(self.title, self.wiki.backlinks),
-            _=lambda s: werkzeug.escape(_(s), quote=True),
-        )
+            yield self.special_footer_template.render(
+                changes_url=self.get_url(None, self.wiki.recent_changes),
+                index_url=self.get_url(None, self.wiki.all_pages),
+                orphaned_url=self.get_url(None, self.wiki.orphaned),
+                wanted_url=self.get_url(None, self.wiki.wanted),
+                _=lambda s: werkzeug.escape(_(s), quote=True),
+            )
+        else:
+            yield self.footer_template.render(
+                edit_url=edit_url,
+                history_url=self.get_url(self.title, self.wiki.history),
+                backlinks_url=self.get_url(self.title, self.wiki.backlinks),
+                _=lambda s: werkzeug.escape(_(s), quote=True),
+            )
 
     history_item_template = Template(u"""<li>
 <a href="${date_url}">${date_html}</a>

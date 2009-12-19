@@ -12,7 +12,7 @@ if __name__=="__main__":
     config = hatta.WikiConfig()
     config.parse_args()
     config.parse_files()
-    config.sanitize()
     application = hatta.Wiki(config).application
-    host, port = config.interface or 'localhost', int(config.port)
+    host = config.get('interface', 'localhost')
+    port = int(config.get('port', 8080))
     werkzeug.run_simple(host, port, application, use_reloader=True)

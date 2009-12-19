@@ -1719,17 +1719,33 @@ href="${atom_url}">
 <div class="header">${header_content}</div>
 <div class="content">
 """)
-    footer_template = Template(u"""<div class="footer">
-<%if edit_url%><a href="${edit_url}" class="edit">${_("Edit")}</a> <%endif%>
-<a href="${history_url}" class="history">${_("History")}</a>
-<a href="${backlinks_url}" class="backlinks">${_("Backlinks")}</a>
-</div></div></body></html>""")
-    special_footer_template = Template(u"""<div class="footer">
-<a href="${changes_url}" class="changes">${_("Changes")}</a>
-<a href="${index_url}" class="index">${_("Index")}</a>
-<a href="${orphaned_url}" class="orphaned">${_("Orphaned")}</a>
-<a href="${wanted_url}" class="wanted">${_("Wanted")}</a>
-</div></div></body></html>""")
+
+    def footer(self, special, edit, edit_url):
+        if edit:
+            return
+        yield u'<div class="footer">'
+        if special:
+            footer_links = [
+                (_(u'Changes'), 'changes',
+                 self.get_url(None, self.wiki.recent_changes)),
+                (_(u'Index'), 'index',
+                 self.get_url(None, self.wiki.all_pages)),
+                (_(u'Orphaned'), 'orphaned',
+                 self.get_url(None, self.wiki.orphaned)),
+                (_(u'Wanted'), 'wanted',
+                 self.get_url(None, self.wiki.wanted)),
+            ]
+        else:
+            footer_links = [
+                (_(u'Edit'), 'edit', edit_url),
+                (_(u'History'), 'history',
+                 self.get_url(self.title, self.wiki.history)),
+                (_(u'Backlinks'), 'backlinks',
+                 self.get_url(self.title, self.wiki.backlinks))
+            ]
+        for label, class_, url in footer_links:
+            yield werkzeug.html.a(werkzeug.html(label), href=url, class_=class_)
+        yield u'</div>'
 
     def render_content(self, content, special_title=None, edit=False):
         """The main page template."""
@@ -1759,23 +1775,9 @@ href="${atom_url}">
         )
         for part in content:
             yield part
-        if edit:
-            yield u'</div></body></html>'
-        elif special_title:
-            yield self.special_footer_template.render(
-                changes_url=self.get_url(None, self.wiki.recent_changes),
-                index_url=self.get_url(None, self.wiki.all_pages),
-                orphaned_url=self.get_url(None, self.wiki.orphaned),
-                wanted_url=self.get_url(None, self.wiki.wanted),
-                _=lambda s: werkzeug.escape(_(s), quote=True),
-            )
-        else:
-            yield self.footer_template.render(
-                edit_url=edit_url,
-                history_url=self.get_url(self.title, self.wiki.history),
-                backlinks_url=self.get_url(self.title, self.wiki.backlinks),
-                _=lambda s: werkzeug.escape(_(s), quote=True),
-            )
+        for part in self.footer(special_title, edit, edit_url):
+            yield part
+        yield u'</div></body></html>'
 
     history_item_template = Template(u"""<li>
 <a href="${date_url}">${date_html}</a>
@@ -2418,7 +2420,7 @@ It can only be edited by the site admin directly on the disk."""))
         if request.form.get('preview'):
             text = request.form.get("text")
             if text is not None:
-                lines = text.split('\n')
+                lines = tlext.split('\n')
             else:
                 lines = [werkzeug.html.p(werkzeug.html(
                     _(u'No preview for binaries.')))]

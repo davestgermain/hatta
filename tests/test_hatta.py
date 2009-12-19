@@ -367,7 +367,13 @@ abbr.date {border:none}
         </div>
         <h1>different &lt;title&gt;</h1>
     </div>
-    <div class="content">some &lt;content&gt;</div>
+    <div class="content">some &lt;content&gt;
+       <div class="footer">
+         <a class="changes" href="/+history/">Changes</a>
+         <a class="index" href="/+index">Index</a>
+         <a class="orphaned" href="/+orphaned">Orphaned</a>
+         <a class="wanted" href="/+wanted">Wanted</a>
+       </div></div>
 </body></html>"""
         html_eq(expect, html)
 

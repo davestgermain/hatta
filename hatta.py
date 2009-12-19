@@ -41,20 +41,6 @@ import werkzeug.exceptions
 import werkzeug.routing
 
 try:
-    import jinja2
-    # Make jinja2 roughly compatible with werkzeug.Template
-    Template = jinja2.Environment(
-        block_start_string='<%',
-        block_end_string='%>',
-        variable_start_string='${',
-        variable_end_string='}',
-    ).from_string
-except ImportError:
-    jinja2 = None
-    import werkzeug.templates
-    Template = werkzeug.Template
-
-try:
     import Image
 except ImportError:
     Image = None
@@ -1777,14 +1763,6 @@ class WikiPage(object):
             yield part
         yield u'</div></div></body></html>'
 
-    history_item_template = Template(u"""<li>
-<a href="${date_url}">${date_html}</a>
-<%if not read_only%>
-<input type="submit" name="${rev}" value="${undo}" class="button">
-<%endif%>
-. . . .  ${author_link}
-<div class="comment">${comment}</div>
-</li>""")
 
     def pages_list(self, pages, message=None, link=None, _class=None):
         """Generate the content of a page list page."""
@@ -1819,15 +1797,16 @@ class WikiPage(object):
             else:
                 date_url = self.request.adapter.build(self.wiki.revision, {
                     'title': title, 'rev': rev})
-            yield self.history_item_template.render(
-                read_only=read_only,
-                rev=rev,
-                date_url=date_url,
-                date_html=self.date_html(date),
-                author_link=self.wiki_link(author),
-                comment=werkzeug.escape(comment),
-                undo=werkzeug.escape(_('Undo'), quote=True),
-            )
+            if read_only:
+                button = u''
+            else:
+                button = (u'<input type="submit" name="%d" value="%s" '
+                          u'class="button">' % (rev, werkzeug.html(_(u'Undo'))))
+            history_item = (u'<li><a href="%s">%s/a>%s . . . . <div '
+                            u'class="comment">%s</div>' % (
+                                date_url, self.date_html(date), button,
+                                self.wiki_link(author), werkzeug.html(comment)))
+            yield history_item
         yield (u'</ul><input type="hidden" name="parent" value="%d"></form>'
                % max_rev)
 
@@ -2748,10 +2727,6 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response = self.response(request, title, content, '/history')
         return response
 
-    recent_changes_item_template = Template(u"""<li>
-<a href="${date_url}">${date_html}</a>
-${page_link} . . . . ${author_link}
-<div class="comment">${comment}</div></li>""")
 
     def recent_changes(self, request):
         """Serve the recent changes page."""
@@ -2784,12 +2759,12 @@ ${page_link} . . . . ${author_link}
                 last[title] = author, comment
                 lastrev[title] = rev
 
-                yield self.recent_changes_item_template.render(
-                    date_url=date_url,
-                    date_html=page.date_html(date),
-                    page_link=page.wiki_link(title),
-                    author_link=page.wiki_link(author),
-                    comment=werkzeug.escape(comment),
+                yield werkzeug.html.li(
+                    werkzeug.html.a(page.date_html(date), href=date_url),
+                    page.wiki_link(title),
+                    u' . . . . ',
+                    page.wiki_link(author),
+                    werkzeug.html.div(werkzeug.html(comment), class_="comment")
                 )
             yield u'</ul>'
 

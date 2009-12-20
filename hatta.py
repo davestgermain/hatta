@@ -1798,12 +1798,13 @@ class WikiPage(object):
             if read_only:
                 button = u''
             else:
-                button = (u'<input type="submit" name="%d" value="%s" '
-                          u'class="button">' % (rev, werkzeug.html(_(u'Undo'))))
-            history_item = (u'<li><a href="%s">%s/a>%s . . . . <div '
-                            u'class="comment">%s</div>' % (
-                                date_url, self.date_html(date), button,
-                                self.wiki_link(author), werkzeug.html(comment)))
+                button = werkzeug.html.input(type_="submit", name=str(rev),
+                                             value=_(u'Undo'))
+            yield werkzeug.html.li(werkzeug.html.a(self.date_html(date),
+                                                   href=date_url),
+                                   button, ' . . . . ', self.wiki_link(author),
+                                   werkzeug.html.div(werkzeug.html(comment),
+                                                     class_="comment"))
             yield history_item
         yield (u'</ul><input type="hidden" name="parent" value="%d"></form>'
                % max_rev)

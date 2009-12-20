@@ -1270,12 +1270,12 @@ without would yet you your yours yourself yourselves""")).split())
 
         con = self.con
         try:
-            sql = ('SELECT target FROM links '
+            sql = ('SELECT DISTINCT(target) FROM links '
                    'WHERE NOT EXISTS '
                    '(SELECT * FROM titles WHERE target=title) '
                    'ORDER BY target;')
             for (title,) in con.execute(sql):
-                #if not external_link(title):
+                if not external_link(title) and not title.startswith('+'):
                     yield title
         finally:
             con.commit()

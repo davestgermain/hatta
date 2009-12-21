@@ -2393,7 +2393,7 @@ It can only be edited by the site admin directly on the disk."""))
         if request.form.get('preview'):
             text = request.form.get("text")
             if text is not None:
-                lines = tlext.split('\n')
+                lines = text.split('\n')
             else:
                 lines = [werkzeug.html.p(werkzeug.html(
                     _(u'No preview for binaries.')))]

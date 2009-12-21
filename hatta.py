@@ -1266,17 +1266,18 @@ without would yet you your yours yourself yourselves""")).split())
             con.commit()
 
     def wanted_pages(self):
-        """Gives all pages that are linked to, but don't exist."""
+        """Gives all pages that are linked to, but don't exist, together with
+        the number of links."""
 
         con = self.con
         try:
-            sql = ('SELECT DISTINCT(target) FROM links '
+            sql = ('SELECT COUNT(*), target FROM links '
                    'WHERE NOT EXISTS '
                    '(SELECT * FROM titles WHERE target=title) '
-                   'ORDER BY target;')
-            for (title,) in con.execute(sql):
+                   'GROUP BY target ORDER BY -COUNT(*);')
+            for (refs, title,) in con.execute(sql):
                 if not external_link(title) and not title.startswith('+'):
-                    yield title
+                    yield refs, title
         finally:
             con.commit()
 
@@ -2823,10 +2824,22 @@ xmlns:atom="http://www.w3.org/2005/Atom"
     def wanted(self, request):
         """Show all pages that don't exist yet, but are linked."""
 
+        def wanted_pages_list(page):
+            """Generate the content of wanted pages page."""
+
+            h = werkzeug.html
+            yield h.p(h(
+                _(u"List of pages that are linked to, but don't exist yet.")))
+            yield u'<ol class="wanted">'
+            for refs, title in self.index.wanted_pages():
+                url = page.get_url(title, self.backlinks)
+                yield h.li(h.b(page.wiki_link(title)),
+                           h.i(u' (', h.a(h(_(u"%d references") % refs),
+                                          href=url, class_="backlinks"), ')'))
+            yield u'</ol>'
+
         page = self.get_page(request, '')
-        pages = self.index.wanted_pages()
-        content = page.pages_list(pages,
-            _(u"List of pages that are linked to, but don't exist yet."))
+        content = wanted_pages_list(page)
         html = page.render_content(content, _(u'Wanted pages'))
         response = WikiResponse(html, mimetype='text/html')
         response.set_etag('/+wanted/%d' % self.storage.repo_revision())

@@ -824,8 +824,11 @@ class WikiParser(object):
 
     def _line_smiley(self, groups):
         smiley = groups["smiley_face"]
-        return self.wiki_image(self.smilies[smiley], smiley,
-                               class_="smiley")
+        try:
+            url = self.smilies[smiley]
+        except KeyError:
+            url = ''
+        return self.wiki_image(url, smiley, class_="smiley")
 
     def _line_bold(self, groups):
         if 'b' in self.stack:

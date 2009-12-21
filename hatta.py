@@ -2758,7 +2758,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 lastrev[title] = rev
 
                 yield werkzeug.html.li(
-                    werkzeug.html.a(page.date_html(date), href=date_url),
+                    werkzeug.html.a(page.date_html(date), href=date_url), ' ',
                     page.wiki_link(title),
                     u' . . . . ',
                     page.wiki_link(author),

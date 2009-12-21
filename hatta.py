@@ -1375,8 +1375,8 @@ without would yet you your yours yourself yourselves""")).split())
                 text = self.storage.page_text(title)
             except werkzeug.exceptions.NotFound:
                 text = u''
-        extract_links = getattr(page, 'extract_links')
-        if extract_links:
+        extract_links = getattr(page, 'extract_links', None)
+        if extract_links is not None:
             links = extract_links(text)
             self.update_links(title, links, cursor=cursor)
         self.update_words(title, text, cursor=cursor)

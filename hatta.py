@@ -2143,6 +2143,8 @@ class WikiTitleConverter(werkzeug.routing.PathConverter):
     def to_url(self, value):
         return werkzeug.url_quote(value, self.map.charset, safe="")
 
+    regex='([^+%]|%[^2]|%2[^Bb]).*'
+
 class WikiAllConverter(werkzeug.routing.BaseConverter):
     """Matches everything."""
 

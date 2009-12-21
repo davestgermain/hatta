@@ -1707,9 +1707,7 @@ class WikiPage(object):
         yield h.script(type_="text/javascript",
                      src=self.get_url(None, self.wiki.scripts_js))
 
-    def footer(self, special_title, edit, edit_url):
-        if edit:
-            return
+    def footer(self, special_title, edit_url):
         if special_title:
             footer_links = [
                 (_(u'Changes'), 'changes',
@@ -1733,7 +1731,7 @@ class WikiPage(object):
             yield werkzeug.html.a(werkzeug.html(label), href=url, class_=class_)
             yield u'\n'
 
-    def render_content(self, content, special_title=None, edit=False):
+    def render_content(self, content, special_title=None):
         """The main page template."""
 
         edit_url = None
@@ -1756,10 +1754,12 @@ class WikiPage(object):
         yield u'\n</div><div class="content">\n'
         for part in content:
             yield part
-        yield u'\n<div class="footer">\n'
-        for part in self.footer(special_title, edit, edit_url):
-            yield part
-        yield u'</div></div></body></html>'
+        if not special_title or not self.title:
+            yield u'\n<div class="footer">\n'
+            for part in self.footer(special_title, edit_url):
+                yield part
+            yield u'</div>'
+        yield u'</div></body></html>'
 
 
     def pages_list(self, pages, message=None, link=None, _class=None):
@@ -1805,7 +1805,6 @@ class WikiPage(object):
                                    button, ' . . . . ', self.wiki_link(author),
                                    werkzeug.html.div(werkzeug.html(comment),
                                                      class_="comment"))
-            yield history_item
         yield (u'</ul><input type="hidden" name="parent" value="%d"></form>'
                % max_rev)
 
@@ -2450,7 +2449,7 @@ It can only be edited by the site admin directly on the disk."""))
         page = self.get_page(request, title)
         content = page.editor_form(preview)
         special_title = _(u'Editing "%(title)s"') % {'title': title}
-        html = page.render_content(content, special_title, edit=True)
+        html = page.render_content(content, special_title)
         if not exists:
             response = werkzeug.Response(html, mimetype="text/html",
                                      status='404 Not found')
@@ -2764,7 +2763,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 )
             yield u'</ul>'
 
-        page = self.get_page(request, u'history')
+        page = self.get_page(request, '')
         content = page.render_content(changes_list(page), _(u'Recent changes'))
         response = WikiResponse(content, mimetype='text/html')
         response.set_etag('/history/%d' % self.storage.repo_revision())

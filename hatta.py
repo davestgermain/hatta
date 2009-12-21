@@ -2859,17 +2859,19 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         def page_search(words, page, resuest):
             """Display the search results."""
 
-            search_item = (u'<li><b>%s</b> <i>(%s)</i><div '
-                           u'class="snippet">%s</div></li>')
+            h = werkzeug.html
             self.storage.reopen()
             self.index.update(self, request)
             result = sorted(self.index.find(words), key=lambda x:-x[0])
-            yield u'<p>%s</p><ul class="search">' % werkzeug.escape(
-                _(u'%d page(s) containing all words:') % len(result))
-            for score, title in result:
-                yield search_item % (page.wiki_link(title), score,
-                                     search_snippet(title, words))
-            yield u'</ul>'
+            yield werkzeug.html.p(h(_(u'%d page(s) containing all words:')
+                                  % len(result)))
+            yield u'<ol class="search">'
+            for number, (score, title) in enumerate(result):
+                yield h.li(h.b(page.wiki_link(title)), u' ', h.i(score),
+                           h.div(search_snippet(title, words),
+                                 _class="snippet"),
+                           id_="search-%d" % (number+1))
+            yield u'</ol>'
 
         query = request.values.get('q', u'').strip()
         page = self.get_page(request, '')

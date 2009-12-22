@@ -2162,8 +2162,7 @@ class WikiPageBugs(WikiPageText):
         in_bug = False
         attributes = {}
         title = None
-        bug_no = 0
-        for line in lines:
+        for line_no, line in enumerate(lines):
             if last_lines and line.startswith('----'):
                 title = ''.join(last_lines)
                 last_lines = []
@@ -2174,17 +2173,12 @@ class WikiPageBugs(WikiPageText):
                 attributes[attribute.strip()] = value.strip()
             else:
                 if in_header:
-                    bug_no += 1
                     if in_bug:
                         yield '</div>'
                     tags = [tag.strip() for tag in
-                            attributes.get('tags', '').split(',')
+                            attributes.get('tags', '').split()
                             if tag.strip()]
-                    if tags:
-                        class_ =  ' '.join(tags)
-                    else:
-                        class_ = ''
-                    yield '<div id="bug_%d" class="bug %s">' % (bug_no, class_)
+                    yield '<div id="line_%d">' % (line_no)
                     in_bug = True
                     if title:
                         yield werkzeug.html.h2(werkzeug.html(title))

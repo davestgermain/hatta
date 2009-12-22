@@ -2197,12 +2197,22 @@ class WikiPageBugs(WikiPageText):
                     in_header = False
                 if not line.strip():
                     if last_lines:
-                        yield werkzeug.html.p(werkzeug.html(''.join(last_lines)))
+                        if last_lines[0] in ' \t':
+                            yield werkzeug.html.pre(werkzeug.html(
+                                            ''.join(last_lines)))
+                        else:
+                            yield werkzeug.html.p(werkzeug.html(
+                                            ''.join(last_lines)))
                         last_lines = []
                 else:
                     last_lines.append(line)
         if last_lines:
-            yield werkzeug.html.p(werkzeug.html(''.join(last_lines)))
+            if last_lines[0] in ' \t':
+                yield werkzeug.html.pre(werkzeug.html(
+                                ''.join(last_lines)))
+            else:
+                yield werkzeug.html.p(werkzeug.html(
+                                ''.join(last_lines)))
         if in_bug:
             yield '</div>'
 

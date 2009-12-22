@@ -70,6 +70,7 @@ url = 'http://hatta-wiki.org/'
 description = 'Wiki engine that lives in Mercurial repository.'
 
 mimetypes.add_type('application/x-python', '.wsgi')
+mimetypes.add_type('application/x-javascript', '.js')
 
 
 def external_link(addr):
@@ -1744,8 +1745,10 @@ class WikiPage(object):
                  self.get_url(self.title, self.wiki.backlinks))
             ]
         for label, class_, url in footer_links:
-            yield werkzeug.html.a(werkzeug.html(label), href=url, class_=class_)
-            yield u'\n'
+            if url:
+                yield werkzeug.html.a(werkzeug.html(label), href=url,
+                                      class_=class_)
+                yield u'\n'
 
     def render_content(self, content, special_title=None):
         """The main page template."""
@@ -2166,7 +2169,7 @@ class Wiki(object):
     index_class = WikiSearch
     mime_map = {
         'text': WikiPageText,
-        'application/javascript': WikiPageText,
+        'application/x-javascript': WikiPageText,
         'application/x-python': WikiPageText,
         'text/csv': WikiPageCSV,
         'text/x-wiki': WikiPageWiki,

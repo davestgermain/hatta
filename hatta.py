@@ -2167,6 +2167,14 @@ class Wiki(object):
     """
     storage_class = WikiStorage
     index_class = WikiSearch
+    filename_map = {
+        'README': (WikiPageText, 'text/plain'),
+        'ISSUES': (WikiPageText, 'text/plain'),
+        'COPYING': (WikiPageText, 'text/plain'),
+        'CHANGES': (WikiPageText, 'text/plain'),
+        'MANIFEST': (WikiPageText, 'text/plain'),
+        'favicon.ico': (WikiPageImage, 'image/x-icon'),
+    }
     mime_map = {
         'text': WikiPageText,
         'application/x-javascript': WikiPageText,
@@ -2327,23 +2335,27 @@ abbr.date {border:none}"""
         """Creates a page object based on page's mime type"""
 
         if title:
-            mime = self.storage.page_mime(title)
-            major, minor = mime.split('/', 1)
-            plus_pos = minor.find('+')
-            if plus_pos>0:
-                minor_base = minor[plus_pos]
-            else:
-                minor_base = ''
             try:
-                page_class = self.mime_map[mime]
+                page_class, mime = self.filename_map[title]
             except KeyError:
+                mime = self.storage.page_mime(title)
+                major, minor = mime.split('/', 1)
                 try:
-                    page_class = self.mime_map['/'.join([major, minor_base])]
+                    page_class = self.mime_map[mime]
                 except KeyError:
                     try:
-                        page_class = self.mime_map[major]
+                        plus_pos = minor.find('+')
+                        if plus_pos>0:
+                            minor_base = minor[plus_pos:]
+                        else:
+                            minor_base = ''
+                        base_mime = '/'.join([major, minor_base])
+                        page_class = self.mime_map[base_mime]
                     except KeyError:
-                        page_class = self.mime_map['']
+                        try:
+                            page_class = self.mime_map[major]
+                        except KeyError:
+                                page_class = self.mime_map['']
         else:
             page_class = WikiPage
             mime = ''

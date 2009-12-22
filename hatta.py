@@ -45,6 +45,15 @@ try:
 except ImportError:
     Image = None
 
+try:
+    import pygments
+    import pygments.util
+    import pygments.lexers
+    import pygments.formatters
+    import pygments.styles
+except ImportError:
+    pygments = None
+
 # Note: we have to set these before importing Mercurial
 os.environ['HGENCODING'] = 'utf-8'
 os.environ['HGMERGE'] = "internal:merge"
@@ -59,6 +68,9 @@ __version__ = '1.3.3dev'
 name = 'Hatta'
 url = 'http://hatta-wiki.org/'
 description = 'Wiki engine that lives in Mercurial repository.'
+
+
+mimetypes.add_type('application/x-python', '.wsgi')
 
 def external_link(addr):
     """
@@ -1803,7 +1815,7 @@ class WikiPage(object):
                 button = u''
             else:
                 button = h.input(type_="submit", name=str(rev),
-                                 value=h(_(u'Undo'), quote=True))
+                                 value=h(_(u'Undo')))
             yield h.li(h.a(self.date_html(date), href=date_url),
                        button, ' . . . . ', h.i(self.wiki_link(author)),
                        h.div(h(comment), class_="comment"))
@@ -1881,15 +1893,10 @@ class WikiPageText(WikiPage):
     def highlight(self, text, mime=None, syntax=None, line_no=0):
         """Colorize the source code."""
 
-        try:
-            import pygments
-            import pygments.util
-            import pygments.lexers
-            import pygments.formatters
-            import pygments.styles
-        except ImportError:
+        if pygments is None:
             yield werkzeug.html.pre(werkzeug.html(text))
             return
+
         if 'tango' in pygments.styles.STYLE_MAP:
             style = 'tango'
         else:
@@ -2164,6 +2171,7 @@ class Wiki(object):
     mime_map = {
         'text': WikiPageText,
         'application/javascript': WikiPageText,
+        'application/x-python': WikiPageText,
         'text/csv': WikiPageCSV,
         'text/x-wiki': WikiPageWiki,
         'image': WikiPageImage,

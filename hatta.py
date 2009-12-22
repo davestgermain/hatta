@@ -3027,9 +3027,9 @@ def application(env, start):
     global application
     config = read_config()
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    if config.get('pages_path') == None:
+    if config.get('pages_path') is None:
         config.set('pages_path', os.path.join(script_dir, 'docs'))
-    if config.get('cache_path') == None:
+    if config.get('cache_path') is None:
         config.set('cache_path', os.path.join(script_dir, 'cache'))
     wiki = Wiki(config)
     application = wiki.application

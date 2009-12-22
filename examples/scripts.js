@@ -6,8 +6,8 @@ function localize_dates() {
     }
     var format_date = function (d) {
         var p = function(n) {return ('00'+n).slice(-2); };
-        var tz = d.getTimezoneOffset()/60;
-        if (tz>0) { tz = "+"+tz; }
+        var tz = -d.getTimezoneOffset()/60;
+        if (tz>=0) { tz = "+"+tz; }
         return ""+d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes())+" GMT"+tz;
     }
     var nodes = document.getElementsByTagName('abbr');

@@ -2197,7 +2197,7 @@ class WikiPageBugs(WikiPageText):
                     in_header = False
                 if not line.strip():
                     if last_lines:
-                        if last_lines[0] in ' \t':
+                        if last_lines[0][0] in ' \t':
                             yield werkzeug.html.pre(werkzeug.html(
                                             ''.join(last_lines)))
                         else:
@@ -2207,7 +2207,7 @@ class WikiPageBugs(WikiPageText):
                 else:
                     last_lines.append(line)
         if last_lines:
-            if last_lines[0] in ' \t':
+            if last_lines[0][0] in ' \t':
                 yield werkzeug.html.pre(werkzeug.html(
                                 ''.join(last_lines)))
             else:

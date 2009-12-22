@@ -1,4 +1,4 @@
-function localize_dates() {
+function hatta_dates() {
 /* Scan whole document for UTC dates and replace them with localtime versions */
     var parse_date = function (text) {
         var m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})Z$/.exec(text);
@@ -22,7 +22,7 @@ function localize_dates() {
     }
 }
 
-function js_editor() {
+function hatta_editor() {
     var textBox = document.getElementById('editortext');
     if (textBox) {
         var jumpLine = 0+document.location.hash.substring(1);
@@ -89,7 +89,7 @@ function js_editor() {
 }
 
 window.onload = function () {
-    localize_dates();
-    js_editor();
+    hatta_dates();
+    hatta_editor();
 }
 

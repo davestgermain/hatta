@@ -1778,11 +1778,11 @@ class WikiPage(object):
     def history_list(self):
         """Generate the content of the history page."""
 
+        h = werkzeug.html
         max_rev = -1;
         title = self.title
         link = self.wiki_link(title)
-        yield werkzeug.html.p(werkzeug.escape(
-            _(u'History of changes for %(link)s.')) % {'link': link})
+        yield h.p(h(_(u'History of changes for %(link)s.')) % {'link': link})
         url = self.request.get_url(title, self.wiki.undo, method='POST')
         yield u'<form action="%s" method="POST"><ul class="history">' % url
         try:
@@ -1802,15 +1802,14 @@ class WikiPage(object):
             if read_only:
                 button = u''
             else:
-                button = werkzeug.html.input(type_="submit", name=str(rev),
-                                             value=_(u'Undo'))
-            yield werkzeug.html.li(werkzeug.html.a(self.date_html(date),
-                                                   href=date_url),
-                                   button, ' . . . . ', self.wiki_link(author),
-                                   werkzeug.html.div(werkzeug.html(comment),
-                                                     class_="comment"))
-        yield (u'</ul><input type="hidden" name="parent" value="%d"></form>'
-               % max_rev)
+                button = h.input(type_="submit", name=str(rev),
+                                 value=h(_(u'Undo'), quote=True))
+            yield h.li(h.a(self.date_html(date), href=date_url),
+                       button, ' . . . . ', h.i(self.wiki_link(author)),
+                       h.div(h(comment), class_="comment"))
+        yield u'</ul>'
+        yield h.input(type_="hidden", name="parent", value=max_rev)
+        yield u'</form>'
 
     def dependencies(self):
         """Refresh the page when any of those pages was changed."""
@@ -2735,6 +2734,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         def changes_list(page):
             """Generate the content of the recent changes page."""
 
+            h = werkzeug.html
             yield u'<ul>'
             last = {}
             lastrev = {}
@@ -2760,12 +2760,10 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 last[title] = author, comment
                 lastrev[title] = rev
 
-                yield werkzeug.html.li(
-                    werkzeug.html.a(page.date_html(date), href=date_url), ' ',
-                    page.wiki_link(title),
-                    u' . . . . ',
-                    page.wiki_link(author),
-                    werkzeug.html.div(werkzeug.html(comment), class_="comment")
+                yield h.li(h.a(page.date_html(date), href=date_url), ' ',
+                    h.b(page.wiki_link(title)), u' . . . . ',
+                    h.i(page.wiki_link(author)),
+                    h.div(h(comment), class_="comment")
                 )
             yield u'</ul>'
 
@@ -3031,7 +3029,7 @@ def application(env, start):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     if config.get('pages_path') == None:
         config.set('pages_path', os.path.join(script_dir, 'docs'))
-    if config.get('pages_cache') == None:
+    if config.get('cache_path') == None:
         config.set('cache_path', os.path.join(script_dir, 'cache'))
     wiki = Wiki(config)
     application = wiki.application

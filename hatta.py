@@ -2146,6 +2146,47 @@ class WikiPageCSV(WikiPageFile):
             csv_file.close()
         yield u'</table>'
 
+class WikiPageBugs(WikiPageText):
+    """Display class for type text/x-bugs"""
+
+    def view_content(self, lines=None):
+        """Parse the ISSUES file in (roughly) format used by ciss"""
+
+        if self.title not in self.storage:
+            raise werkzeug.exceptions.NotFound()
+        if lines is None:
+            f = self.storage.open_page(self.title)
+            lines = self.storage.page_lines(f)
+        last_line = None
+        in_header = False
+        attributes = {}
+        for line in lines:
+            if last_line and line.startswith('----'):
+                yield werkzeug.html.h2(werkzeug.html(last_line))
+                last_line = None
+                in_header = True
+                attributes = {}
+            elif in_header and ':' in line:
+                attribute, value = line.split(':', 1)
+                attributes[attribute.strip()] = value.strip()
+            else:
+                if attributes and in_header:
+                    yield '<dl>'
+                    for attribute, value in attributes.iteritems():
+                        yield werkzeug.html.dt(werkzeug.html(attribute))
+                        yield werkzeug.html.dd(werkzeug.html(value))
+                    yield '</dl>'
+                in_header = False
+                if not line.strip():
+                    if last_line:
+                        yield werkzeug.html.p(werkzeug.html(last_line))
+                        last_line = None
+                else:
+                    last_line = line.strip()
+        if last_line:
+            yield werkzeug.html.p(werkzeug.html(last_line))
+
+
 class WikiTitleConverter(werkzeug.routing.PathConverter):
     """Behaves like the path converter, except that it escapes slashes."""
 
@@ -2169,7 +2210,8 @@ class Wiki(object):
     index_class = WikiSearch
     filename_map = {
         'README': (WikiPageText, 'text/plain'),
-        'ISSUES': (WikiPageText, 'text/plain'),
+        'ISSUES': (WikiPageBugs, 'text/x-bugs'),
+        'ISSUES.txt': (WikiPageBugs, 'text/x-bugs'),
         'COPYING': (WikiPageText, 'text/plain'),
         'CHANGES': (WikiPageText, 'text/plain'),
         'MANIFEST': (WikiPageText, 'text/plain'),

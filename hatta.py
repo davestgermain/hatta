@@ -69,8 +69,8 @@ name = 'Hatta'
 url = 'http://hatta-wiki.org/'
 description = 'Wiki engine that lives in Mercurial repository.'
 
-
 mimetypes.add_type('application/x-python', '.wsgi')
+
 
 def external_link(addr):
     """
@@ -1931,10 +1931,6 @@ class WikiPageText(WikiPage):
         except pygments.util.ClassNotFound:
             yield werkzeug.html.pre(werkzeug.html(text))
             return
-        if self.request.print_highlight_styles:
-            css = formatter.get_style_defs('.highlight')
-            self.request.print_highlight_styles = False
-            yield werkzeug.html.style(werkzeug.html(css), type="text/css")
         html = pygments.highlight(text, lexer, formatter)
         yield html
 
@@ -2243,6 +2239,13 @@ blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}
 abbr.date {border:none}"""
 
     def __init__(self, config):
+        if pygments is not None:
+            if 'tango' in pygments.styles.STYLE_MAP:
+                style = 'tango'
+            else:
+                style = 'friendly'
+            formatter = pygments.formatters.HtmlFormatter(style=style)
+            self.style += formatter.get_style_defs('.highlight')
         self.dead = False
         self.config = config
         self.language = config.get('language', None)

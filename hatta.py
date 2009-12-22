@@ -2159,10 +2159,13 @@ class WikiPageBugs(WikiPageText):
             lines = self.storage.page_lines(f)
         last_lines = []
         in_header = False
+        in_bug = False
         attributes = {}
+        title = None
+        bug_no = 0
         for line in lines:
             if last_lines and line.startswith('----'):
-                yield werkzeug.html.h2(werkzeug.html(''.join(last_lines)))
+                title = ''.join(last_lines)
                 last_lines = []
                 in_header = True
                 attributes = {}
@@ -2170,13 +2173,28 @@ class WikiPageBugs(WikiPageText):
                 attribute, value = line.split(':', 1)
                 attributes[attribute.strip()] = value.strip()
             else:
-                if attributes and in_header:
-                    yield '<dl>'
-                    for attribute, value in attributes.iteritems():
-                        yield werkzeug.html.dt(werkzeug.html(attribute))
-                        yield werkzeug.html.dd(werkzeug.html(value))
-                    yield '</dl>'
-                in_header = False
+                if in_header:
+                    bug_no += 1
+                    if in_bug:
+                        yield '</div>'
+                    tags = [tag.strip() for tag in
+                            attributes.get('tags', '').split(',')
+                            if tag.strip()]
+                    if tags:
+                        class_ =  ' '.join(tags)
+                    else:
+                        class_ = ''
+                    yield '<div id="bug_%d" class="bug %s">' % (bug_no, class_)
+                    in_bug = True
+                    if title:
+                        yield werkzeug.html.h2(werkzeug.html(title))
+                    if attributes:
+                        yield '<dl>'
+                        for attribute, value in attributes.iteritems():
+                            yield werkzeug.html.dt(werkzeug.html(attribute))
+                            yield werkzeug.html.dd(werkzeug.html(value))
+                        yield '</dl>'
+                    in_header = False
                 if not line.strip():
                     if last_lines:
                         yield werkzeug.html.p(werkzeug.html(''.join(last_lines)))
@@ -2185,6 +2203,8 @@ class WikiPageBugs(WikiPageText):
                     last_lines.append(line)
         if last_lines:
             yield werkzeug.html.p(werkzeug.html(''.join(last_lines)))
+        if in_bug:
+            yield '</div>'
 
 
 class WikiTitleConverter(werkzeug.routing.PathConverter):

@@ -2157,13 +2157,13 @@ class WikiPageBugs(WikiPageText):
         if lines is None:
             f = self.storage.open_page(self.title)
             lines = self.storage.page_lines(f)
-        last_line = None
+        last_lines = []
         in_header = False
         attributes = {}
         for line in lines:
-            if last_line and line.startswith('----'):
-                yield werkzeug.html.h2(werkzeug.html(last_line))
-                last_line = None
+            if last_lines and line.startswith('----'):
+                yield werkzeug.html.h2(werkzeug.html(''.join(last_lines)))
+                last_lines = []
                 in_header = True
                 attributes = {}
             elif in_header and ':' in line:
@@ -2178,13 +2178,13 @@ class WikiPageBugs(WikiPageText):
                     yield '</dl>'
                 in_header = False
                 if not line.strip():
-                    if last_line:
-                        yield werkzeug.html.p(werkzeug.html(last_line))
-                        last_line = None
+                    if last_lines:
+                        yield werkzeug.html.p(werkzeug.html(''.join(last_lines)))
+                        last_lines = []
                 else:
-                    last_line = line.strip()
-        if last_line:
-            yield werkzeug.html.p(werkzeug.html(last_line))
+                    last_lines.append(line)
+        if last_lines:
+            yield werkzeug.html.p(werkzeug.html(''.join(last_lines)))
 
 
 class WikiTitleConverter(werkzeug.routing.PathConverter):
@@ -2316,7 +2316,10 @@ div.header div.menu a.current { color: #000 }
 hr { background: transparent; border:none; height: 0;
      border-bottom: 1px solid #babdb6; clear: both }
 blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}
-abbr.date {border:none}"""
+abbr.date {border:none}
+dt {font-weight: bold; float: left; }
+dd {font-style: italic; }
+"""
 
     def __init__(self, config):
         if pygments is not None:

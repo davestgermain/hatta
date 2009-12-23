@@ -2069,7 +2069,7 @@ class WikiPageFile(WikiPage):
             comment = _(u'uploaded')
             rev = -1
         html = werkzeug.html
-        yield html.p(html(
+        yield html.p(html
                 _(u"This is a binary file, it can't be edited on a wiki. "
                   u"Please upload a new version instead.")))
         yield html.form(html.div(
@@ -2152,8 +2152,6 @@ class WikiPageBugs(WikiPageText):
     def view_content(self, lines=None):
         """Parse the ISSUES file in (roughly) format used by ciss"""
 
-        if self.title not in self.storage:
-            raise werkzeug.exceptions.NotFound()
         if lines is None:
             f = self.storage.open_page(self.title)
             lines = self.storage.page_lines(f)
@@ -3044,6 +3042,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         if title in self.storage:
             return self.download(request, title)
         response = werkzeug.Response(content, mimetype=mime)
+        response.set_etag('/%s/-1' % title)
+        response.make_conditional(request)
         return response
 
     def scripts_js(self, request):

@@ -1843,14 +1843,19 @@ class WikiPage(object):
 class WikiPageText(WikiPage):
     """Pages of mime type text/* use this for display."""
 
+    def content_iter(self, lines):
+        yield '<pre>'
+        for line in lines:
+            yield werkzeug.html(line)
+        yield '</pre>'
+
     def view_content(self, lines=None):
-        """Generate HTML for the content."""
+        """Read the page content from storage or preview and return iterator."""
 
         if lines is None:
-            text = self.storage.page_text(self.title)
-        else:
-            text = ''.join(lines)
-        return self.highlight(text, mime=self.mime)
+            f = self.storage.open_page(self.title)
+            lines = self.storage.page_lines(f)
+        return self.content_iter(lines)
 
     def editor_form(self, preview=None):
         """Generate the HTML for the editor."""
@@ -1892,50 +1897,6 @@ class WikiPageText(WikiPage):
             yield html.h1(html(_(u'Preview, not saved')), class_="preview")
             for part in self.view_content(preview):
                 yield part
-
-    def highlight(self, text, mime=None, syntax=None, line_no=0):
-        """Colorize the source code."""
-
-        if pygments is None:
-            yield werkzeug.html.pre(werkzeug.html(text))
-            return
-
-        if 'tango' in pygments.styles.STYLE_MAP:
-            style = 'tango'
-        else:
-            style = 'friendly'
-        formatter = pygments.formatters.HtmlFormatter(style=style)
-        formatter.line_no = line_no
-
-        def wrapper(source, outfile):
-            """Wrap each line of formatted output."""
-
-            yield 0, '<div class="highlight"><pre>'
-            for lineno, line in source:
-                if line.strip():
-                    yield (lineno,
-                           werkzeug.html.div(line.strip('\n'), id_="line_%d" %
-                                             formatter.line_no))
-                else:
-                    yield (lineno,
-                           werkzeug.html.div('&nbsp;', id_="line_%d" %
-                                             formatter.line_no))
-                formatter.line_no += 1
-            yield 0, '</pre></div>'
-
-        formatter.wrap = wrapper
-        try:
-            if mime:
-                lexer = pygments.lexers.get_lexer_for_mimetype(mime)
-            elif syntax:
-                lexer = pygments.lexers.get_lexer_by_name(syntax)
-            else:
-                lexer = pygments.lexers.guess_lexer(text)
-        except pygments.util.ClassNotFound:
-            yield werkzeug.html.pre(werkzeug.html(text))
-            return
-        html = pygments.highlight(text, lexer, formatter)
-        yield html
 
     def diff_content(self, from_rev, to_rev, message=u''):
         """Generate the HTML markup for a diff."""
@@ -1991,7 +1952,63 @@ class WikiPageText(WikiPage):
                     line_no, werkzeug.escape(old_text))
         yield u'</pre>'
 
-class WikiPageWiki(WikiPageText):
+class WikiPageColorText(WikiPageText):
+    """Text pages, but displayed colorized with pygments"""
+
+    def view_content(self, lines=None):
+        """Generate HTML for the content."""
+
+        if lines is None:
+            text = self.storage.page_text(self.title)
+        else:
+            text = ''.join(lines)
+        return self.highlight(text, mime=self.mime)
+
+    def highlight(self, text, mime=None, syntax=None, line_no=0):
+        """Colorize the source code."""
+
+        if pygments is None:
+            yield werkzeug.html.pre(werkzeug.html(text))
+            return
+
+        if 'tango' in pygments.styles.STYLE_MAP:
+            style = 'tango'
+        else:
+            style = 'friendly'
+        formatter = pygments.formatters.HtmlFormatter(style=style)
+        formatter.line_no = line_no
+
+        def wrapper(source, outfile):
+            """Wrap each line of formatted output."""
+
+            yield 0, '<div class="highlight"><pre>'
+            for lineno, line in source:
+                if line.strip():
+                    yield (lineno,
+                           werkzeug.html.div(line.strip('\n'), id_="line_%d" %
+                                             formatter.line_no))
+                else:
+                    yield (lineno,
+                           werkzeug.html.div('&nbsp;', id_="line_%d" %
+                                             formatter.line_no))
+                formatter.line_no += 1
+            yield 0, '</pre></div>'
+
+        formatter.wrap = wrapper
+        try:
+            if mime:
+                lexer = pygments.lexers.get_lexer_for_mimetype(mime)
+            elif syntax:
+                lexer = pygments.lexers.get_lexer_by_name(syntax)
+            else:
+                lexer = pygments.lexers.guess_lexer(text)
+        except pygments.util.ClassNotFound:
+            yield werkzeug.html.pre(werkzeug.html(text))
+            return
+        html = pygments.highlight(text, lexer, formatter)
+        yield html
+
+class WikiPageWiki(WikiPageColorText):
     """Pages of with wiki markup use this for display."""
 
     def __init__(self, *args, **kw):
@@ -2126,9 +2143,7 @@ class WikiPageImage(WikiPageFile):
 class WikiPageCSV(WikiPageFile):
     """Display class for type text/csv."""
 
-    def view_content(self, lines=None):
-        if self.title not in self.storage:
-            raise werkzeug.exceptions.NotFound()
+    def content_iter(self, lines=None):
         import csv
         csv_file = self.storage.open_page(self.title)
         reader = csv.reader(csv_file)
@@ -2146,15 +2161,18 @@ class WikiPageCSV(WikiPageFile):
             csv_file.close()
         yield u'</table>'
 
-class WikiPageBugs(WikiPageText):
-    """Display class for type text/x-bugs"""
-
     def view_content(self, lines=None):
-        """Parse the ISSUES file in (roughly) format used by ciss"""
+        if self.title not in self.storage:
+            raise werkzeug.exceptions.NotFound()
+        return self.content_iter(lines)
 
-        if lines is None:
-            f = self.storage.open_page(self.title)
-            lines = self.storage.page_lines(f)
+class WikiPageBugs(WikiPageText):
+    """
+    Display class for type text/x-bugs
+    Parse the ISSUES file in (roughly) format used by ciss
+    """
+
+    def content_iter(self, lines):
         last_lines = []
         in_header = False
         in_bug = False

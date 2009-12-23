@@ -9,7 +9,7 @@
 ...     text = image or werkzeug.escape(label or addr, quote=True)
 ...     return u'<img src="%s" alt="%s">' % (href, text)
 >>> def hgh(text, mime=None, syntax=None, line_no=0):
-...     class DummyPage(WikiPageText):
+...     class DummyPage(WikiPageColorText):
 ...         def __init__(self):
 ...             self.request = self
 ...             self.request.print_highlight_styles = None

@@ -2069,7 +2069,7 @@ class WikiPageFile(WikiPage):
             comment = _(u'uploaded')
             rev = -1
         html = werkzeug.html
-        yield html.p(html
+        yield html.p(html(
                 _(u"This is a binary file, it can't be edited on a wiki. "
                   u"Please upload a new version instead.")))
         yield html.form(html.div(

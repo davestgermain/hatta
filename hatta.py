@@ -148,6 +148,8 @@ class WikiConfig(object):
             self.options.append(kw['dest'])
             parser.add_option(*args, **kw)
 
+        add('-V', '--version', dest='show_version', default=False,
+            help='Display version and exit', action="store_true")
         add('-d', '--pages-dir', dest='pages_path',
             help='Store pages in DIR', metavar='DIR')
         add('-t', '--cache-dir', dest='cache_path',
@@ -2362,6 +2364,9 @@ dd {font-style: italic; }
 """
 
     def __init__(self, config):
+        if config.get_bool('show_version', False):
+            sys.stdout.write("Hatta %s\n" % __version__)
+            sys.exit()
         if pygments is not None:
             if 'tango' in pygments.styles.STYLE_MAP:
                 style = 'tango'

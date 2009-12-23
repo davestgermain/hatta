@@ -1293,7 +1293,8 @@ without would yet you your yours yourself yourselves""")).split())
                    'WHERE NOT EXISTS '
                    '(SELECT * FROM titles WHERE target=title) '
                    'GROUP BY target ORDER BY -COUNT(*);')
-            for (refs, title,) in con.execute(sql):
+            for (refs, db_title,) in con.execute(sql):
+                title = str(db_title)
                 if not external_link(title) and not title.startswith('+'):
                     yield refs, title
         finally:

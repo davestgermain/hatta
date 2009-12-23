@@ -1609,6 +1609,7 @@ class WikiPage(object):
     def wiki_link(self, addr, label=None, class_=None, image=None, lineno=0):
         """Create HTML for a wiki link."""
 
+        addr = addr.strip()
         text = werkzeug.escape(label or addr)
         chunk = ''
         if class_ is not None:
@@ -2234,7 +2235,10 @@ class WikiTitleConverter(werkzeug.routing.PathConverter):
     """Behaves like the path converter, except that it escapes slashes."""
 
     def to_url(self, value):
-        return werkzeug.url_quote(value, self.map.charset, safe="")
+        return werkzeug.url_quote(value.strip(), self.map.charset, safe="")
+
+    def to_python(self, value):
+        return value.strip()
 
     regex='([^+%]|%[^2]|%2[^Bb]).*'
 

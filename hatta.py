@@ -336,12 +336,14 @@ class WikiStorage(object):
         return path
 
     def _file_path(self, title):
+        title = unicode(title).strip()
         return os.path.join(self.path,
-                            werkzeug.url_quote(title.strip(), safe=''))
+                            werkzeug.url_quote(title, safe=''))
 
     def _title_to_file(self, title):
+        title = unicode(title).strip()
         return os.path.join(self.repo_prefix,
-                            werkzeug.url_quote(title.strip(), safe=''))
+                            werkzeug.url_quote(title, safe=''))
 
     def _file_to_title(self, filename):
         assert filename.startswith(self.repo_prefix)
@@ -2239,9 +2241,6 @@ class WikiTitleConverter(werkzeug.routing.PathConverter):
 
     def to_url(self, value):
         return werkzeug.url_quote(value.strip(), self.map.charset, safe="")
-
-    def to_python(self, value):
-        return werkzeug.url_unquote(value).strip()
 
     regex='([^+%]|%[^2]|%2[^Bb]).*'
 

@@ -1283,7 +1283,7 @@ without would yet you your yours yourself yourselves""")).split())
                    '(SELECT * FROM links WHERE target=title) '
                    'ORDER BY title;')
             for (title,) in con.execute(sql):
-                yield title
+                yield unicode(title)
         finally:
             con.commit()
 
@@ -1315,7 +1315,7 @@ without would yet you your yours yourself yourselves""")).split())
                    'WHERE links.target=? AND titles.id=links.src '
                    'ORDER BY titles.title;')
             for (backlink,) in con.execute(sql, (title,)):
-                yield backlink
+                yield unicode(backlink)
         finally:
             con.commit()
 
@@ -1327,7 +1327,7 @@ without would yet you your yours yourself yourselves""")).split())
             title_id = self.title_id(title, con)
             sql = 'SELECT target FROM links WHERE src=? ORDER BY number;'
             for (link,) in con.execute(sql, (title_id,)):
-                yield link
+                yield unicode(link)
         finally:
             con.commit()
 
@@ -1336,8 +1336,8 @@ without would yet you your yours yourself yourselves""")).split())
         try:
             title_id = self.title_id(title, con)
             sql = 'SELECT target, label FROM links WHERE src=? ORDER BY number;'
-            for link_and_label in con.execute(sql, (title_id,)):
-                yield link_and_label
+            for link, label in con.execute(sql, (title_id,)):
+                yield unicode(link), unicode(label)
         finally:
             con.commit()
 
@@ -1379,7 +1379,7 @@ without would yet you your yours yourself yourselves""")).split())
                         break
                     score += float(count)/rank
                 if score > 0:
-                    yield int(100*score), title
+                    yield int(100*score), unicode(title)
         finally:
             con.commit()
 
@@ -3020,7 +3020,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             html = regexp.sub(highlighted, snippet)
             return html
 
-        def page_search(words, page, resuest):
+        def page_search(words, page, request):
             """Display the search results."""
 
             h = werkzeug.html
@@ -3031,7 +3031,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                                   % len(result)))
             yield u'<ol class="search">'
             for number, (score, title) in enumerate(result):
-                yield h.li(h.b(page.wiki_link(title)), u' ', h.i(score),
+                yield h.li(h.b(page.wiki_link(title)), u' ', h.i(str(score)),
                            h.div(search_snippet(title, words),
                                  _class="snippet"),
                            id_="search-%d" % (number+1))

@@ -336,11 +336,12 @@ class WikiStorage(object):
         return path
 
     def _file_path(self, title):
-        return os.path.join(self.path, werkzeug.url_quote(title, safe=''))
+        return os.path.join(self.path,
+                            werkzeug.url_quote(title.strip(), safe=''))
 
     def _title_to_file(self, title):
         return os.path.join(self.repo_prefix,
-                            werkzeug.url_quote(title, safe=''))
+                            werkzeug.url_quote(title.strip(), safe=''))
 
     def _file_to_title(self, filename):
         assert filename.startswith(self.repo_prefix)
@@ -1542,7 +1543,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         if view is None:
             view = self.wiki.view
         if title is not None:
-            kw['title'] = title
+            kw['title'] = title.strip()
         return self.adapter.build(view, kw, method=method,
                                   force_external=external)
 
@@ -1647,6 +1648,7 @@ class WikiPage(object):
     def wiki_image(self, addr, alt, class_='wiki', lineno=0):
         """Create HTML for a wiki image."""
 
+        addr = addr.strip()
         html = werkzeug.html
         chunk = ''
         if external_link(addr):

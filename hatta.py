@@ -1296,7 +1296,7 @@ without would yet you your yours yourself yourselves""")).split())
                    '(SELECT * FROM titles WHERE target=title) '
                    'GROUP BY target ORDER BY -COUNT(*);')
             for (refs, db_title,) in con.execute(sql):
-                title = str(db_title)
+                title = unicode(db_title)
                 if not external_link(title) and not title.startswith('+'):
                     yield refs, title
         finally:

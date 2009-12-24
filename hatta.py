@@ -2238,7 +2238,7 @@ class WikiTitleConverter(werkzeug.routing.PathConverter):
         return werkzeug.url_quote(value.strip(), self.map.charset, safe="")
 
     def to_python(self, value):
-        return value.strip()
+        return werkzeug.url_unquote(value).strip()
 
     regex='([^+%]|%[^2]|%2[^Bb]).*'
 

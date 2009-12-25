@@ -2155,6 +2155,7 @@ class WikiPageCSV(WikiPageFile):
 
     def content_iter(self, lines=None):
         import csv
+        # XXX Add preview support
         csv_file = self.storage.open_page(self.title)
         reader = csv.reader(csv_file)
         html_title = werkzeug.escape(self.title, quote=True)

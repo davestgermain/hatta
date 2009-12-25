@@ -71,6 +71,7 @@ description = 'Wiki engine that lives in Mercurial repository.'
 
 mimetypes.add_type('application/x-python', '.wsgi')
 mimetypes.add_type('application/x-javascript', '.js')
+mimetypes.add_type('text/x-rst', '.rst')
 
 
 def external_link(addr):
@@ -2175,6 +2176,23 @@ class WikiPageCSV(WikiPageFile):
             raise werkzeug.exceptions.NotFound()
         return self.content_iter(lines)
 
+class WikiPageRST(WikiPageText):
+    """
+    Display ReStructured Text.
+    """
+
+    def content_iter(self, lines):
+        try:
+            from docutils.core import publish_parts
+        except ImportError:
+            return super(WikiPageRST, self).content_iter(lines)
+        text = ''.join(lines)
+        SAFE_DOCUTILS = dict(file_insertion_enabled=False, raw_enabled=False)
+        content = publish_parts(text, writer_name='html',
+                                settings_overrides=SAFE_DOCUTILS)['html_body']
+        return [content]
+
+
 class WikiPageBugs(WikiPageText):
     """
     Display class for type text/x-bugs
@@ -2271,6 +2289,7 @@ class Wiki(object):
         'application/x-javascript': WikiPageText,
         'application/x-python': WikiPageText,
         'text/csv': WikiPageCSV,
+        'text/x-rst': WikiPageRST,
         'text/x-wiki': WikiPageWiki,
         'image': WikiPageImage,
         '': WikiPageFile,

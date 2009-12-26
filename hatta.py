@@ -1844,13 +1844,19 @@ class WikiPage(object):
         yield h.input(type_="hidden", name="parent", value=max_rev)
         yield u'</form>'
 
+
     def dependencies(self):
         """Refresh the page when any of those pages was changed."""
 
         dependencies = set()
-        for link in [self.wiki.logo_page, self.wiki.menu_page]:
-            if link not in self.storage:
-                dependencies.add(werkzeug.url_quote(link))
+        for title in [self.wiki.logo_page, self.wiki.menu_page]:
+            if title not in self.storage:
+                dependencies.add(werkzeug.url_quote(title))
+        for title in [self.wiki.menu_page]:
+            if title in self.storage:
+                inode, size, mtime = self.storage.page_file_meta(title)
+                etag = '%s/%d-%d' % (werkzeug.url_quote(title), inode, mtime)
+                dependencies.add(etag)
         return dependencies
 
     def diff_content(self, from_rev, to_rev, message=u''):
@@ -2079,6 +2085,11 @@ class WikiPageWiki(WikiPageColorText):
 
     def dependencies(self):
         dependencies = WikiPage.dependencies(self)
+        for title in [self.wiki.icon_page]:
+            if title in self.storage:
+                inode, size, mtime = self.storage.page_file_meta(title)
+                etag = '%s/%d-%d' % (werkzeug.url_quote(title), inode, mtime)
+                dependencies.add(etag)
         for link in self.index.page_links(self.title):
             if link not in self.storage:
                 dependencies.add(werkzeug.url_quote(link))

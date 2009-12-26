@@ -1859,11 +1859,6 @@ class WikiPage(object):
                 dependencies.add(etag)
         return dependencies
 
-    def diff_content(self, from_rev, to_rev, message=u''):
-        """Genrate HTML for the diff of revisions of a page."""
-
-        return []
-
 class WikiPageText(WikiPage):
     """Pages of mime type text/* use this for display."""
 
@@ -1925,7 +1920,7 @@ class WikiPageText(WikiPage):
             for part in self.view_content(preview):
                 yield part
 
-    def diff_content(self, from_rev, to_rev, message=u''):
+    def diff_content(self, from_text, to_text, message=u''):
         """Generate the HTML markup for a diff."""
 
         def infiniter(iterator):
@@ -1936,9 +1931,7 @@ class WikiPageText(WikiPage):
             while True:
                 yield None
 
-        text = self.storage.revision_text(self.title, from_rev)
-        other_text = self.storage.revision_text(self.title, to_rev)
-        diff = difflib._mdiff(text.split('\n'), other_text.split('\n'))
+        diff = difflib._mdiff(from_text.split('\n'), to_text.split('\n'))
         stack = []
         mark_re = re.compile('\0[-+^]([^\1\0]*)\1|([^\0\1])')
         yield message
@@ -2982,7 +2975,14 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         message = werkzeug.html(_(
             u'Differences between revisions %(link1)s and %(link2)s '
             u'of page %(link)s.')) % links
-        content = page.diff_content(from_rev, to_rev, message)
+        diff_content = getattr(page, 'diff_content', None)
+        if diff_content:
+            from_text = self.storage.revision_text(page.title, from_rev)
+            to_text = self.storage.revision_text(page.title, to_rev)
+            content = page.diff_content(from_text, to_text, message)
+        else:
+            content = [werkzeug.html.p(werkzeug.html(
+                _(u"Diff not available for this kind of pages.")))]
         special_title = _(u'Diff for "%(title)s"') % {'title': title}
         html = page.render_content(content, special_title)
         response = werkzeug.Response(html, mimetype='text/html')

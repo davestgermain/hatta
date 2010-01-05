@@ -2302,7 +2302,7 @@ class Wiki(object):
         'favicon.ico': (WikiPageImage, 'image/x-icon'),
     }
     mime_map = {
-        'text': WikiPageText,
+        'text': WikiPageColorText,
         'application/x-javascript': WikiPageText,
         'application/x-python': WikiPageText,
         'text/csv': WikiPageCSV,

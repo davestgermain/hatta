@@ -2303,8 +2303,8 @@ class Wiki(object):
     }
     mime_map = {
         'text': WikiPageColorText,
-        'application/x-javascript': WikiPageText,
-        'application/x-python': WikiPageText,
+        'application/x-javascript': WikiPageColorText,
+        'application/x-python': WikiPageColorText,
         'text/csv': WikiPageCSV,
         'text/x-rst': WikiPageRST,
         'text/x-wiki': WikiPageWiki,

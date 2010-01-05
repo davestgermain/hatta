@@ -181,6 +181,9 @@ class WikiConfig(object):
             help='Enable WikiWord links', action="store_true")
         add('-I', '--ignore-indent', dest='ignore_indent', default=False,
             help='Treat indented lines as normal text', action="store_true")
+        add('-P', '--pygments-style', dest='pygments_style',
+            help='Use the STYLE pygments style for highlighting',
+            metavar='STYLE')
 
         options, args = parser.parse_args()
         for option, value in options.__dict__.iteritems():
@@ -2430,6 +2433,7 @@ dd {font-style: italic; }
         self.site_name = self.config.get('site_name', u'Hatta Wiki')
         self.read_only = self.config.get_bool('read_only', False)
         self.icon_page = self.config.get('icon_page', None)
+        self.pygments_style = self.config.get('pygments_style', 'tango')
 
         self.storage = self.storage_class(self.path, self.page_charset)
         if not os.path.isdir(self.cache):
@@ -3128,7 +3132,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         if pygments is None:
             raise werkzeug.exceptions.NotFound()
 
-        pygments_style = 'tango'
+        pygments_style = self.pygments_style
         if pygments_style not in pygments.styles.STYLE_MAP:
             pygments_style = 'default'
         formatter = pygments.formatters.HtmlFormatter(style=pygments_style)

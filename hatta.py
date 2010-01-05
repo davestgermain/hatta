@@ -171,15 +171,15 @@ class WikiConfig(object):
             help='Read configuration from FILE', metavar='FILE')
         add('-l', '--language', dest='language',
             help='Translate interface to LANG', metavar='LANG')
-        add('-r', '--read-only', dest='read_only', default=False,
+        add('-r', '--read-only', dest='read_only',
             help='Whether the wiki should be read-only', action="store_true")
         add('-g', '--icon-page', dest='icon_page', metavar="PAGE",
             help='Read icons graphics from PAGE.')
-        add('-w', '--hgweb', dest='hgweb', default=False,
+        add('-w', '--hgweb', dest='hgweb',
             help='Enable hgweb access to the repository', action="store_true")
-        add('-W', '--wiki-words', dest='wiki_words', default=False,
+        add('-W', '--wiki-words', dest='wiki_words',
             help='Enable WikiWord links', action="store_true")
-        add('-I', '--ignore-indent', dest='ignore_indent', default=False,
+        add('-I', '--ignore-indent', dest='ignore_indent',
             help='Treat indented lines as normal text', action="store_true")
         add('-P', '--pygments-style', dest='pygments_style',
             help='Use the STYLE pygments style for highlighting',

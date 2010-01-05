@@ -1725,6 +1725,8 @@ class WikiPage(object):
         yield h.title(u'%s - %s' % (e(special_title or self.title),
                                     e(self.wiki.site_name)))
         yield h.link(rel="stylesheet", type_="text/css",
+                     href=self.get_url(None, self.wiki.pygments_css))
+        yield h.link(rel="stylesheet", type_="text/css",
                      href=self.get_url(None, self.wiki.style_css))
         if special_title:
             yield h.meta(name="robots", content="NOINDEX,NOFOLLOW")
@@ -1991,11 +1993,7 @@ class WikiPageColorText(WikiPageText):
             yield werkzeug.html.pre(werkzeug.html(text))
             return
 
-        if 'tango' in pygments.styles.STYLE_MAP:
-            style = 'tango'
-        else:
-            style = 'friendly'
-        formatter = pygments.formatters.HtmlFormatter(style=style)
+        formatter = pygments.formatters.HtmlFormatter()
         formatter.line_no = line_no
 
         def wrapper(source, outfile):
@@ -2409,13 +2407,6 @@ dd {font-style: italic; }
         if config.get_bool('show_version', False):
             sys.stdout.write("Hatta %s\n" % __version__)
             sys.exit()
-        if pygments is not None:
-            if 'tango' in pygments.styles.STYLE_MAP:
-                style = 'tango'
-            else:
-                style = 'friendly'
-            formatter = pygments.formatters.HtmlFormatter(style=style)
-            self.style += formatter.get_style_defs('.highlight')
         self.dead = False
         self.config = config
         self.language = config.get('language', None)
@@ -2486,6 +2477,8 @@ dd {font-style: italic; }
               methods=['GET', 'HEAD']),
             R('/robots.txt', endpoint=self.robots_txt, methods=['GET', 'HEAD']),
             R('/+download/style.css', endpoint=self.style_css,
+              methods=['GET', 'HEAD']),
+            R('/+download/pygments.css', endpoint=self.pygments_css,
               methods=['GET', 'HEAD']),
             R('/+download/scripts.js', endpoint=self.scripts_js,
               methods=['GET', 'HEAD']),
@@ -3128,6 +3121,19 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         """Serve the default style"""
 
         return self._serve_default(request, 'style.css', self.style,
+                                   'text/css')
+    def pygments_css(self, request):
+        """Serve the default pygments style"""
+
+        if pygments is None:
+            raise werkzeug.exceptions.NotFound()
+
+        pygments_style = 'tango'
+        if pygments_style not in pygments.styles.STYLE_MAP:
+            pygments_style = 'default'
+        formatter = pygments.formatters.HtmlFormatter(style=pygments_style)
+        style_defs = formatter.get_style_defs('.highlight')
+        return self._serve_default(request, 'pygments.css', style_defs,
                                    'text/css')
 
     def favicon_ico(self, request):

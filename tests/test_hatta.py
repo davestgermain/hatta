@@ -225,6 +225,7 @@ class TestHTML(object):
 "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
     <title>page &lt;title&gt; - Hatta Wiki</title>
+    <link type="text/css" href="/+download/pygments.css" rel="stylesheet">
     <link type="text/css" href="/+download/style.css" rel="stylesheet">
     <link type="application/wiki" href="/+edit/page%20%3Ctitle%3E" rel="alternate">
     <link type="image/x-icon" href="/favicon.ico" rel="shortcut icon">
@@ -259,6 +260,7 @@ class TestHTML(object):
 "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
     <title>different &lt;title&gt; - Hatta Wiki</title>
+    <link type="text/css" href="/+download/pygments.css" rel="stylesheet">
     <link type="text/css" href="/+download/style.css" rel="stylesheet">
     <meta content="NOINDEX,NOFOLLOW" name="robots">
     <link type="image/x-icon" href="/favicon.ico" rel="shortcut icon">

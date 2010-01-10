@@ -321,14 +321,27 @@ class WikiStorage(object):
         else:
             create = False
         self.repo_prefix = self.path[len(self.repo_path):].strip('/')
-        self.repo = mercurial.hg.repository(self.ui, self.repo_path,
-                                            create=create)
+        self._repos = {}
+        # Create the repository if needed.
+        mercurial.hg.repository(self.ui, self.repo_path, create=create)
 
     def reopen(self):
         """Close and reopen the repo, to make sure we are up to date."""
 
-        self.repo = mercurial.hg.repository(self.ui, self.repo_path)
+        #self.repo = mercurial.hg.repository(self.ui, self.repo_path)
+        self._repos = {}
 
+    @property
+    def repo(self):
+        """Keep one open repository per thread."""
+
+        thread_id = thread.get_ident()
+        try:
+            return self._repos[thread_id]
+        except KeyError:
+            repo = mercurial.hg.repository(self.ui, self.repo_path)
+            self._repos[thread_id] = repo
+            return repo
 
     def _find_repo_path(self, path):
         """Go up the directory tree looking for a repository."""

@@ -2017,14 +2017,9 @@ class WikiPageColorText(WikiPageText):
 
             yield 0, '<div class="highlight"><pre>'
             for lineno, line in source:
-                if line.strip():
-                    yield (lineno,
-                           werkzeug.html.div(line.strip('\n'), id_="line_%d" %
-                                             formatter.line_no))
-                else:
-                    yield (lineno,
-                           werkzeug.html.div('&nbsp;', id_="line_%d" %
-                                             formatter.line_no))
+                yield (lineno,
+                       werkzeug.html.span(line, id_="line_%d" %
+                                         formatter.line_no))
                 formatter.line_no += 1
             yield 0, '</pre></div>'
 
@@ -2364,11 +2359,12 @@ h.style.whiteSpace="-o-pre-wrap"}catch(e){};try{h.style.whiteSpace="-pre-wrap"
 b.scrollTop=h.scrollHeight;h.parentNode.removeChild(h)}else{var l='';var m=
 document.getElementsByTagName('link');for(var i=0;i<m.length;++i){var n=m[i];
 if(n.getAttribute('type')==='application/wiki'){l=n.getAttribute('href')}}if(
-l===''){return}var o=['p','h1','h2','h3','h4','h5','h6','pre','ul','div'];for(
-var j=0;j<o.length;++j){var m=document.getElementsByTagName(o[j]);for(var i=0;
-i<m.length;++i){var n=m[i];if(n.id&&n.id.match(/^line_\d+$/)){n.ondblclick=
-function(){var a=l+'#'+this.id.replace('line_','');document.location.href=a
-}}}}}}window.onload=function(){hatta_dates();hatta_edit()}"""
+l===''){return}var o=['p','h1','h2','h3','h4','h5','h6','pre','ul','div',
+'span'];for(var j=0;j<o.length;++j){var m=document.getElementsByTagName(o[j]);
+for(var i=0;i<m.length;++i){var n=m[i];if(n.id&&n.id.match(/^line_\d+$/)){
+n.ondblclick=function(){var a=l+'#'+this.id.replace('line_','');
+document.location.href=a}}}}}}
+window.onload=function(){hatta_dates();hatta_edit()}"""
     style = """\
 html { background: #fff; color: #2e3436;
     font-family: sans-serif; font-size: 96% }

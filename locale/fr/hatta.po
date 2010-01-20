@@ -1,28 +1,42 @@
 # French translation for hatta.py.
 # Copyright (C) 2009
 # John "Nigthlybuild" Lejeune <john.lejeune@free.fr>, 2009.
-#
+# Bruno Bord, 2010
+
 msgid ""
 msgstr ""
 "Project-Id-Version: svn\n"
-"POT-Creation-Date: 2008-12-05 10:29+CET\n"
-"PO-Revision-Date: 2009-01-31 17:05+0100\n"
-"Last-Translator: John Lejeune <john.lejeune@free.fr>\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2010-01-20 16:40+0100\n"
+"PO-Revision-Date: 2010-01-20 16:46+0100\n"
+"Last-Translator: Bruno Bord\n"
 "Language-Team: FR <john.lejeune@free.fr>\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
 
-#: hatta.py:219
+#: hatta.py:345
+msgid "merge of edit conflict"
+msgstr "fusion après conflit sur modification"
+
+#: hatta.py:347
+msgid "forced merge of edit conflict"
+msgstr "fusion forcée après conflit sur modification"
+
+#: hatta.py:352
+msgid "failed merge of edit conflict"
+msgstr "échec de la fusion après conflit sur modification"
+
+#: hatta.py:365
 msgid "anon"
 msgstr "anon"
 
-#: hatta.py:220
+#: hatta.py:366
 msgid "comment"
 msgstr "commentaire"
 
-#: hatta.py:675
+#: hatta.py:1084
 msgid ""
 "am ii iii per po re a about above\n"
 "across after afterwards again against all almost alone along already also\n"
@@ -78,139 +92,174 @@ msgstr ""
 "whether which while whither who whoever whole whom whose why will with within\n"
 "without would yet you your yours yourself yourselves"
 
-#: hatta.py:1087
+#: hatta.py:1609
 msgid "Search"
 msgstr "Rechercher"
 
-#: hatta.py:1115
-msgid "Edit"
-msgstr "Édition"
-
-#: hatta.py:1117
-msgid "History"
-msgstr "Historique"
-
-#: hatta.py:1119
-msgid "Backlinks"
-msgstr "Rétroliens"
-
-#: hatta.py:1175
-msgid "Content of revision %(rev)d of page %(title)s:"
-msgstr "Contenu de la révision %(rev)d de la page %(title)s:"
-
-#: hatta.py:1181
-msgid "Revision of \"%(title)s\""
-msgstr "Révision de \"%(title)s\""
-
-#: hatta.py:1250
-msgid "No preview for binaries."
-msgstr "Pas de prévisualisation pour les binaires."
-
-#: hatta.py:1292
-msgid "Editing \"%(title)s\""
-msgstr "Editon de \"%(title)s\""
-
-#: hatta.py:1335
-msgid "modified"
-msgstr "modifié"
-
-#: hatta.py:1342
-msgid "created"
-msgstr "crée"
-
-#: hatta.py:1353
-#: hatta.py:1383
-msgid "Comment"
-msgstr "Commentaire"
-
-#: hatta.py:1355
-#: hatta.py:1385
-msgid "Author"
-msgstr "Auteur"
-
-#: hatta.py:1357
-#: hatta.py:1387
-msgid "Save"
-msgstr "Enregistrer"
-
-#: hatta.py:1358
-msgid "Preview"
-msgstr "Prévisualisation"
-
-#: hatta.py:1359
-#: hatta.py:1388
-msgid "Cancel"
-msgstr "Annuler"
-
-#: hatta.py:1363
-msgid "Preview, not saved"
-msgstr "Prévisualisation, non enregistré"
-
-#: hatta.py:1371
-msgid "changed"
-msgstr "modifié"
-
-#: hatta.py:1377
-msgid "uploaded"
-msgstr "téléchargé"
-
-#: hatta.py:1379
-msgid "This is a binary file, it can't be edited on a wiki. Please upload a new version instead."
-msgstr "Ceci est un fichier binaire, il ne peut être édité dans un wiki. Merci de télécharger une nouvelle version à la place."
-
-#: hatta.py:1507
-msgid "Track the most recent changes to the wiki in this feed."
-msgstr "Suivre les changements les plus récents apportés au wiki dans ce flux."
-
-#: hatta.py:1554
-msgid "Delete page %(title)s"
-msgstr "Supprimer la page %(title)s"
-
-#: hatta.py:1558
-msgid "Undo of change %(rev)d of page %(title)s"
-msgstr "Annulation des modifications %(rev)d sur la page %(title)s"
-
-#: hatta.py:1571
-msgid "History of \"%(title)s\""
-msgstr "Historique de \"%(title)s\""
-
-#: hatta.py:1578
-msgid "History of changes for %(link)s."
-msgstr "Historique des modifications pour %(link)s."
-
-#: hatta.py:1601
+#: hatta.py:1626
+#: hatta.py:2460
 msgid "Recent changes"
 msgstr "Modifications récentes"
 
+#: hatta.py:1647
+msgid "Edit"
+msgstr "Édition"
+
 #: hatta.py:1651
+msgid "History"
+msgstr "Historique"
+
+#: hatta.py:1653
+msgid "Backlinks"
+msgstr "Rétroliens"
+
+#: hatta.py:1689
+#, python-format
+msgid "History of changes for %(link)s."
+msgstr "Historique des modifications pour %(link)s."
+
+#: hatta.py:1744
+msgid "modified"
+msgstr "modifié"
+
+#: hatta.py:1748
+msgid "created"
+msgstr "crée"
+
+#: hatta.py:1760
+#: hatta.py:1936
+msgid "Comment"
+msgstr "Commentaire"
+
+#: hatta.py:1762
+#: hatta.py:1938
+msgid "Author"
+msgstr "Auteur"
+
+#: hatta.py:1765
+#: hatta.py:1940
+msgid "Save"
+msgstr "Enregistrer"
+
+#: hatta.py:1766
+msgid "Preview"
+msgstr "Prévisualisation"
+
+#: hatta.py:1767
+#: hatta.py:1942
+msgid "Cancel"
+msgstr "Annuler"
+
+#: hatta.py:1771
+msgid "Preview, not saved"
+msgstr "Prévisualisation, non enregistré"
+
+#: hatta.py:1921
+msgid "changed"
+msgstr "modifié"
+
+#: hatta.py:1927
+msgid "uploaded"
+msgstr "téléchargé"
+
+#: hatta.py:1931
+msgid "This is a binary file, it can't be edited on a wiki. Please upload a new version instead."
+msgstr "Ceci est un fichier binaire, il ne peut être édité dans un wiki. Merci de télécharger une nouvelle version à la place."
+
+#: hatta.py:1974
+#, python-format
+msgid "<p class=\"error\">Error parsing CSV file %s on line %d: %s"
+msgstr "<p class=\"error\">Erreur d'analyse du fichier CSV %s à la ligne %d : %s"
+
+#: hatta.py:2126
+#, python-format
+msgid "Content of revision %(rev)d of page %(title)s:"
+msgstr "Contenu de la révision %(rev)d de la page %(title)s:"
+
+#: hatta.py:2130
+#, python-format
+msgid "Revision of \"%(title)s\""
+msgstr "Révision de \"%(title)s\""
+
+#: hatta.py:2138
+msgid "This site is read-only."
+msgstr "Ce site est en lecture seule"
+
+#: hatta.py:2140
+msgid ""
+"Can't edit live scripts.\n"
+"To edit this page remove it from the script_page option first."
+msgstr ""
+"Impossible de modifier les scripts.\n"
+"Pour modifier cette page, enlevez-là d'abord de l'option \"script_page\"."
+
+#: hatta.py:2144
+msgid "This page is locked."
+msgstr "Cette page est verrouillée"
+
+#: hatta.py:2158
+msgid "No preview for binaries."
+msgstr "Pas de prévisualisation pour les binaires."
+
+#: hatta.py:2207
+#, python-format
+msgid "Editing \"%(title)s\""
+msgstr "Édition de \"%(title)s\""
+
+#: hatta.py:2337
+msgid "Track the most recent changes to the wiki in this feed."
+msgstr "Suivre les changements les plus récents apportés au wiki dans ce flux."
+
+#: hatta.py:2396
+#, python-format
+msgid "Delete page %(title)s"
+msgstr "Supprimer la page %(title)s"
+
+#: hatta.py:2400
+#, python-format
+msgid "Undo of change %(rev)d of page %(title)s"
+msgstr "Annuler les modifications %(rev)d sur la page %(title)s"
+
+#: hatta.py:2414
+#, python-format
+msgid "History of \"%(title)s\""
+msgstr "Historique de \"%(title)s\""
+
+#: hatta.py:2476
+#, python-format
 msgid "Differences between revisions %(link1)s and %(link2)s of page %(link)s."
 msgstr "Différences entre les révisions %(link1)s et %(link2)s pour la page %(link)s."
 
-#: hatta.py:1657
+#: hatta.py:2483
+#, python-format
 msgid "Diff for \"%(title)s\""
 msgstr "Diff pour \"%(title)s\""
 
-#: hatta.py:1710
-msgid "Page index"
-msgstr "Index de la page"
-
-#: hatta.py:1712
-msgid "Searching for \"%s\""
-msgstr "Rechercher  \"%s\""
-
-#: hatta.py:1718
+#: hatta.py:2492
 msgid "Index of all pages."
 msgstr "Index de toutes les pages."
 
-#: hatta.py:1726
+#: hatta.py:2522
+#, python-format
 msgid "%d page(s) containing all words:"
-msgstr "%d page(s) contenant tous les mots:"
+msgstr "%d page(s) contenant tous les mots :"
 
-#: hatta.py:1752
-msgid "Links to \"%s\""
-msgstr "Liens vers \"%s\""
+#: hatta.py:2538
+msgid "Page index"
+msgstr "Index de la page"
 
-#: hatta.py:1759
+#: hatta.py:2543
+#, python-format
+msgid "Searching for \"%s\""
+msgstr "Rechercher  \"%s\""
+
+#: hatta.py:2554
+#, python-format
 msgid "Pages that contain a link to %s."
 msgstr "Pages contenant un lien vers %s."
+
+#: hatta.py:2565
+#, python-format
+msgid "Links to \"%s\""
+msgstr "Liens vers \"%s\""
 

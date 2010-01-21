@@ -176,7 +176,7 @@ This might be considered a bug, but impossible to detect in general.
 <div class="highlight"><pre><span id="line_1">lorem ipsum</span></pre></div> 
 
 >>> parse(u'{{{#!c++\nint eger;\n}}}')
-<div class="highlight"><pre><div id="line_1"><span class="kt">int</span> <span class="n">eger</span><span class="p">;</span></div></pre></div>
+<div class="highlight"><pre><span id="line_1"><span class="kt">int</span> <span class="n">eger</span><span class="p">;</span></span></pre></div>
 
 >>> parse(u'|table|')
 <table id="line_0"><tr><td>table</td></tr></table>

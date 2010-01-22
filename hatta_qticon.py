@@ -499,7 +499,7 @@ class PreferenceWindow(QWidget):
         grid_layout = QGridLayout()
         # Wiki name input
         tooltip = _(u'Sets the name of you wiki. The name will be visible '
-                   u'all accross the wiki and in wiki discovery.')
+                   u'across the wiki and on discovery.')
         self.name_label = QLabel(_(u'Wiki name:'), self)
         self.name_label.setToolTip(tooltip)
         self.name_edit = QLineEdit(self.wiki_name, self)
@@ -508,7 +508,7 @@ class PreferenceWindow(QWidget):
         grid_layout.addWidget(self.name_edit, 0, 1)
 
         # Pages dir choosing
-        tooltip = _(u'Sets the pages directory, where wiki pages will be'
+        tooltip = _(u'Sets the pages directory, where wiki pages will be '
                    u'held.')
         self.pages_label = QLabel(_(u'Pages path:'), self)
         self.pages_label.setToolTip(tooltip)

@@ -410,7 +410,7 @@ class WikiStorage(object):
         repo_file = self._title_to_file(title)
         file_path = self._file_path(title)
         if os.path.islink(file_path):
-            raise werkzeug.exceptions.Forbidden(u"Can't edit symbolic links")
+            raise werkzeug.exceptions.Forbidden(_(u"Can't edit symbolic links"))
         mercurial.util.rename(file_name, file_path)
         changectx = self._changectx()
         try:
@@ -481,7 +481,7 @@ class WikiStorage(object):
         repo_file = self._title_to_file(title)
         file_path = self._file_path(title)
         if os.path.islink(file_path):
-            raise werkzeug.exceptions.Forbidden(u"Can't edit symbolic links")
+            raise werkzeug.exceptions.Forbidden(_(u"Can't edit symbolic links"))
         try:
             os.unlink(file_path)
         except OSError:
@@ -494,7 +494,7 @@ class WikiStorage(object):
 
         file_path = self._file_path(title)
         if os.path.islink(file_path):
-            raise werkzeug.exceptions.Forbidden(u"Can't read symbolic links")
+            raise werkzeug.exceptions.Forbidden(_(u"Can't read symbolic links"))
         try:
             return open(file_path, "rb")
         except IOError:
@@ -1911,7 +1911,8 @@ class WikiPageText(WikiPage):
             comment = _(u'created')
             rev = -1
         except werkzeug.exceptions.Forbidden:
-            yield werkzeug.html.p(werkzeug.html(_(u"Can't edit a symbolic link.")))
+            yield werkzeug.html.p(
+                werkzeug.html(_(u"Can't edit symbolic links")))
             return
         if preview:
             lines = preview
@@ -2572,12 +2573,12 @@ dd {font-style: italic; }
             'robots.txt',
         ]
         if self.read_only:
-            raise werkzeug.exceptions.Forbidden(_("This site is read-only."))
+            raise werkzeug.exceptions.Forbidden(_(u"This site is read-only."))
         if title in restricted_pages:
-            raise werkzeug.exceptions.Forbidden(_("""Can't edit this page.
+            raise werkzeug.exceptions.Forbidden(_(u"""Can't edit this page.
 It can only be edited by the site admin directly on the disk."""))
         if title in self.index.page_links(self.locked_page):
-            raise werkzeug.exceptions.Forbidden(_("This page is locked."))
+            raise werkzeug.exceptions.Forbidden(_(u"This page is locked."))
 
     def save(self, request, title):
         self._check_lock(title)
@@ -2608,7 +2609,8 @@ It can only be edited by the site admin directly on the disk."""))
                 if title == self.locked_page:
                     for link, label in page.extract_links(text):
                         if title == link:
-                            raise werkzeug.exceptions.Forbidden()
+                            raise werkzeug.exceptions.Forbidden(
+                                _(u"This page is locked."))
                 if u'href="' in comment or u'http:' in comment:
                     raise werkzeug.exceptions.Forbidden()
                 if text.strip() == '':
@@ -3174,7 +3176,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         """Serve the pages repository on the web like a normal hg repository."""
 
         if not self.config.get_bool('hgweb', False):
-            raise werkzeug.exceptions.Forbidden('Repository access disabled.')
+            raise werkzeug.exceptions.Forbidden(
+                _(u'Repository access disabled.'))
         app = mercurial.hgweb.request.wsgiapplication(
             lambda: mercurial.hgweb.hgweb(self.storage.repo, self.site_name))
         def hg_app(env, start):
@@ -3190,7 +3193,8 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         """Terminate the standalone server if invoked from localhost."""
 
         if not request.remote_addr.startswith('127.'):
-            raise werkzeug.exceptions.Forbidden()
+            raise werkzeug.exceptions.Forbidden(
+                _(u'This URL can only be called locally.'))
         def agony():
             yield u'Oh dear!'
             self.dead = True

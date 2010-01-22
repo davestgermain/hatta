@@ -2191,8 +2191,9 @@ class WikiPageCSV(WikiPageFile):
                                                  for cell in row))
         except csv.Error, e:
             yield u'</table>'
-            yield _(u'<p class="error">Error parsing CSV file %s on line %d: %s'
-                    % (html_title, reader.line_num, e))
+            yield werkzeug.p(werkzeug.html(
+                _(u'Error parsing CSV file %{file}s on line %{line}d: %{error}s')
+                % {'file': html_title, 'line': reader.line_num, 'error': e}))
         finally:
             csv_file.close()
         yield u'</table>'

@@ -1,0 +1,409 @@
+# Hatta Wiki translation template
+# Copyright (C) 2010
+# Radomir Dopieralski <hatta@sheep.art.pl>, 2010.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Hatta 1.3.3dev\n"
+"POT-Creation-Date: 2010-01-22 16:15+CET\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: ENCODING\n"
+"Generated-By: pygettext.py 1.5\n"
+
+
+#: hatta.py:392
+msgid "merge of edit conflict"
+msgstr ""
+
+#: hatta.py:395
+msgid "failed merge of edit conflict"
+msgstr ""
+
+#: hatta.py:408
+msgid "anon"
+msgstr ""
+
+#: hatta.py:409
+msgid "comment"
+msgstr ""
+
+#: hatta.py:413 hatta.py:484 hatta.py:1915
+msgid "Can't edit symbolic links"
+msgstr ""
+
+#: hatta.py:497
+msgid "Can't read symbolic links"
+msgstr ""
+
+#: hatta.py:1202
+msgid ""
+"am ii iii per po re a about above\n"
+"across after afterwards again against all almost alone along already also\n"
+"although always am among ain amongst amoungst amount an and another any aren\n"
+"anyhow anyone anything anyway anywhere are around as at back be became because\n"
+"become becomes becoming been before beforehand behind being below beside\n"
+"besides between beyond bill both but by can cannot cant con could couldnt\n"
+"describe detail do done down due during each eg eight either eleven else etc\n"
+"elsewhere empty enough even ever every everyone everything everywhere except\n"
+"few fifteen fifty fill find fire first five for former formerly forty found\n"
+"four from front full further get give go had has hasnt have he hence her here\n"
+"hereafter hereby herein hereupon hers herself him himself his how however\n"
+"hundred i ie if in inc indeed interest into is it its itself keep last latter\n"
+"latterly least isn less made many may me meanwhile might mill mine more\n"
+"moreover most mostly move much must my myself name namely neither never\n"
+"nevertheless next nine no nobody none noone nor not nothing now nowhere of off\n"
+"often on once one only onto or other others otherwise our ours ourselves out\n"
+"over own per perhaps please pre put rather re same see seem seemed seeming\n"
+"seems serious several she should show side since sincere six sixty so some\n"
+"somehow someone something sometime sometimes somewhere still such take ten than\n"
+"that the their theirs them themselves then thence there thereafter thereby\n"
+"therefore therein thereupon these they thick thin third this those though three\n"
+"through throughout thru thus to together too toward towards twelve twenty two\n"
+"un under ve until up upon us very via was wasn we well were what whatever when\n"
+"whence whenever where whereafter whereas whereby wherein whereupon wherever\n"
+"whether which while whither who whoever whole whom whose why will with within\n"
+"without would yet you your yours yourself yourselves"
+msgstr ""
+
+#: hatta.py:1702
+msgid "Search"
+msgstr ""
+
+#: hatta.py:1721 hatta.py:2965
+msgid "Recent changes"
+msgstr ""
+
+#: hatta.py:1766
+msgid "Changes"
+msgstr ""
+
+#: hatta.py:1768
+msgid "Index"
+msgstr ""
+
+#: hatta.py:1770
+msgid "Orphaned"
+msgstr ""
+
+#: hatta.py:1772
+msgid "Wanted"
+msgstr ""
+
+#: hatta.py:1777
+msgid "Edit"
+msgstr ""
+
+#: hatta.py:1778
+msgid "History"
+msgstr ""
+
+#: hatta.py:1780
+msgid "Backlinks"
+msgstr ""
+
+#: hatta.py:1836
+msgid "History of changes for %(link)s."
+msgstr ""
+
+#: hatta.py:1857
+msgid "Undo"
+msgstr ""
+
+#: hatta.py:1907
+msgid "modified"
+msgstr ""
+
+#: hatta.py:1911
+msgid "created"
+msgstr ""
+
+#: hatta.py:1927 hatta.py:2130
+msgid "Comment"
+msgstr ""
+
+#: hatta.py:1929 hatta.py:2132
+msgid "Author"
+msgstr ""
+
+#: hatta.py:1932 hatta.py:2134
+msgid "Save"
+msgstr ""
+
+#: hatta.py:1933
+msgid "Preview"
+msgstr ""
+
+#: hatta.py:1934 hatta.py:2136
+msgid "Cancel"
+msgstr ""
+
+#: hatta.py:1938
+msgid "Preview, not saved"
+msgstr ""
+
+#: hatta.py:2115
+msgid "changed"
+msgstr ""
+
+#: hatta.py:2121
+msgid "uploaded"
+msgstr ""
+
+#: hatta.py:2125
+msgid "This is a binary file, it can't be edited on a wiki. Please upload a new version instead."
+msgstr ""
+
+#: hatta.py:2195
+msgid "Error parsing CSV file %{file}s on line %{line}d: %{error}s"
+msgstr ""
+
+#: hatta.py:2551
+msgid "Content of revision %(rev)d of page %(title)s:"
+msgstr ""
+
+#: hatta.py:2555
+msgid "Revision of \"%(title)s\""
+msgstr ""
+
+#: hatta.py:2577
+msgid "This site is read-only."
+msgstr ""
+
+#: hatta.py:2579
+msgid ""
+"Can't edit this page.\n"
+"It can only be edited by the site admin directly on the disk."
+msgstr ""
+
+#: hatta.py:2582 hatta.py:2614
+msgid "This page is locked."
+msgstr ""
+
+#: hatta.py:2596
+msgid "No preview for binaries."
+msgstr ""
+
+#: hatta.py:2650
+msgid "Editing \"%(title)s\""
+msgstr ""
+
+#: hatta.py:2783
+msgid "Track the most recent changes to the wiki in this feed."
+msgstr ""
+
+#: hatta.py:2901
+msgid "Delete page %(title)s"
+msgstr ""
+
+#: hatta.py:2905
+msgid "Undo of change %(rev)d of page %(title)s"
+msgstr ""
+
+#: hatta.py:2920
+msgid "History of \"%(title)s\""
+msgstr ""
+
+#: hatta.py:2984
+msgid "Differences between revisions %(link1)s and %(link2)s of page %(link)s."
+msgstr ""
+
+#: hatta.py:2994
+msgid "Diff not available for this kind of pages."
+msgstr ""
+
+#: hatta.py:2995
+msgid "Diff for \"%(title)s\""
+msgstr ""
+
+#: hatta.py:3006
+msgid "Index of all pages"
+msgstr ""
+
+#: hatta.py:3007
+msgid "Page Index"
+msgstr ""
+
+#: hatta.py:3019
+msgid "List of pages with no links to them"
+msgstr ""
+
+#: hatta.py:3020
+msgid "Orphaned pages"
+msgstr ""
+
+#: hatta.py:3034
+msgid "List of pages that are linked to, but don't exist yet."
+msgstr ""
+
+#: hatta.py:3039
+msgid "%d references"
+msgstr ""
+
+#: hatta.py:3045
+msgid "Wanted pages"
+msgstr ""
+
+#: hatta.py:3081
+msgid "%d page(s) containing all words:"
+msgstr ""
+
+#: hatta.py:3099
+msgid "Searching for \"%s\""
+msgstr ""
+
+#: hatta.py:3110
+msgid "Pages that contain a link to %(link)s."
+msgstr ""
+
+#: hatta.py:3114
+msgid "Links to \"%s\""
+msgstr ""
+
+#: hatta.py:3181
+msgid "Repository access disabled."
+msgstr ""
+
+#: hatta.py:3198
+msgid "This URL can only be called locally."
+msgstr ""
+
+#: hatta_qticon.py:227
+msgid "Restarting wiki..."
+msgstr ""
+
+#: hatta_qticon.py:276
+msgid "Hatta Wiki menu"
+msgstr ""
+
+#: hatta_qticon.py:279
+msgid "Starting wiki..."
+msgstr ""
+
+#: hatta_qticon.py:281
+msgid "Click this icon to interact with Hatta wiki."
+msgstr ""
+
+#: hatta_qticon.py:306
+msgid "Nearby wikis:"
+msgstr ""
+
+#: hatta_qticon.py:307
+msgid "Displays a list of nearby discovered wikis. Click one to view it."
+msgstr ""
+
+#: hatta_qticon.py:316
+msgid "Welcome to Hatta Wiki"
+msgstr ""
+
+#: hatta_qticon.py:317
+msgid "Click the hat icon to start or quit the Hatta Wiki."
+msgstr ""
+
+#: hatta_qticon.py:344
+msgid "&Preferences"
+msgstr ""
+
+#: hatta_qticon.py:345
+msgid "Lets you configure the wiki."
+msgstr ""
+
+#: hatta_qticon.py:350
+msgid "&Open wiki"
+msgstr ""
+
+#: hatta_qticon.py:352
+msgid "Opens the wiki in the default browser."
+msgstr ""
+
+#: hatta_qticon.py:355
+msgid "&Quit"
+msgstr ""
+
+#: hatta_qticon.py:357
+msgid "Stops the wiki and quits the status icon."
+msgstr ""
+
+#: hatta_qticon.py:388
+msgid "Error %(error_number)d: %(error_string)s"
+msgstr ""
+
+#: hatta_qticon.py:393
+msgid "    %(wiki_name)s on %(host_name)s"
+msgstr ""
+
+#: hatta_qticon.py:395
+msgid "Opens %(wiki_name)s in browser."
+msgstr ""
+
+#: hatta_qticon.py:414
+msgid "More wikis"
+msgstr ""
+
+#: hatta_qticon.py:415
+msgid "Shows even more wikis discovered nearby!"
+msgstr ""
+
+#: hatta_qticon.py:427
+msgid "    Install Bonjour to view nearby wikis"
+msgstr ""
+
+#: hatta_qticon.py:434
+msgid "    Install libavahi-compat-libdnssd1 to view nearby wikis"
+msgstr ""
+
+#: hatta_qticon.py:489
+msgid "Enter the name of your wiki"
+msgstr ""
+
+#: hatta_qticon.py:491
+msgid "Choose path for wiki pages"
+msgstr ""
+
+#: hatta_qticon.py:495
+msgid "Hatta preferences"
+msgstr ""
+
+#: hatta_qticon.py:501
+msgid "Sets the name of you wiki. The name will be visible all accross the wiki and in wiki discovery."
+msgstr ""
+
+#: hatta_qticon.py:503
+msgid "Wiki name:"
+msgstr ""
+
+#: hatta_qticon.py:511
+msgid "Sets the pages directory, where wiki pages will beheld."
+msgstr ""
+
+#: hatta_qticon.py:513
+msgid "Pages path:"
+msgstr ""
+
+#: hatta_qticon.py:518
+msgid "&Open..."
+msgstr ""
+
+#: hatta_qticon.py:529
+msgid "Sets the port on which wiki is listening on. Valid ports: %(min_port)d to %(max_port)d."
+msgstr ""
+
+#: hatta_qticon.py:532
+msgid "Listen port:"
+msgstr ""
+
+#: hatta_qticon.py:542
+msgid "Should wiki announce itself to the neighbourhood network?"
+msgstr ""
+
+#: hatta_qticon.py:544
+msgid "Announce hatta"
+msgstr ""
+
+#: hatta_qticon.py:555
+msgid "Choose page directory"
+msgstr ""
+

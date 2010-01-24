@@ -12,6 +12,7 @@ import sys
 
 import hatta
 import py
+import werkzeug
 
 # Patch for no gettext
 hatta._ = lambda x:x
@@ -25,7 +26,11 @@ def clear_directory(top):
         for name in files:
             os.remove(os.path.join(root, name))
         for name in dirs:
-            os.rmdir(os.path.join(root, name))
+            path = os.path.join(root, name)
+            if os.path.islink(path):
+                os.remove(path)
+            else:
+                os.rmdir(path)
     try:
         os.removedirs(top)
     except OSError:
@@ -42,6 +47,40 @@ def pytest_funcarg__repo(request):
     request.addfinalizer(lambda: clear_directory(repo_path))
     return hatta.WikiStorage(repo_path)
 
+class TestMercurialStorage(object):
+    """
+    Groups tests specific to Hatta's default storage.
+    """
+
+    title = 'test title'
+    filename = 'test%20title'
+    author = u'test author'
+    text = u'test text'
+    comment = u'test comment'
+
+    def test_filename(self, repo):
+        """
+        Check if the page's file is named properly.
+        """
+
+        title = u'../some/+s page/ąęść?.txt'
+        filename = '..%2Fsome%2F%2Bs%20page%2F%C4%85%C4%99%C5%9B%C4%87%3F.txt'
+        filepath = os.path.join(repo.path, filename)
+        repo.save_text(title, self.text, self.author, self.comment, parent=-1)
+        assert os.path.exists(filepath)
+
+    def test_symlinks(self, repo):
+        """
+        Make sure access to symlinks is blocked.
+        """
+
+        path = os.path.join(repo.path, self.filename)
+        os.symlink('/', path)
+        py.test.raises(werkzeug.exceptions.Forbidden, repo.save_text,
+                       self.title, self.text, self.author, self.comment,
+                       parent=-1)
+        py.test.raises(werkzeug.exceptions.Forbidden, repo.open_page,
+                       self.title)
 
 class TestStorage(object):
     """
@@ -59,7 +98,8 @@ class TestStorage(object):
         Create a page and read its contents, verify that it matches.
         """
 
-        repo.save_text(self.title, self.text, self.author, self.comment, parent=-1)
+        repo.save_text(self.title, self.text, self.author, self.comment,
+                       parent=-1)
         saved = repo.open_page(self.title).read()
         assert saved == self.text
 
@@ -68,7 +108,8 @@ class TestStorage(object):
         Save a page with parent set to None.
         """
 
-        repo.save_text(self.title, self.text, self.author, self.comment, parent=None)
+        repo.save_text(self.title, self.text, self.author, self.comment,
+                       parent=None)
         saved = repo.open_page(self.title).read()
         assert saved == self.text
 

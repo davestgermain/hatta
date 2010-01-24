@@ -120,7 +120,22 @@ class TestStorage(object):
         Create and delete a page.
         """
 
-        repo.save_text(self.title, self.text, self.author, self.comment, parent=-1)
+        repo.save_text(self.title, self.text, self.author, self.comment,
+                       parent=-1)
         assert self.title in repo
         repo.delete_page(self.title, self.author, self.comment)
         assert self.title not in repo
+
+
+    def test_metadata(self, repo):
+        """
+        Test that metadata is created and retrieved properly.
+        """
+
+        repo.save_text(self.title, self.text, self.author, self.comment,
+                       parent=-1)
+        rev, date, author, comment = repo.page_meta(self.title)
+        assert rev == 0
+        assert author == self.author
+        assert comment == self.comment
+

@@ -367,10 +367,9 @@ class WikiStorage(object):
         if not abspath.startswith(self.path):
             raise werkzeug.exceptions.Forbidden(_(u"Can't read or write outside of the pages repository"))
 
+
     def _file_path(self, title):
-        title = unicode(title).strip()
-        return os.path.join(self.path,
-                            werkzeug.url_quote(title, safe=''))
+        return os.path.join(self.repo_path, self._title_to_file(title))
 
     def _title_to_file(self, title):
         title = unicode(title).strip()

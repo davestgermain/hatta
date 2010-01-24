@@ -1474,19 +1474,15 @@ without would yet you your yours yourself yourselves""")).split())
     def reindex_page(self, page, title, cursor, text=None):
         """Updates the content of the database, needs locks around."""
 
-        mime = page_mime(title)
-        if not mime.startswith('text/'):
-            self.update_words(title, '', cursor=cursor)
-            return
         if text is None:
+            get_text = getattr(page, 'plain_text', lambda: u'')
             try:
-                text = self.storage.page_text(title)
+                text = get_text()
             except werkzeug.exceptions.NotFound:
                 text = u''
-        extract_links = getattr(page, 'extract_links', None)
-        if extract_links is not None:
-            links = extract_links(text)
-            self.update_links(title, links, cursor=cursor)
+        extract_links = getattr(page, 'extract_links', lambda: [])
+        if text:
+            self.update_links(title, extract_links(text), cursor=cursor)
         self.update_words(title, text, cursor=cursor)
 
     def update_page(self, page, title, data=None, text=None):
@@ -1948,6 +1944,15 @@ class WikiPageText(WikiPage):
         for line in lines:
             yield werkzeug.html(line)
         yield '</pre>'
+
+    def plain_text(self):
+        """
+        Get the content of the page with all markup removed, used for
+        indexing.
+        """
+
+        return self.storage.page_text(self.title)
+
 
     def view_content(self, lines=None):
         """Read the page content from storage or preview and return iterator."""

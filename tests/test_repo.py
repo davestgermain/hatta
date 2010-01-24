@@ -63,8 +63,24 @@ class TestSubdirectoryStorage(object):
     Tests for the WikiSubdirectoryStorage.
     """
 
-    # XXX Put your tests here.
+    author = u'test author'
+    text = u'test text'
+    comment = u'test comment'
 
+    @py.test.mark.xfail
+    def test_filename(self, repo):
+        """
+        Check if the page's file is named properly.
+        """
+
+        title = u'some/page.txt'
+        filename = 'some/page.txt'
+        filepath = os.path.join(repo.path, filename)
+        repo.save_text(title, self.text, self.author, self.comment, parent=-1)
+        exists = os.path.exists(filepath)
+        assert exists
+
+    # XXX Put your tests here.
 
 class TestMercurialStorage(object):
     """
@@ -86,8 +102,10 @@ class TestMercurialStorage(object):
         filename = '..%2Fsome%2F%2Bs%20page%2F%C4%85%C4%99%C5%9B%C4%87%3F.txt'
         filepath = os.path.join(repo.path, filename)
         repo.save_text(title, self.text, self.author, self.comment, parent=-1)
-        assert os.path.exists(filepath)
+        exists = os.path.exists(filepath)
+        assert exists
 
+    @py.test.mark.skipif("sys.platform == 'win32'")
     def test_symlinks(self, repo):
         """
         Make sure access to symlinks is blocked.
@@ -101,6 +119,7 @@ class TestMercurialStorage(object):
         py.test.raises(werkzeug.exceptions.Forbidden, repo.open_page,
                        self.title)
 
+    @py.test.mark.skipif("sys.platform == 'win32'")
     def test_symlinks_not_exist(self, repo):
         """
         Make sure symlinks are not reported as existing pages.
@@ -150,6 +169,7 @@ class TestMercurialStorage(object):
         py.test.raises(werkzeug.exceptions.Forbidden, repo.delete_page,
                        self.title, self.author, self.comment)
 
+    @py.test.mark.skipif("sys.platform == 'win32'")
     def test_symlink_delete(self, repo):
         """
         What happens when you try to delete a symlink as page.

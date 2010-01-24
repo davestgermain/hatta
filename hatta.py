@@ -98,6 +98,33 @@ def external_link(addr):
             or addr.startswith('ftp://')
             or addr.startswith('mailto:'))
 
+def page_mime(title):
+    """
+    Guess page's mime type ased on corresponding file name.
+    Default ot text/x-wiki for files without an extension.
+
+    >>> page_mime(u'something.txt')
+    'text/plain'
+    >>> page_mime(u'SomePage')
+    'text/x-wiki'
+    >>> page_mime(u'ąęśUnicodePage')
+    'text/x-wiki'
+    >>> page_mime(u'image.png')
+    'image/png'
+    >>> page_mime(u'style.css')
+    'text/css'
+    >>> page_mime(u'archive.tar.gz')
+    'archive/gzip'
+    """
+
+    addr = title.encode('utf-8') # the encoding doesn't relly matter here
+    mime, encoding = mimetypes.guess_type(addr, strict=False)
+    if encoding:
+        mime = 'archive/%s' % encoding
+    if mime is None:
+        mime = 'text/x-wiki'
+    return mime
+
 
 class WikiConfig(object):
     """
@@ -541,32 +568,6 @@ class WikiStorage(object):
 
         return self._changectx().rev()
 
-    def page_mime(self, title):
-        """
-        Guess page's mime type ased on corresponding file name.
-        Default ot text/x-wiki for files without an extension.
-
-        >>> page_mime('something.txt')
-        'text/plain'
-        >>> page_mime('SomePage')
-        'text/x-wiki'
-        >>> page_mime(u'ąęśUnicodePage')
-        'text/x-wiki'
-        >>> page_mime('image.png')
-        'image/png'
-        >>> page_mime('style.css')
-        'text/css'
-        >>> page_mime('archive.tar.gz')
-        'archive/gzip'
-        """
-
-        addr = self._file_path(title)
-        mime, encoding = mimetypes.guess_type(addr, strict=False)
-        if encoding:
-            mime = 'archive/%s' % encoding
-        if mime is None:
-            mime = 'text/x-wiki'
-        return mime
 
     def _changectx(self):
         """Get the changectx of the tip."""
@@ -1473,7 +1474,7 @@ without would yet you your yours yourself yourselves""")).split())
     def reindex_page(self, page, title, cursor, text=None):
         """Updates the content of the database, needs locks around."""
 
-        mime = self.storage.page_mime(title)
+        mime = page_mime(title)
         if not mime.startswith('text/'):
             self.update_words(title, '', cursor=cursor)
             return
@@ -1749,7 +1750,7 @@ class WikiPage(object):
         if addr == '':
             return html.a(name=chunk)
         if addr in self.storage:
-            mime = self.storage.page_mime(addr)
+            mime = page_mime(addr)
             if mime.startswith('image/'):
                 return html.img(src=self.get_download_url(addr), class_=class_,
                                 alt=alt)
@@ -2571,7 +2572,7 @@ dd {font-style: italic; }
             try:
                 page_class, mime = self.filename_map[title]
             except KeyError:
-                mime = self.storage.page_mime(title)
+                mime = page_mime(title)
                 major, minor = mime.split('/', 1)
                 try:
                     page_class = self.mime_map[mime]
@@ -2878,7 +2879,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
     def download(self, request, title):
         """Serve the raw content of a page."""
 
-        mime = self.storage.page_mime(title)
+        mime = page_mime(title)
         if mime == 'text/x-wiki':
             mime = 'text/plain'
         f = self.storage.open_page(title)

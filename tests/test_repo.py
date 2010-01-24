@@ -8,6 +8,8 @@ directory.
 """
 
 import os
+import sys
+
 import hatta
 import py
 
@@ -40,37 +42,35 @@ def pytest_funcarg__repo(request):
     request.addfinalizer(lambda: clear_directory(repo_path))
     return hatta.WikiStorage(repo_path)
 
-class TestMercurialStorage(object):
+
+class TestStorage(object):
     """
     This class groups the general tests for Hatta storage that should
     always pass, no matter what configuration is used.
     """
+
+    text = u"test text"
+    title = u"test title"
+    author = u"test author"
+    comment = u"test comment"
 
     def test_save_text(self, repo):
         """
         Create a page and read its contents, verify that it matches.
         """
 
-        text = u"test text"
-        title = u"test title"
-        author = u"test author"
-        comment = u"test comment"
-        repo.save_text(title, text, author, comment, parent=-1)
-        saved = repo.open_page(title).read()
-        assert saved == text
+        repo.save_text(self.title, self.text, self.author, self.comment, parent=-1)
+        saved = repo.open_page(self.title).read()
+        assert saved == self.text
 
     def test_save_text_noparent(self, repo):
         """
         Save a page with parent set to None.
         """
 
-        text = u"test text"
-        title = u"test title"
-        author = u"test author"
-        comment = u"test comment"
-        repo.save_text(title, text, author, comment, parent=None)
-        saved = repo.open_page(title).read()
-        assert saved == text
+        repo.save_text(self.title, self.text, self.author, self.comment, parent=None)
+        saved = repo.open_page(self.title).read()
+        assert saved == self.text
 
     def test_save_merge_no_conflict(self, repo):
         """
@@ -79,12 +79,9 @@ class TestMercurialStorage(object):
         """
 
         text = u"test\ntext"
-        title = u"test title"
-        author = u"test author"
-        comment = u"test comment"
-        repo.save_text(title, text, author, comment, parent=-1)
-        repo.save_text(title, text, author, comment, parent=-1)
-        saved = repo.open_page(title).read()
+        repo.save_text(self.title, text, self.author, self.comment, parent=-1)
+        repo.save_text(self.title, text, self.author, self.comment, parent=-1)
+        saved = repo.open_page(self.title).read()
         assert saved == text
 
     def test_save_merge_line_conflict(self, repo):
@@ -105,13 +102,10 @@ class TestMercurialStorage(object):
 123
 111
 789"""
-        title = u"test title"
-        author = u"test author"
-        comment = u"test comment"
-        repo.save_text(title, text, author, comment, parent=-1)
-        repo.save_text(title, text1, author, comment, parent=0)
-        repo.save_text(title, text2, author, comment, parent=0)
-        saved = repo.open_page(title).read()
+        repo.save_text(self.title, text, self.author, self.comment, parent=-1)
+        repo.save_text(self.title, text1, self.author, self.comment, parent=0)
+        repo.save_text(self.title, text2, self.author, self.comment, parent=0)
+        saved = repo.open_page(self.title).read()
         assert saved == u"""\
 123
 <<<<<<< local
@@ -126,11 +120,7 @@ class TestMercurialStorage(object):
         Create and delete a page.
         """
 
-        text = u"text test"
-        title = u"test title"
-        author = u"test author"
-        comment = u"test comment"
-        repo.save_text(title, text, author, comment, parent=-1)
-        assert title in repo
-        repo.delete_page(title, author, comment)
-        assert title not in repo
+        repo.save_text(self.title, self.text, self.author, self.comment, parent=-1)
+        assert self.title in repo
+        repo.delete_page(self.title, self.author, self.comment)
+        assert self.title not in repo

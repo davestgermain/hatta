@@ -707,6 +707,12 @@ class WikiSubdirectoryStorage(WikiStorage):
         super(WikiSubdirectoryStorage, self).save_file(title, file_name,
                                                        author, comment, parent)
 
+    def delete_page(self, title, author=u'', comment=u''):
+        super(WikiSubdirectoryStorage, self).delete_page(title, author, comment)
+        file_path = self._file_path(title)
+        self._check_path(file_path)
+        dir_path = os.path.dirname(file_path)
+        os.removedirs(dir_path)
 
 class WikiParser(object):
     r"""

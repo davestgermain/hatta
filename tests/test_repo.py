@@ -95,6 +95,18 @@ class TestSubdirectoryStorage(object):
             exists = os.path.exists(filepath)
             assert exists
 
+    def test_subdirectory_delete(self, subdir_repo):
+        title = u'foo/bar'
+        filepath = os.path.join(subdir_repo.path, 'foo/bar')
+        dirpath = os.path.join(subdir_repo.path, 'foo')
+        subdir_repo.save_text(title, self.text, self.author, self.comment,
+                              parent=-1)
+        subdir_repo.delete_page(title, self.author, self.comment)
+        exists = os.path.exists(filepath)
+        assert not exists
+        exists = os.path.exists(dirpath)
+        assert not exists
+
 
 class TestMercurialStorage(object):
     """

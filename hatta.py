@@ -409,8 +409,8 @@ class WikiStorage(object):
         text = comment.encode('utf-8') or _(u'comment').encode('utf-8')
         repo_file = self._title_to_file(title)
         file_path = self._file_path(title)
-        if os.path.islink(file_path):
-            raise werkzeug.exceptions.Forbidden(_(u"Can't edit symbolic links"))
+        if os.path.islink(file_path) or os.path.isdir(file_path):
+            raise werkzeug.exceptions.Forbidden(_(u"Can't edit symbolic links or directories"))
         mercurial.util.rename(file_name, file_path)
         changectx = self._changectx()
         try:
@@ -480,8 +480,8 @@ class WikiStorage(object):
         text = comment.encode('utf-8') or 'deleted'
         repo_file = self._title_to_file(title)
         file_path = self._file_path(title)
-        if os.path.islink(file_path):
-            raise werkzeug.exceptions.Forbidden(_(u"Can't edit symbolic links"))
+        if os.path.islink(file_path) or os.path.isdir(file_path):
+            raise werkzeug.exceptions.Forbidden(_(u"Can't edit symbolic links or directories"))
         try:
             os.unlink(file_path)
         except OSError:
@@ -493,8 +493,8 @@ class WikiStorage(object):
         """Open the page and return a file-like object with its contents."""
 
         file_path = self._file_path(title)
-        if os.path.islink(file_path):
-            raise werkzeug.exceptions.Forbidden(_(u"Can't read symbolic links"))
+        if os.path.islink(file_path) or os.path.isdir(file_path):
+            raise werkzeug.exceptions.Forbidden(_(u"Can't read symbolic links or directories"))
         try:
             return open(file_path, "rb")
         except IOError:
@@ -1912,7 +1912,7 @@ class WikiPageText(WikiPage):
             rev = -1
         except werkzeug.exceptions.Forbidden:
             yield werkzeug.html.p(
-                werkzeug.html(_(u"Can't edit symbolic links")))
+                werkzeug.html(_(u"Can't edit symbolic links or directories")))
             return
         if preview:
             lines = preview

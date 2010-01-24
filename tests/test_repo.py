@@ -100,6 +100,47 @@ class TestMercurialStorage(object):
         os.mkdir(path)
         assert self.title not in repo
 
+    def test_directory_read(self, repo):
+        """
+        What happens when you try to read a directory as page.
+        """
+
+        path = os.path.join(repo.path, self.filename)
+        os.mkdir(path)
+        py.test.raises(werkzeug.exceptions.Forbidden, repo.open_page,
+                       self.title)
+
+    def test_directory_write(self, repo):
+        """
+        What happens when you try to write a directory as page.
+        """
+
+        path = os.path.join(repo.path, self.filename)
+        os.mkdir(path)
+        py.test.raises(werkzeug.exceptions.Forbidden, repo.save_text,
+                       self.title, self.text, self.author, self.comment,
+                       parent=-1)
+
+    def test_directory_delete(self, repo):
+        """
+        What happens when you try to delete a directory as page.
+        """
+
+        path = os.path.join(repo.path, self.filename)
+        os.mkdir(path)
+        py.test.raises(werkzeug.exceptions.Forbidden, repo.delete_page,
+                       self.title, self.author, self.comment)
+
+    def test_symlink_delete(self, repo):
+        """
+        What happens when you try to delete a symlink as page.
+        """
+
+        path = os.path.join(repo.path, self.filename)
+        os.symlink('/', path)
+        py.test.raises(werkzeug.exceptions.Forbidden, repo.delete_page,
+                       self.title, self.author, self.comment)
+
 class TestStorage(object):
     """
     This class groups the general tests for Hatta storage that should

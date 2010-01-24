@@ -47,6 +47,25 @@ def pytest_funcarg__repo(request):
     request.addfinalizer(lambda: clear_directory(repo_path))
     return hatta.WikiStorage(repo_path)
 
+def pytest_funcarg__subdir_repo(request):
+    """
+    This function is executed whenever a test needs a "repo" parameter.
+    It creates a new WikiSubdirectoryStorage object with Hatta repository in a
+    temporary directory.
+    """
+
+    repo_path = str(request.config.ensuretemp('repo'))
+    request.addfinalizer(lambda: clear_directory(repo_path))
+    return hatta.WikiSubdirectoryStorage(repo_path)
+
+class TestSubdirectoryStorage(object):
+    """
+    Tests for the WikiSubdirectoryStorage.
+    """
+
+    # XXX Put your tests here.
+
+
 class TestMercurialStorage(object):
     """
     Groups tests specific to Hatta's default storage.

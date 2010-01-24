@@ -184,6 +184,9 @@ class WikiConfig(object):
         add('-P', '--pygments-style', dest='pygments_style',
             help='Use the STYLE pygments style for highlighting',
             metavar='STYLE')
+        add('-D', '--subdirectories', dest='subdirectories',
+            action="store_true",
+            help='Store subpages as subdirectories in the filesystem')
 
         options, args = parser.parse_args()
         for option, value in options.__dict__.iteritems():
@@ -661,6 +664,17 @@ class WikiStorage(object):
         for filename in modified+added+removed+deleted:
             if filename.startswith(self.repo_prefix):
                 yield self._file_to_title(filename)
+
+
+class WikiSubdirectoryStorage(WikiStorage):
+    """
+    A version of WikiStorage that keeps the subpages in real subdirectories in
+    the filesystem.
+
+    """
+
+    # XXX Override required methods here.
+
 
 class WikiParser(object):
     r"""
@@ -2445,8 +2459,11 @@ dd {font-style: italic; }
         self.read_only = self.config.get_bool('read_only', False)
         self.icon_page = self.config.get('icon_page', None)
         self.pygments_style = self.config.get('pygments_style', 'tango')
-
-        self.storage = self.storage_class(self.path, self.page_charset)
+        self.subdirectories = self.config.get_bool('subdirectories', False)
+        if self.subdirectories:
+            self.storage = WikiSubdirectoryStorage(self.path, self.page_charset)
+        else:
+            self.storage = self.storage_class(self.path, self.page_charset)
         if not os.path.isdir(self.cache):
             os.makedirs(self.cache)
             reindex = True

@@ -305,7 +305,7 @@ class WikiStorage(object):
         """
 
         self.charset = charset or 'utf-8'
-        self.path = path
+        self.path = os.path.abspath(path)
         if not os.path.exists(self.path):
             os.makedirs(self.path)
         self.repo_path = self._find_repo_path(self.path)
@@ -354,6 +354,18 @@ class WikiStorage(object):
             if path == old_path:
                 return None
         return path
+
+
+    def _check_path(self, path):
+        """
+        Ensure that the path is within allowed bounds.
+        """
+
+        abspath = os.path.abspath(path)
+        if os.path.islink(path) or os.path.isdir(path):
+            raise werkzeug.exceptions.Forbidden(_(u"Can't use symbolic links or directories as pages"))
+        if not abspath.startswith(self.path):
+            raise werkzeug.exceptions.Forbidden(_(u"Can't read or write outside of the pages repository"))
 
     def _file_path(self, title):
         title = unicode(title).strip()
@@ -412,8 +424,7 @@ class WikiStorage(object):
         text = comment.encode('utf-8') or _(u'comment').encode('utf-8')
         repo_file = self._title_to_file(title)
         file_path = self._file_path(title)
-        if os.path.islink(file_path) or os.path.isdir(file_path):
-            raise werkzeug.exceptions.Forbidden(_(u"Can't edit symbolic links or directories"))
+        self._check_path(file_path)
         mercurial.util.rename(file_name, file_path)
         changectx = self._changectx()
         try:
@@ -483,8 +494,7 @@ class WikiStorage(object):
         text = comment.encode('utf-8') or 'deleted'
         repo_file = self._title_to_file(title)
         file_path = self._file_path(title)
-        if os.path.islink(file_path) or os.path.isdir(file_path):
-            raise werkzeug.exceptions.Forbidden(_(u"Can't edit symbolic links or directories"))
+        self._check_path(file_path)
         try:
             os.unlink(file_path)
         except OSError:
@@ -496,8 +506,7 @@ class WikiStorage(object):
         """Open the page and return a file-like object with its contents."""
 
         file_path = self._file_path(title)
-        if os.path.islink(file_path) or os.path.isdir(file_path):
-            raise werkzeug.exceptions.Forbidden(_(u"Can't read symbolic links or directories"))
+        self._check_path(file_path)
         try:
             return open(file_path, "rb")
         except IOError:

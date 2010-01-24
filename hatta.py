@@ -681,7 +681,31 @@ class WikiSubdirectoryStorage(WikiStorage):
 
     """
 
-    # XXX Override required methods here.
+    periods_re = re.compile(r'^[.]|(?<=/)[.]')
+    slashes_re = re.compile(r'^[/]|(?<=/)[/]')
+
+    def _title_to_file(self, title):
+        """Modified escaping to allow slashes and spaces."""
+
+        title = unicode(title).strip()
+        escaped = werkzeug.url_quote(title, safe='/ ')
+        path = os.path.join(self.repo_prefix, escaped)
+        path = self.periods_re.sub('%2E', path)
+        path = self.slashes_re.sub('%2F', path)
+        return path
+
+    def save_file(self, title, file_name, author=u'', comment=u'', parent=None):
+        """Make the subdirectories if needed."""
+
+        file_path = self._file_path(title)
+        self._check_path(file_path)
+        dir_path = os.path.dirname(file_path)
+        try:
+            os.makedirs(dir_path)
+        except OSError:
+            pass
+        super(WikiSubdirectoryStorage, self).save_file(title, file_name,
+                                                       author, comment, parent)
 
 
 class WikiParser(object):
@@ -1932,9 +1956,9 @@ class WikiPageText(WikiPage):
         except werkzeug.exceptions.NotFound:
             comment = _(u'created')
             rev = -1
-        except werkzeug.exceptions.Forbidden:
+        except werkzeug.exceptions.Forbidden, e:
             yield werkzeug.html.p(
-                werkzeug.html(_(u"Can't edit symbolic links or directories")))
+                werkzeug.html(_(unicode(e))))
             return
         if preview:
             lines = preview

@@ -67,20 +67,34 @@ class TestSubdirectoryStorage(object):
     text = u'test text'
     comment = u'test comment'
 
-    @py.test.mark.xfail
-    def test_filename(self, repo):
+    title_encodings = {
+        u'test title': 'test title',
+        u'.test title': '%2Etest title',
+        u'../test title': '%2E./test title',
+        u'test/./title': 'test/%2E/title',
+        u'test/../title': 'test/%2E./title',
+        u'test//title': 'test/%2Ftitle',
+        u'/test/title': '%2Ftest/title',
+    }
+
+
+    def test_title_to_file(self, subdir_repo):
+        for title, filename in self.title_encodings.iteritems():
+            escaped = subdir_repo._title_to_file(title)
+            assert escaped == filename
+
+    def test_filename(self, subdir_repo):
         """
         Check if the page's file is named properly.
         """
 
-        title = u'some/page.txt'
-        filename = 'some/page.txt'
-        filepath = os.path.join(repo.path, filename)
-        repo.save_text(title, self.text, self.author, self.comment, parent=-1)
-        exists = os.path.exists(filepath)
-        assert exists
+        for title, filename in self.title_encodings.iteritems():
+            filepath = os.path.join(subdir_repo.path, filename)
+            subdir_repo.save_text(title, self.text, self.author, self.comment,
+                                  parent=-1)
+            exists = os.path.exists(filepath)
+            assert exists
 
-    # XXX Put your tests here.
 
 class TestMercurialStorage(object):
     """
@@ -104,6 +118,18 @@ class TestMercurialStorage(object):
         repo.save_text(title, self.text, self.author, self.comment, parent=-1)
         exists = os.path.exists(filepath)
         assert exists
+
+    def test_check_path(self, repo):
+        py.test.raises(werkzeug.exceptions.Forbidden, repo._check_path, "/")
+        py.test.raises(werkzeug.exceptions.Forbidden, repo._check_path, "..")
+        py.test.raises(werkzeug.exceptions.Forbidden, repo._check_path,
+                       repo.path+"/..")
+        path = os.path.join(repo.path, 'aaa')
+        os.symlink('/', path)
+        py.test.raises(werkzeug.exceptions.Forbidden, repo._check_path, path)
+        path = os.path.join(repo.path, 'bbb')
+        os.mkdir(path)
+        py.test.raises(werkzeug.exceptions.Forbidden, repo._check_path, path)
 
     @py.test.mark.skipif("sys.platform == 'win32'")
     def test_symlinks(self, repo):

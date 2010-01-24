@@ -685,7 +685,7 @@ class WikiSubdirectoryStorage(WikiStorage):
     slashes_re = re.compile(r'^[/]|(?<=/)[/]')
 
     def _title_to_file(self, title):
-        """Modified escaping to allow slashes and spaces."""
+        """Modified escaping allowing (some) slashes and spaces."""
 
         title = unicode(title).strip()
         escaped = werkzeug.url_quote(title, safe='/ ')
@@ -695,7 +695,9 @@ class WikiSubdirectoryStorage(WikiStorage):
         return path
 
     def save_file(self, title, file_name, author=u'', comment=u'', parent=None):
-        """Make the subdirectories if needed."""
+        """
+        Save the file and make the subdirectories if needed.
+        """
 
         file_path = self._file_path(title)
         self._check_path(file_path)
@@ -708,11 +710,19 @@ class WikiSubdirectoryStorage(WikiStorage):
                                                        author, comment, parent)
 
     def delete_page(self, title, author=u'', comment=u''):
+        """
+        Remove empty directories after deleting a page.
+
+        Note that Mercurial doesn't track directories, so we don't have to
+        commit after removing empty directories.
+        """
+
         super(WikiSubdirectoryStorage, self).delete_page(title, author, comment)
         file_path = self._file_path(title)
         self._check_path(file_path)
         dir_path = os.path.dirname(file_path)
         os.removedirs(dir_path)
+
 
 class WikiParser(object):
     r"""

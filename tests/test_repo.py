@@ -82,6 +82,24 @@ class TestMercurialStorage(object):
         py.test.raises(werkzeug.exceptions.Forbidden, repo.open_page,
                        self.title)
 
+    def test_symlinks_not_exist(self, repo):
+        """
+        Make sure symlinks are not reported as existing pages.
+        """
+
+        path = os.path.join(repo.path, self.filename)
+        os.symlink('/', path)
+        assert self.title not in repo
+
+    def test_directories_not_exist(self, repo):
+        """
+        Make sure direcotries are not reported as existing pages.
+        """
+
+        path = os.path.join(repo.path, self.filename)
+        os.mkdir(path)
+        assert self.title not in repo
+
 class TestStorage(object):
     """
     This class groups the general tests for Hatta storage that should

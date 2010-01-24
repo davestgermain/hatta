@@ -689,9 +689,9 @@ class WikiSubdirectoryStorage(WikiStorage):
 
         title = unicode(title).strip()
         escaped = werkzeug.url_quote(title, safe='/ ')
+        escaped = self.periods_re.sub('%2E', escaped)
+        escaped = self.slashes_re.sub('%2F', escaped)
         path = os.path.join(self.repo_prefix, escaped)
-        path = self.periods_re.sub('%2E', path)
-        path = self.slashes_re.sub('%2F', path)
         return path
 
     def save_file(self, title, file_name, author=u'', comment=u'', parent=None):

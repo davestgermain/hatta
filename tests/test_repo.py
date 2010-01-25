@@ -115,6 +115,27 @@ class TestSubdirectoryStorage(object):
         exists = os.path.exists(dirpath)
         assert not exists
 
+    def test_create_parent(self, subdir_repo):
+        """
+        Make sure you can't create a parent page of existsing page.
+        """
+
+        subdir_repo.save_text(u'xxx/yyy', self.text, self.author, self.comment,
+                              parent=-1)
+        py.test.raises(werkzeug.exceptions.Forbidden, subdir_repo.save_text,
+                       u'xxx', self.text, self.author, self.comment,
+                       parent=-1)
+
+    def test_create_subpage(self, subdir_repo):
+        """
+        Make sure you can't create a subpage of existsing page.
+        """
+
+        subdir_repo.save_text(u'xxx', self.text, self.author, self.comment,
+                              parent=-1)
+        py.test.raises(werkzeug.exceptions.Forbidden, subdir_repo.save_text,
+                       u'xxx/yyy', self.text, self.author, self.comment,
+                       parent=-1)
 
 class TestMercurialStorage(object):
     """
@@ -225,6 +246,7 @@ class TestMercurialStorage(object):
         os.symlink('/', path)
         py.test.raises(werkzeug.exceptions.Forbidden, repo.delete_page,
                        self.title, self.author, self.comment)
+
 
 class TestStorage(object):
     """

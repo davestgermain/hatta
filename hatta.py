@@ -706,9 +706,11 @@ class WikiSubdirectoryStorage(WikiStorage):
         try:
             os.makedirs(dir_path)
         except OSError, e:
-            if e.errno != 17 or not os.path.isdir(dir_path):
+            if e.errno == 17 and not os.path.isdir(dir_path):
                 raise werkzeug.exceptions.Forbidden(
                     _(u"Can't make subpages of existing pages"))
+            elif e.errno != 17:
+                raise
         super(WikiSubdirectoryStorage, self).save_file(title, file_name,
                                                        author, comment, parent)
 

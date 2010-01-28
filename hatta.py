@@ -1479,12 +1479,12 @@ without would yet you your yours yourself yourselves""")).split())
         """Updates the content of the database, needs locks around."""
 
         if text is None:
-            get_text = getattr(page, 'plain_text', lambda: u'')
+            get_text = getattr(page, 'plain_text', lambda x: u'')
             try:
                 text = get_text()
             except werkzeug.exceptions.NotFound:
                 text = u''
-        extract_links = getattr(page, 'extract_links', lambda: [])
+        extract_links = getattr(page, 'extract_links', lambda x: [])
         if text:
             self.update_links(title, extract_links(text), cursor=cursor)
         self.update_words(title, text, cursor=cursor)

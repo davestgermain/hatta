@@ -1479,7 +1479,7 @@ without would yet you your yours yourself yourselves""")).split())
         """Updates the content of the database, needs locks around."""
 
         if text is None:
-            get_text = getattr(page, 'plain_text', lambda x: u'')
+            get_text = getattr(page, 'plain_text', lambda: u'')
             try:
                 text = get_text()
             except werkzeug.exceptions.NotFound:

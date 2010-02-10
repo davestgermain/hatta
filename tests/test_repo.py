@@ -153,12 +153,23 @@ class TestMercurialStorage(object):
         Check if the page's file is named properly.
         """
 
-        title = u'../some/+s page/ąęść?.txt'
-        filename = '_..%2Fsome%2F%2Bs%20page%2F%C4%85%C4%99%C5%9B%C4%87%3F.txt'
-        filepath = os.path.join(repo.path, filename)
-        repo.save_text(title, self.text, self.author, self.comment, parent=-1)
-        exists = os.path.exists(filepath)
-        assert exists
+        files = {
+            u'../some/+s page/ąęść?.txt':
+                '_..%2Fsome%2F%2Bs%20page%2F%C4%85%C4%99%C5%9B%C4%87%3F.txt',
+            u'simple': 'simple',
+            u'COM1': '_COM1',
+            u'_weird': '__weird',
+            u'/absolute': '%2Fabsolute',
+            u'slash/': 'slash%2F',
+            u'%percent%': '%25percent%25',
+        }
+        for title, filename in files.iteritems():
+            filepath = os.path.join(repo.path, filename)
+            repo.save_text(title, self.text, self.author, self.comment,
+                           parent=-1)
+            exists = os.path.exists(filepath)
+            print '%s -> %s' % (repr(title), filename)
+            assert exists
 
     def test_check_path(self, repo):
         py.test.raises(werkzeug.exceptions.Forbidden, repo._check_path, "/")

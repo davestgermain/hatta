@@ -2894,7 +2894,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         try:
             wrap_file = werkzeug.wrap_file
         except AttributeError:
-            wrap_file = lambda x, y:x
+            wrap_file = lambda x, y:y
         f = wrap_file(request.environ, self.storage.open_page(title))
         response = self.response(request, title, f, '/download', mime, size=-1)
         response.direct_passthrough = True
@@ -2957,7 +2957,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         try:
             wrap_file = werkzeug.wrap_file
         except AttributeError:
-            wrap_file = lambda x, y:x
+            wrap_file = lambda x, y:y
         f = wrap_file(request.environ, open(cache_file))
         response = self.response(request, title, f, '/render', cache_mime,
                                  size=cache_size)

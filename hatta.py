@@ -382,7 +382,6 @@ class WikiStorage(object):
                 return None
         return path
 
-
     def _check_path(self, path):
         """
         Ensure that the path is within allowed bounds.
@@ -390,22 +389,35 @@ class WikiStorage(object):
 
         abspath = os.path.abspath(path)
         if os.path.islink(path) or os.path.isdir(path):
-            raise werkzeug.exceptions.Forbidden(_(u"Can't use symbolic links or directories as pages"))
+            raise werkzeug.exceptions.Forbidden(
+                _(u"Can't use symbolic links or directories as pages"))
         if not abspath.startswith(self.path):
-            raise werkzeug.exceptions.Forbidden(_(u"Can't read or write outside of the pages repository"))
-
+            raise werkzeug.exceptions.Forbidden(
+                _(u"Can't read or write outside of the pages repository"))
 
     def _file_path(self, title):
         return os.path.join(self.repo_path, self._title_to_file(title))
 
     def _title_to_file(self, title):
         title = unicode(title).strip()
-        return os.path.join(self.repo_prefix,
-                            werkzeug.url_quote(title, safe=''))
+        filename = werkzeug.url_quote(title, safe='')
+        # Escape special windows filenames and dot files
+        _windows_device_files = ('CON', 'AUX', 'COM1', 'COM2', 'COM3',
+                                 'COM4', 'LPT1', 'LPT2', 'LPT3', 'PRN',
+                                 'NUL')
+        if (filename.split('.')[0].upper() in _windows_device_files or
+            filename.startswith('_') or filename.startswith('.')):
+            filename = '_' + filename
+        return os.path.join(self.repo_prefix, filename)
 
-    def _file_to_title(self, filename):
-        assert filename.startswith(self.repo_prefix)
-        name = filename[len(self.repo_prefix):].strip('/')
+    def _file_to_title(self, filepath):
+        if not filepath.startswith(self.repo_prefix):
+            raise werkzeug.exceptions.Forbidden(
+                _(u"Can't read or write outside of the pages repository"))
+        name = filepath[len(self.repo_prefix):].strip('/')
+        # Unescape special windows filenames and dot files
+        if name.startswith('_') and len(name)>1:
+            name = name[1:]
         return werkzeug.url_unquote(name)
 
     def __contains__(self, title):

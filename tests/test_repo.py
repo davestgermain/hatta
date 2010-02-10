@@ -154,7 +154,7 @@ class TestMercurialStorage(object):
         """
 
         title = u'../some/+s page/ąęść?.txt'
-        filename = '..%2Fsome%2F%2Bs%20page%2F%C4%85%C4%99%C5%9B%C4%87%3F.txt'
+        filename = '_..%2Fsome%2F%2Bs%20page%2F%C4%85%C4%99%C5%9B%C4%87%3F.txt'
         filepath = os.path.join(repo.path, filename)
         repo.save_text(title, self.text, self.author, self.comment, parent=-1)
         exists = os.path.exists(filepath)

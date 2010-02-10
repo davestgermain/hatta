@@ -2886,13 +2886,18 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return response
 
     def download(self, request, title):
-        """Serve the raw content of a page."""
+        """Serve the raw content of a page directly from disk."""
 
         mime = page_mime(title)
         if mime == 'text/x-wiki':
             mime = 'text/plain'
-        f = self.storage.open_page(title)
+        try:
+            wrap_file = werkzeug.wrap_file
+        except AttributeError:
+            wrap_file = lambda x, y:x
+        f = wrap_file(request.environ, self.storage.open_page(title))
         response = self.response(request, title, f, '/download', mime, size=-1)
+        response.direct_passthrough = True
         return response
 
     def render(self, request, title):
@@ -2949,9 +2954,14 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                 mercurial.util.rename(result_file, cache_file)
             finally:
                 rm_temp_dir(temp_dir)
-        f = open(cache_file)
+        try:
+            wrap_file = werkzeug.wrap_file
+        except AttributeError:
+            wrap_file = lambda x, y:x
+        f = wrap_file(request.environ, open(cache_file))
         response = self.response(request, title, f, '/render', cache_mime,
                                  size=cache_size)
+        response.direct_passthrough = True
         return response
 
     def undo(self, request, title):

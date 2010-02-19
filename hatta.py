@@ -820,7 +820,7 @@ class WikiParser(object):
         "math": (100, ur"\$\$(?P<math_text>[^$]+)\$\$"),
         "mono": (110, ur"##"),
         "newline": (120, ur"\n"),
-        "punct": (130, ur'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+])|\b|$)' %
+        "punct": (130, ur'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+"\'—-])|\b|$)' %
                   ur"|".join(re.escape(k) for k in punct)),
         "table": (140, ur"=?\|=?"),
         "text": (150, ur".+?"),

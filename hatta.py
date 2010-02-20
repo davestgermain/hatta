@@ -126,6 +126,30 @@ def page_mime(title):
     return mime
 
 
+class WikiError(werkzeug.exceptions.HTTPException):
+    """Base class for all error pages."""
+
+
+class ForbiddenErrErr(WikiError):
+    code = 403
+
+
+class NotFoundErrErr(WikiError):
+    code = 404
+
+
+class UnsupportedMediaTypeErr(WikiError):
+    code = 415
+
+
+class NotImplementedErr(WikiError):
+    code = 501
+
+
+class ServiceUnavailableErr(WikiError):
+    code = 503
+
+
 class WikiConfig(object):
     """
     Responsible for reading and storing site configuration. Contains the
@@ -389,10 +413,10 @@ class WikiStorage(object):
 
         abspath = os.path.abspath(path)
         if os.path.islink(path) or os.path.isdir(path):
-            raise werkzeug.exceptions.Forbidden(
+            raise ForbiddenErr(
                 _(u"Can't use symbolic links or directories as pages"))
         if not abspath.startswith(self.path):
-            raise werkzeug.exceptions.Forbidden(
+            raise ForbiddenErr(
                 _(u"Can't read or write outside of the pages repository"))
 
     def _file_path(self, title):
@@ -412,7 +436,7 @@ class WikiStorage(object):
 
     def _file_to_title(self, filepath):
         if not filepath.startswith(self.repo_prefix):
-            raise werkzeug.exceptions.Forbidden(
+            raise ForbiddenErr(
                 _(u"Can't read or write outside of the pages repository"))
         name = filepath[len(self.repo_prefix):].strip('/')
         # Unescape special windows filenames and dot files
@@ -548,7 +572,7 @@ class WikiStorage(object):
         try:
             return open(file_path, "rb")
         except IOError:
-            raise werkzeug.exceptions.NotFound()
+            raise NotFoundErr()
 
     def page_file_meta(self, title):
         """Get page's inode number, size and last modification time."""
@@ -565,7 +589,7 @@ class WikiStorage(object):
 
         filectx_tip = self._find_filectx(title)
         if filectx_tip is None:
-            raise werkzeug.exceptions.NotFound()
+            raise NotFoundErr()
             #return -1, None, u'', u''
         rev = filectx_tip.filerev()
         filectx = filectx_tip.filectx(rev)
@@ -627,11 +651,11 @@ class WikiStorage(object):
 
         filectx_tip = self._find_filectx(title)
         if filectx_tip is None:
-            raise werkzeug.exceptions.NotFound()
+            raise NotFoundErr()
         try:
             data = filectx_tip.filectx(rev).data()
         except IndexError:
-            raise werkzeug.exceptions.NotFound()
+            raise NotFoundErr()
         return data
 
     def revision_text(self, title, rev):
@@ -719,7 +743,7 @@ class WikiSubdirectoryStorage(WikiStorage):
             os.makedirs(dir_path)
         except OSError, e:
             if e.errno == 17 and not os.path.isdir(dir_path):
-                raise werkzeug.exceptions.Forbidden(
+                raise ForbiddenErr(
                     _(u"Can't make subpages of existing pages"))
             elif e.errno != 17:
                 raise
@@ -1494,7 +1518,7 @@ without would yet you your yours yourself yourselves""")).split())
             get_text = getattr(page, 'plain_text', lambda: u'')
             try:
                 text = get_text()
-            except werkzeug.exceptions.NotFound:
+            except NotFoundErr:
                 text = u''
         extract_links = getattr(page, 'extract_links', lambda x: [])
         if text:
@@ -1869,7 +1893,7 @@ class WikiPage(object):
             try:
                 self.wiki._check_lock(self.title)
                 edit_url = self.get_url(self.title, self.wiki.edit)
-            except werkzeug.exceptions.Forbidden:
+            except ForbiddenErr:
                 pass
 
         yield u"""\
@@ -1914,7 +1938,7 @@ class WikiPage(object):
         try:
             self.wiki._check_lock(title)
             read_only = False
-        except werkzeug.exceptions.Forbidden:
+        except ForbiddenErr:
             read_only = True
         for rev, date, author, comment in self.wiki.storage.page_history(title):
             if max_rev < rev:
@@ -1991,10 +2015,10 @@ class WikiPageText(WikiPage):
             comment = _(u'modified')
             if old_author == author:
                 comment = old_comment
-        except werkzeug.exceptions.NotFound:
+        except NotFoundErr:
             comment = _(u'created')
             rev = -1
-        except werkzeug.exceptions.Forbidden, e:
+        except ForbiddenErr, e:
             yield werkzeug.html.p(
                 werkzeug.html(_(unicode(e))))
             return
@@ -2116,7 +2140,7 @@ class WikiPageColorText(WikiPageText):
                 lexer = pygments.lexers.get_lexer_by_name(syntax)
             else:
                 lexer = pygments.lexers.guess_lexer(text)
-        except pygments.util.ClassNotFound:
+        except pygments.util.ClassNotFoundErr:
             yield werkzeug.html.pre(werkzeug.html(text))
             return
         html = pygments.highlight(text, lexer, formatter)
@@ -2143,7 +2167,7 @@ class WikiPageWiki(WikiPageColorText):
         if text is None:
             try:
                 text = self.storage.page_text(self.title)
-            except werkzeug.exceptions.NotFound:
+            except NotFoundErr:
                 text = u''
         return self.parser.extract_links(text)
 
@@ -2187,7 +2211,7 @@ class WikiPageFile(WikiPage):
 
     def view_content(self, lines=None):
         if self.title not in self.storage:
-            raise werkzeug.exceptions.NotFound()
+            raise NotFoundErr()
         content = ['<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>' %
                    (self.request.get_download_url(self.title),
                     werkzeug.escape(self.title), self.mime)]
@@ -2228,7 +2252,7 @@ class WikiPageImage(WikiPageFile):
 
     def view_content(self, lines=None):
         if self.title not in self.storage:
-            raise werkzeug.exceptions.NotFound()
+            raise NotFoundErr()
         content = ['<img src="%s" alt="%s">'
                    % (self.request.get_url(self.title, self.wiki.render),
                       werkzeug.escape(self.title))]
@@ -2255,7 +2279,7 @@ class WikiPageImage(WikiPageFile):
             im.thumbnail((128, 128), Image.ANTIALIAS)
             im.save(cache_file,'PNG')
         except IOError:
-            raise werkzeug.exceptions.UnsupportedMediaType('Image corrupted')
+            raise UnsupportedMediaTypeErr('Image corrupted')
         cache_file.close()
         return cache_path
 
@@ -2284,7 +2308,7 @@ class WikiPageCSV(WikiPageFile):
 
     def view_content(self, lines=None):
         if self.title not in self.storage:
-            raise werkzeug.exceptions.NotFound()
+            raise NotFoundErr()
         return self.content_iter(lines)
 
 class WikiPageRST(WikiPageText):
@@ -2620,7 +2644,7 @@ dd {font-style: italic; }
         page = self.get_page(request, title)
         try:
             content = page.view_content()
-        except werkzeug.exceptions.NotFound:
+        except NotFoundErr:
             url = request.get_url(title, self.edit, external=True)
             return werkzeug.routing.redirect(url, code=303)
         html = page.render_content(content)
@@ -2661,12 +2685,12 @@ dd {font-style: italic; }
             'robots.txt',
         ]
         if self.read_only:
-            raise werkzeug.exceptions.Forbidden(_(u"This site is read-only."))
+            raise ForbiddenErr(_(u"This site is read-only."))
         if title in restricted_pages:
-            raise werkzeug.exceptions.Forbidden(_(u"""Can't edit this page.
+            raise ForbiddenErr(_(u"""Can't edit this page.
 It can only be edited by the site admin directly on the disk."""))
         if title in self.index.page_links(self.locked_page):
-            raise werkzeug.exceptions.Forbidden(_(u"This page is locked."))
+            raise ForbiddenErr(_(u"This page is locked."))
 
     def save(self, request, title):
         self._check_lock(title)
@@ -2697,10 +2721,10 @@ It can only be edited by the site admin directly on the disk."""))
                 if title == self.locked_page:
                     for link, label in page.extract_links(text):
                         if title == link:
-                            raise werkzeug.exceptions.Forbidden(
+                            raise ForbiddenErr(
                                 _(u"This page is locked."))
                 if u'href="' in comment or u'http:' in comment:
-                    raise werkzeug.exceptions.Forbidden()
+                    raise ForbiddenErr()
                 if text.strip() == '':
                     self.storage.delete_page(title, author, comment)
                     url = request.get_url(self.front_page)
@@ -3153,7 +3177,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
 
             try:
                 text = self.storage.page_text(title)
-            except werkzeug.exceptions.NotFound:
+            except NotFoundErr:
                 return u''
             regexp = re.compile(u"|".join(re.escape(w) for w in words),
                                 re.U|re.I)
@@ -3239,7 +3263,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         """Serve the default pygments style"""
 
         if pygments is None:
-            raise werkzeug.exceptions.NotFound()
+            raise NotImplementedErr(_(u"Code highlighting is not available."))
 
         pygments_style = self.pygments_style
         if pygments_style not in pygments.styles.STYLE_MAP:
@@ -3274,8 +3298,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         """Serve the pages repository on the web like a normal hg repository."""
 
         if not self.config.get_bool('hgweb', False):
-            raise werkzeug.exceptions.Forbidden(
-                _(u'Repository access disabled.'))
+            raise ForbiddenErr(_(u'Repository access disabled.'))
         app = mercurial.hgweb.request.wsgiapplication(
             lambda: mercurial.hgweb.hgweb(self.storage.repo, self.site_name))
         def hg_app(env, start):
@@ -3291,8 +3314,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         """Terminate the standalone server if invoked from localhost."""
 
         if not request.remote_addr.startswith('127.'):
-            raise werkzeug.exceptions.Forbidden(
-                _(u'This URL can only be called locally.'))
+            raise ForbiddenErr(_(u'This URL can only be called locally.'))
         def agony():
             yield u'Oh dear!'
             self.dead = True

@@ -764,6 +764,17 @@ class WikiSubdirectoryStorage(WikiStorage):
         dir_path = os.path.dirname(file_path)
         os.removedirs(dir_path)
 
+    def all_pages(self):
+        """Iterate over the titles of all pages in the wiki. Include subdirectories."""
+
+        for (dirpath, dirnames, filenames) in os.walk(self.path):
+            path = dirpath[len(self.path)+1:]
+            for name in filenames:
+                filename = os.path.join(path, name)
+                if (os.path.isfile(os.path.join(self.path, filename))
+                    and not filename.startswith('.')):
+                    yield werkzeug.url_unquote(filename)
+
 
 class WikiParser(object):
     r"""

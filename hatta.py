@@ -130,11 +130,11 @@ class WikiError(werkzeug.exceptions.HTTPException):
     """Base class for all error pages."""
 
 
-class ForbiddenErrErr(WikiError):
+class ForbiddenErr(WikiError):
     code = 403
 
 
-class NotFoundErrErr(WikiError):
+class NotFoundErr(WikiError):
     code = 404
 
 

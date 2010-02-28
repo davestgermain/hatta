@@ -122,7 +122,7 @@ class TestSubdirectoryStorage(object):
 
         subdir_repo.save_text(u'xxx/yyy', self.text, self.author, self.comment,
                               parent=-1)
-        py.test.raises(werkzeug.exceptions.Forbidden, subdir_repo.save_text,
+        py.test.raises(hatta.ForbiddenErr, subdir_repo.save_text,
                        u'xxx', self.text, self.author, self.comment,
                        parent=-1)
 
@@ -133,7 +133,7 @@ class TestSubdirectoryStorage(object):
 
         subdir_repo.save_text(u'xxx', self.text, self.author, self.comment,
                               parent=-1)
-        py.test.raises(werkzeug.exceptions.Forbidden, subdir_repo.save_text,
+        py.test.raises(hatta.ForbiddenErr, subdir_repo.save_text,
                        u'xxx/yyy', self.text, self.author, self.comment,
                        parent=-1)
 
@@ -172,16 +172,16 @@ class TestMercurialStorage(object):
             assert exists
 
     def test_check_path(self, repo):
-        py.test.raises(werkzeug.exceptions.Forbidden, repo._check_path, "/")
-        py.test.raises(werkzeug.exceptions.Forbidden, repo._check_path, "..")
-        py.test.raises(werkzeug.exceptions.Forbidden, repo._check_path,
+        py.test.raises(hatta.ForbiddenErr, repo._check_path, "/")
+        py.test.raises(hatta.ForbiddenErr, repo._check_path, "..")
+        py.test.raises(hatta.ForbiddenErr, repo._check_path,
                        repo.path+"/..")
         path = os.path.join(repo.path, 'aaa')
         os.symlink('/', path)
-        py.test.raises(werkzeug.exceptions.Forbidden, repo._check_path, path)
+        py.test.raises(hatta.ForbiddenErr, repo._check_path, path)
         path = os.path.join(repo.path, 'bbb')
         os.mkdir(path)
-        py.test.raises(werkzeug.exceptions.Forbidden, repo._check_path, path)
+        py.test.raises(hatta.ForbiddenErr, repo._check_path, path)
 
     @py.test.mark.skipif("sys.platform == 'win32'")
     def test_symlinks(self, repo):
@@ -191,10 +191,10 @@ class TestMercurialStorage(object):
 
         path = os.path.join(repo.path, self.filename)
         os.symlink('/', path)
-        py.test.raises(werkzeug.exceptions.Forbidden, repo.save_text,
+        py.test.raises(hatta.ForbiddenErr, repo.save_text,
                        self.title, self.text, self.author, self.comment,
                        parent=-1)
-        py.test.raises(werkzeug.exceptions.Forbidden, repo.open_page,
+        py.test.raises(hatta.ForbiddenErr, repo.open_page,
                        self.title)
 
     @py.test.mark.skipif("sys.platform == 'win32'")
@@ -223,7 +223,7 @@ class TestMercurialStorage(object):
 
         path = os.path.join(repo.path, self.filename)
         os.mkdir(path)
-        py.test.raises(werkzeug.exceptions.Forbidden, repo.open_page,
+        py.test.raises(hatta.ForbiddenErr, repo.open_page,
                        self.title)
 
     def test_directory_write(self, repo):
@@ -233,7 +233,7 @@ class TestMercurialStorage(object):
 
         path = os.path.join(repo.path, self.filename)
         os.mkdir(path)
-        py.test.raises(werkzeug.exceptions.Forbidden, repo.save_text,
+        py.test.raises(hatta.ForbiddenErr, repo.save_text,
                        self.title, self.text, self.author, self.comment,
                        parent=-1)
 
@@ -244,7 +244,7 @@ class TestMercurialStorage(object):
 
         path = os.path.join(repo.path, self.filename)
         os.mkdir(path)
-        py.test.raises(werkzeug.exceptions.Forbidden, repo.delete_page,
+        py.test.raises(hatta.ForbiddenErr, repo.delete_page,
                        self.title, self.author, self.comment)
 
     @py.test.mark.skipif("sys.platform == 'win32'")
@@ -255,7 +255,7 @@ class TestMercurialStorage(object):
 
         path = os.path.join(repo.path, self.filename)
         os.symlink('/', path)
-        py.test.raises(werkzeug.exceptions.Forbidden, repo.delete_page,
+        py.test.raises(hatta.ForbiddenErr, repo.delete_page,
                        self.title, self.author, self.comment)
 
 

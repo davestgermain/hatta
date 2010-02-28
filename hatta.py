@@ -2554,7 +2554,6 @@ dd {font-style: italic; }
         else:
             _ = gettext.translation('hatta', fallback=True).ugettext
         self.path = os.path.abspath(config.get('pages_path', 'docs'))
-        self.cache = os.path.abspath(config.get('cache_path', 'cache'))
         self.page_charset = config.get('page_charset', 'utf-8')
         self.menu_page = self.config.get('menu_page', u'Menu')
         self.front_page = self.config.get('front_page', u'Home')
@@ -2569,6 +2568,10 @@ dd {font-style: italic; }
             self.storage = WikiSubdirectoryStorage(self.path, self.page_charset)
         else:
             self.storage = self.storage_class(self.path, self.page_charset)
+        self.cache = config.get('cache_path', None)
+        if self.cache is None:
+            self.cache = os.path.join(self.storage.repo_path, '.hg', 'hatta', 'cache')
+        self.cache = os.path.abspath(self.cache)
         if not os.path.isdir(self.cache):
             os.makedirs(self.cache)
             reindex = True
@@ -3359,7 +3362,6 @@ def read_config():
         # interface='',
         # port=8080,
         # pages_path = 'docs',
-        # cache_path = 'cache',
         # front_page = 'Home',
         # site_name = 'Hatta Wiki',
         # page_charset = 'UTF-8',
@@ -3377,8 +3379,6 @@ def application(env, start):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     if config.get('pages_path') is None:
         config.set('pages_path', os.path.join(script_dir, 'docs'))
-    if config.get('cache_path') is None:
-        config.set('cache_path', os.path.join(script_dir, 'cache'))
     wiki = Wiki(config)
     application = wiki.application
     return application(env, start)

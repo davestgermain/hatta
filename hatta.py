@@ -690,7 +690,9 @@ class WikiStorage(object):
         """Iterate over the titles of all pages in the wiki."""
 
         for filename in os.listdir(self.path):
-            if (os.path.isfile(os.path.join(self.path, filename))
+            file_path = os.path.join(self.path, filename)
+            if (os.path.isfile(file_path)
+                and not os.path.islink(file_path)
                 and not filename.startswith('.')):
                 yield werkzeug.url_unquote(filename)
 

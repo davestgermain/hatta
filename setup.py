@@ -11,15 +11,15 @@ import hatta
 ################### Common settings ######################
 
 config = dict(
-    name=hatta.name,
+    name=hatta.project_name,
     version=hatta.__version__,
-    url=hatta.url,
+    url=hatta.project_url,
     download_url='http://download.hatta-wiki.org/hatta-%s/Hatta-%s.zip' % (
         hatta.__version__, hatta.__version__),
     license='GNU General Public License (GPL)',
     author='Radomir Dopieralski',
     author_email='hatta@sheep.art.pl',
-    description=hatta.description,
+    description=hatta.project_description,
     long_description=hatta.__doc__,
     keywords='wiki wsgi web mercurial repository',
     py_modules=['hatta'],

@@ -65,14 +65,15 @@ import mercurial.util
 import mercurial.hgweb
 
 __version__ = '1.3.3dev'
-name = 'Hatta'
-url = 'http://hatta-wiki.org/'
-description = 'Wiki engine that lives in Mercurial repository.'
+project_name = 'Hatta'
+project_url = 'http://hatta-wiki.org/'
+project_description = 'Wiki engine that lives in Mercurial repository.'
 
 mimetypes.add_type('application/x-python', '.wsgi')
 mimetypes.add_type('application/x-javascript', '.js')
 mimetypes.add_type('text/x-rst', '.rst')
 
+_ = lambda x: x # Later replaced with gettext initialization
 
 def external_link(addr):
     """
@@ -464,11 +465,9 @@ class WikiStorage(object):
 
         partial = lambda filename: repo_file == filename
         try:
-            unresolved = mercurial.merge.update(self.repo, tip_node,
-                                                True, True, partial)
+            mercurial.merge.update(self.repo, tip_node, True, True, partial)
             msg = _(u'merge of edit conflict')
         except mercurial.util.Abort:
-            unresolved = 1, 1, 1, 1
             msg = _(u'failed merge of edit conflict')
         self.repo.dirstate.setparents(tip_node, node)
         # Mercurial 1.1 and later need updating the merge state
@@ -733,6 +732,7 @@ class WikiSubdirectoryStorage(WikiStorage):
         path = os.path.join(self.repo_prefix, escaped)
         return path
 
+    @locked_repo
     def save_file(self, title, file_name, author=u'', comment=u'', parent=None):
         """
         Save the file and make the subdirectories if needed.
@@ -752,6 +752,7 @@ class WikiSubdirectoryStorage(WikiStorage):
         super(WikiSubdirectoryStorage, self).save_file(title, file_name,
                                                        author, comment, parent)
 
+    @locked_repo
     def delete_page(self, title, author=u'', comment=u''):
         """
         Remove empty directories after deleting a page.
@@ -1304,17 +1305,17 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         else:
             self.empty = False
         con = self.con # sqlite3.connect(self.filename)
-        self.con.execute('CREATE TABLE IF NOT EXISTS titles '
+        con.execute('CREATE TABLE IF NOT EXISTS titles '
                 '(id INTEGER PRIMARY KEY, title VARCHAR);')
-        self.con.execute('CREATE TABLE IF NOT EXISTS words '
+        con.execute('CREATE TABLE IF NOT EXISTS words '
                 '(word VARCHAR, page INTEGER, count INTEGER);')
-        self.con.execute('CREATE INDEX IF NOT EXISTS index1 '
+        con.execute('CREATE INDEX IF NOT EXISTS index1 '
                          'ON words (page);')
-        self.con.execute('CREATE INDEX IF NOT EXISTS index2 '
+        con.execute('CREATE INDEX IF NOT EXISTS index2 '
                          'ON words (word);')
-        self.con.execute('CREATE TABLE IF NOT EXISTS links '
+        con.execute('CREATE TABLE IF NOT EXISTS links '
                 '(src INTEGER, target INTEGER, label VARCHAR, number INTEGER);')
-        self.con.commit()
+        con.commit()
         self.stop_words_re = re.compile(u'^('+u'|'.join(re.escape(_(
 u"""am ii iii per po re a about above
 across after afterwards again against all almost alone along already also
@@ -1824,7 +1825,6 @@ class WikiPage(object):
     def menu(self):
         """Generate the menu items"""
 
-        html = werkzeug.html
         if self.wiki.menu_page in self.storage:
             items = self.index.page_links_and_labels(self.wiki.menu_page)
         else:
@@ -2072,7 +2072,6 @@ class WikiPageText(WikiPage):
                 yield None
 
         diff = difflib._mdiff(from_text.split('\n'), to_text.split('\n'))
-        stack = []
         mark_re = re.compile('\0[-+^]([^\1\0]*)\1|([^\0\1])')
         yield message
         yield u'<pre class="diff">'
@@ -2134,7 +2133,7 @@ class WikiPageColorText(WikiPageText):
         formatter = pygments.formatters.HtmlFormatter()
         formatter.line_no = line_no
 
-        def wrapper(source, outfile):
+        def wrapper(source, unused_outfile):
             """Wrap each line of formatted output."""
 
             yield 0, '<div class="highlight"><pre>'
@@ -2312,7 +2311,7 @@ class WikiPageCSV(WikiPageFile):
                                                  for cell in row))
         except csv.Error, e:
             yield u'</table>'
-            yield werkzeug.p(werkzeug.html(
+            yield werkzeug.html.p(werkzeug.html(
                 _(u'Error parsing CSV file %{file}s on line %{line}d: %{error}s')
                 % {'file': html_title, 'line': reader.line_num, 'error': e}))
         finally:
@@ -2366,9 +2365,9 @@ class WikiPageBugs(WikiPageText):
                 if in_header:
                     if in_bug:
                         yield '</div>'
-                    tags = [tag.strip() for tag in
-                            attributes.get('tags', '').split()
-                            if tag.strip()]
+                    #tags = [tag.strip() for tag in
+                    #        attributes.get('tags', '').split()
+                    #        if tag.strip()]
                     yield '<div id="line_%d">' % (line_no)
                     in_bug = True
                     if title:
@@ -2406,7 +2405,7 @@ class WikiTitleConverter(werkzeug.routing.PathConverter):
     """Behaves like the path converter, except that it escapes slashes."""
 
     def to_url(self, value):
-        return werkzeug.url_quote(value.strip(), self.map.charset, safe="")
+        return werkzeug.url_quote(value.strip(), self.map.charset, safe="/")
 
     regex='([^+%]|%[^2]|%2[^Bb]).*'
 
@@ -2576,9 +2575,9 @@ dd {font-style: italic; }
         self.cache = os.path.abspath(self.cache)
         if not os.path.isdir(self.cache):
             os.makedirs(self.cache)
-            reindex = True
-        else:
-            reindex = False
+#            reindex = True
+#        else:
+#            reindex = False
         self.index = self.index_class(self.cache, self.language, self.storage)
         R = werkzeug.routing.Rule
         self.url_map = werkzeug.routing.Map([
@@ -2790,7 +2789,6 @@ It can only be edited by the site admin directly on the disk."""))
     def atom(self, request):
         date_format = "%Y-%m-%dT%H:%M:%SZ"
         first_date = datetime.datetime.now()
-        now = first_date.strftime(date_format)
         body = []
         first_title = u''
         count = 0
@@ -2860,7 +2858,6 @@ It can only be edited by the site admin directly on the disk."""))
         """Serve an RSS feed of recent changes."""
 
         first_date = datetime.datetime.now()
-        now = first_date.strftime("%a, %d %b %Y %H:%M:%S GMT")
         rss_body = []
         first_title = u''
         count = 0
@@ -2919,7 +2916,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return response
 
     def response(self, request, title, content, etag='', mime='text/html',
-                 rev=None, date=None, size=None):
+                 rev=None, size=None):
         """Create a WikiResponse for a page."""
 
         response = WikiResponse(content, mimetype=mime)

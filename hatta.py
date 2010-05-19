@@ -2409,10 +2409,39 @@ class WikiTitleConverter(werkzeug.routing.PathConverter):
 
     regex='([^+%]|%[^2]|%2[^Bb]).*'
 
+
 class WikiAllConverter(werkzeug.routing.BaseConverter):
     """Matches everything."""
 
     regex='.*'
+
+
+class URL(object):
+    """A decorator for marking methods as endpoints for URLs."""
+
+    urls = []
+
+    def __init__(self, url, methods=None):
+        """Create a decorator with specified parameters."""
+
+        self.url = url
+        self.methods = methods or ['GET', 'HEAD']
+
+    def __call__(self, func):
+        """The actual decorator only records the data."""
+
+        self.urls.append((func.__name__, self.url, self.methods))
+        return func
+
+    @classmethod
+    def rules(cls, app):
+        """Returns the routing rules, using app's bound methods."""
+
+        for name, url, methods in cls.urls:
+            func = getattr(app, name, None)
+            if not callable(func):
+                continue
+            yield werkzeug.routing.Rule(url, endpoint=func, methods=methods)
 
 
 class Wiki(object):
@@ -2579,51 +2608,10 @@ dd {font-style: italic; }
 #        else:
 #            reindex = False
         self.index = self.index_class(self.cache, self.language, self.storage)
-        R = werkzeug.routing.Rule
-        self.url_map = werkzeug.routing.Map([
-            R('/', defaults={'title': self.front_page},
-              endpoint=self.view, methods=['GET', 'HEAD']),
-            R('/+edit/<title:title>', endpoint=self.edit, methods=['GET']),
-            R('/+edit/<title:title>', endpoint=self.save, methods=['POST']),
-            R('/+undo/<title:title>', endpoint=self.undo, methods=['POST']),
-            R('/+history/', endpoint=self.recent_changes,
-              methods=['GET', 'HEAD']),
-            R('/+history/<title:title>/<int:from_rev>:<int:to_rev>',
-              endpoint=self.diff, methods=['GET', 'HEAD']),
-            R('/+history/<title:title>/<int:rev>', endpoint=self.revision,
-              methods=['GET', 'HEAD']),
-            R('/+history/<title:title>', endpoint=self.history,
-              methods=['GET', 'HEAD']),
-            R('/+version/', endpoint=self.version, methods=['GET', 'HEAD']),
-            R('/+version/<title:title>', endpoint=self.version,
-              methods=['GET', 'HEAD']),
-            R('/+download/<title:title>', endpoint=self.download,
-              methods=['GET', 'HEAD']),
-            R('/+render/<title:title>', endpoint=self.render,
-              methods=['GET', 'HEAD']),
-            R('/<title:title>', endpoint=self.view, methods=['GET', 'HEAD']),
-            R('/+feed/rss', endpoint=self.rss, methods=['GET', 'HEAD']),
-            R('/+feed/atom', endpoint=self.atom, methods=['GET', 'HEAD']),
-            R('/+index', endpoint=self.all_pages, methods=['GET', 'HEAD']),
-            R('/+orphaned', endpoint=self.orphaned, methods=['GET', 'HEAD']),
-            R('/+wanted', endpoint=self.wanted, methods=['GET', 'HEAD']),
-            R('/+search', endpoint=self.search, methods=['GET', 'POST']),
-            R('/+search/<title:title>', endpoint=self.backlinks,
-              methods=['GET', 'POST']),
-            R('/off-with-his-head', endpoint=self.die, methods=['GET']),
-            R('/+hg<all:path>', endpoint=self.hgweb, strict_slashes=False,
-              methods=['GET', 'POST', 'HEAD']),
-            # Pages with default content
-            R('/favicon.ico', endpoint=self.favicon_ico,
-              methods=['GET', 'HEAD']),
-            R('/robots.txt', endpoint=self.robots_txt, methods=['GET', 'HEAD']),
-            R('/+download/style.css', endpoint=self.style_css,
-              methods=['GET', 'HEAD']),
-            R('/+download/pygments.css', endpoint=self.pygments_css,
-              methods=['GET', 'HEAD']),
-            R('/+download/scripts.js', endpoint=self.scripts_js,
-              methods=['GET', 'HEAD']),
-        ], converters={'title':WikiTitleConverter, 'all':WikiAllConverter})
+        self.url_map = werkzeug.routing.Map(URL.rules(self), converters={
+            'title':WikiTitleConverter,
+            'all':WikiAllConverter
+        })
 
     def get_page(self, request, title):
         """Creates a page object based on page's mime type"""
@@ -2655,7 +2643,53 @@ dd {font-style: italic; }
             mime = ''
         return page_class(self, request, title, mime)
 
-    def view(self, request, title):
+    def response(self, request, title, content, etag='', mime='text/html',
+                 rev=None, size=None):
+        """Create a WikiResponse for a page."""
+
+        response = WikiResponse(content, mimetype=mime)
+        if rev is None:
+            inode, _size, mtime = self.storage.page_file_meta(title)
+            response.set_etag(u'%s/%s/%d-%d' % (etag, werkzeug.url_quote(title),
+                                                inode, mtime))
+            if size == -1:
+                size = _size
+        else:
+            response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title),
+                                             rev))
+        if size:
+            response.content_length = size
+        response.make_conditional(request)
+        return response
+
+    def _check_lock(self, title):
+        restricted_pages = [
+            'scripts.js',
+            'robots.txt',
+        ]
+        if self.read_only:
+            raise ForbiddenErr(_(u"This site is read-only."))
+        if title in restricted_pages:
+            raise ForbiddenErr(_(u"""Can't edit this page.
+It can only be edited by the site admin directly on the disk."""))
+        if title in self.index.page_links(self.locked_page):
+            raise ForbiddenErr(_(u"This page is locked."))
+
+    def _serve_default(self, request, title, content, mime):
+        """Some pages have their default content."""
+
+        if title in self.storage:
+            return self.download(request, title)
+        response = werkzeug.Response(content, mimetype=mime)
+        response.set_etag('/%s/-1' % title)
+        response.make_conditional(request)
+        return response
+
+    @URL('/<title:title>')
+    @URL('/')
+    def view(self, request, title=None):
+        if title is None:
+            title = self.front_page
         page = self.get_page(request, title)
         try:
             content = page.view_content()
@@ -2667,6 +2701,7 @@ dd {font-style: italic; }
         etag = '/(%s)' % u','.join(dependencies)
         return self.response(request, title, html, etag=etag)
 
+    @URL('/+history/<title:title>/<int:rev>')
     def revision(self, request, title, rev):
         text = self.storage.revision_text(title, rev)
         link = werkzeug.html.a(werkzeug.html(title),
@@ -2684,6 +2719,8 @@ dd {font-style: italic; }
         response = self.response(request, title, html, rev=rev, etag='/old')
         return response
 
+    @URL('/+version/')
+    @URL('/+version/<title:title>')
     def version(self, request, title=None):
         if title is None:
             version = self.storage.repo_revision()
@@ -2694,19 +2731,7 @@ dd {font-style: italic; }
                 version = 0
         return werkzeug.Response('%d' % version, mimetype="text/plain")
 
-    def _check_lock(self, title):
-        restricted_pages = [
-            'scripts.js',
-            'robots.txt',
-        ]
-        if self.read_only:
-            raise ForbiddenErr(_(u"This site is read-only."))
-        if title in restricted_pages:
-            raise ForbiddenErr(_(u"""Can't edit this page.
-It can only be edited by the site admin directly on the disk."""))
-        if title in self.index.page_links(self.locked_page):
-            raise ForbiddenErr(_(u"This page is locked."))
-
+    @URL('/+edit/<title:title>', methods=['POST'])
     def save(self, request, title):
         self._check_lock(title)
         url = request.get_url(title)
@@ -2766,6 +2791,7 @@ It can only be edited by the site admin directly on the disk."""))
                             max_age=604800)
         return response
 
+    @URL('/+edit/<title:title>', methods=['GET'])
     def edit(self, request, title, preview=None):
         self._check_lock(title)
         exists = title in self.storage
@@ -2786,6 +2812,7 @@ It can only be edited by the site admin directly on the disk."""))
         response.headers.add('Cache-Control', 'no-cache')
         return response
 
+    @URL('/+feed/atom')
     def atom(self, request):
         date_format = "%Y-%m-%dT%H:%M:%SZ"
         first_date = datetime.datetime.now()
@@ -2854,6 +2881,7 @@ It can only be edited by the site admin directly on the disk."""))
         response.make_conditional(request)
         return response
 
+    @URL('/+feed/rss')
     def rss(self, request):
         """Serve an RSS feed of recent changes."""
 
@@ -2915,25 +2943,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response.make_conditional(request)
         return response
 
-    def response(self, request, title, content, etag='', mime='text/html',
-                 rev=None, size=None):
-        """Create a WikiResponse for a page."""
-
-        response = WikiResponse(content, mimetype=mime)
-        if rev is None:
-            inode, _size, mtime = self.storage.page_file_meta(title)
-            response.set_etag(u'%s/%s/%d-%d' % (etag, werkzeug.url_quote(title),
-                                                inode, mtime))
-            if size == -1:
-                size = _size
-        else:
-            response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title),
-                                             rev))
-        if size:
-            response.content_length = size
-        response.make_conditional(request)
-        return response
-
+    @URL('/+download/<title:title>')
     def download(self, request, title):
         """Serve the raw content of a page directly from disk."""
 
@@ -2949,6 +2959,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response.direct_passthrough = True
         return response
 
+    @URL('/+render/<title:title>')
     def render(self, request, title):
         """Serve a thumbnail or otherwise rendered content."""
 
@@ -3013,6 +3024,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response.direct_passthrough = True
         return response
 
+    @URL('/+undo/<title:title>', methods=['POST'])
     def undo(self, request, title):
         """Revert a change to a page."""
 
@@ -3046,6 +3058,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
                                     method='GET', force_external=True)
         return werkzeug.redirect(url, 303)
 
+    @URL('/+history/<title:title>')
     def history(self, request, title):
         """Display history of changes of a page."""
 
@@ -3055,7 +3068,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response = self.response(request, title, content, '/history')
         return response
 
-
+    @URL('/+history/')
     def recent_changes(self, request):
         """Serve the recent changes page."""
 
@@ -3102,6 +3115,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response.make_conditional(request)
         return response
 
+    @URL('/+history/<title:title>/<int:from_rev>:<int:to_rev>')
     def diff(self, request, title, from_rev, to_rev):
         """Show the differences between specified revisions."""
 
@@ -3132,6 +3146,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return response
 
 
+    @URL('/+index')
     def all_pages(self, request):
         """Show index of all pages in the wiki."""
 
@@ -3144,6 +3159,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response.make_conditional(request)
         return response
 
+    @URL('/+orphaned')
     def orphaned(self, request):
         """Show all pages that don't have backlinks."""
 
@@ -3157,6 +3173,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response.make_conditional(request)
         return response
 
+    @URL('/+wanted')
     def wanted(self, request):
         """Show all pages that don't exist yet, but are linked."""
 
@@ -3182,6 +3199,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response.make_conditional(request)
         return response
 
+    @URL('/+search', methods=['GET', 'POST'])
     def search(self, request):
         """Serve the search results page."""
 
@@ -3235,6 +3253,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         html = page.render_content(content, title)
         return WikiResponse(html, mimetype='text/html')
 
+    @URL('/+search/<title:title>', methods=['GET', 'POST'])
     def backlinks(self, request, title):
         """Serve the page with backlinks."""
 
@@ -3251,27 +3270,21 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         response.make_conditional(request)
         return response
 
-    def _serve_default(self, request, title, content, mime):
-        """Some pages have their default content."""
-
-        if title in self.storage:
-            return self.download(request, title)
-        response = werkzeug.Response(content, mimetype=mime)
-        response.set_etag('/%s/-1' % title)
-        response.make_conditional(request)
-        return response
-
+    @URL('/+download/scripts.js')
     def scripts_js(self, request):
         """Server the default scripts"""
 
         return self._serve_default(request, 'scripts.js', self.scripts,
                                    'text/javascript')
 
+    @URL('/+download/style.css')
     def style_css(self, request):
         """Serve the default style"""
 
         return self._serve_default(request, 'style.css', self.style,
                                    'text/css')
+
+    @URL('/+download/pygments.css')
     def pygments_css(self, request):
         """Serve the default pygments style"""
 
@@ -3286,12 +3299,14 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return self._serve_default(request, 'pygments.css', style_defs,
                                    'text/css')
 
+    @URL('/favicon.ico')
     def favicon_ico(self, request):
         """Serve the default favicon."""
 
         return self._serve_default(request, 'favicon.ico', self.icon,
                                    'image/x-icon')
 
+    @URL('/robots.txt')
     def robots_txt(self, request):
         """Serve the robots directives."""
 
@@ -3307,6 +3322,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
         return self._serve_default(request, 'robots.txt', robots,
                                    'text/plain')
 
+    @URL('/+hg<all:path>', methods=['GET', 'POST', 'HEAD'])
     def hgweb(self, request, path=None):
         """Serve the pages repository on the web like a normal hg repository."""
 
@@ -3323,6 +3339,7 @@ xmlns:atom="http://www.w3.org/2005/Atom"
             return app(env, start)
         return hg_app
 
+    @URL('/off-with-his-head', methods=['GET'])
     def die(self, request):
         """Terminate the standalone server if invoked from localhost."""
 

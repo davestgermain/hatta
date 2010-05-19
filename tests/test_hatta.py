@@ -239,7 +239,7 @@ class TestHTML(object):
             <input class="button" type="submit" value="Search">
         </div></form>
         <div class="menu">
-          <a href="/" title="Home" class="wiki nonexistent">Home</a>
+          <a href="/Home" title="Home" class="wiki nonexistent">Home</a>
           <a href="/+history" title="+history" class="special">Recent changes</a>
         </div>
         <h1>page &lt;title&gt;</h1>
@@ -274,7 +274,7 @@ class TestHTML(object):
             <input class="button" type="submit" value="Search">
         </div></form>
         <div class="menu">
-          <a href="/" title="Home" class="wiki nonexistent">Home</a>
+          <a href="/Home" title="Home" class="wiki nonexistent">Home</a>
           <a href="/+history" title="+history" class="special">Recent changes</a>
         </div>
         <h1>different &lt;title&gt;</h1>

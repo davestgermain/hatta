@@ -1966,7 +1966,8 @@ class WikiPage(object):
                 button = h.input(type_="submit", name=str(rev),
                                  value=h(_(u'Undo')))
             yield h.li(h.a(self.date_html(date), href=date_url),
-                       button, ' . . . . ', h.i(self.wiki_link(author)),
+                       button, ' . . . . ',
+                       h.i(self.wiki_link("~%s" % author, author)),
                        h.div(h(comment), class_="comment"))
         yield u'</ul>'
         yield h.input(type_="hidden", name="parent", value=max_rev)
@@ -3013,7 +3014,7 @@ It can only be edited by the site admin directly on the disk."""))
 
                 yield h.li(h.a(page.date_html(date), href=date_url), ' ',
                     h.b(page.wiki_link(title)), u' . . . . ',
-                    h.i(page.wiki_link(author)),
+                    h.i(page.wiki_link('~%s' % author, author)),
                     h.div(h(comment), class_="comment")
                 )
             yield u'</ul>'

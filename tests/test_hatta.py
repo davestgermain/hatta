@@ -229,7 +229,6 @@ class TestHTML(object):
     <link type="text/css" href="/+download/style.css" rel="stylesheet">
     <link type="application/wiki" href="/+edit/page%20%3Ctitle%3E" rel="alternate">
     <link type="image/x-icon" href="/favicon.ico" rel="shortcut icon">
-    <link type="application/rss+xml" href="/+feed/rss" rel="alternate" title="Hatta Wiki (RSS)">
     <link type="application/rss+xml" href="/+feed/atom" rel="alternate" title="Hatta Wiki (ATOM)">
     <script src="/+download/scripts.js" type="text/javascript"></script>
 </head><body>
@@ -264,7 +263,6 @@ class TestHTML(object):
     <link type="text/css" href="/+download/style.css" rel="stylesheet">
     <meta content="NOINDEX,NOFOLLOW" name="robots">
     <link type="image/x-icon" href="/favicon.ico" rel="shortcut icon">
-    <link type="application/rss+xml" href="/+feed/rss" rel="alternate" title="Hatta Wiki (RSS)">
     <link type="application/rss+xml" href="/+feed/atom" rel="alternate" title="Hatta Wiki (ATOM)">
     <script src="/+download/scripts.js" type="text/javascript"></script>
 </head><body>

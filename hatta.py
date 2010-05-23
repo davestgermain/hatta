@@ -39,6 +39,7 @@ sys.stderr = sys.__stderr__
 import werkzeug
 import werkzeug.exceptions
 import werkzeug.routing
+import werkzeug.contrib.atom
 
 try:
     import Image
@@ -1864,9 +1865,6 @@ class WikiPage(object):
         yield h.link(rel="shortcut icon", type_="image/x-icon",
                      href=self.get_url(None, self.wiki.favicon_ico))
         yield h.link(rel="alternate", type_="application/rss+xml",
-                     title=e("%s (RSS)" % self.wiki.site_name),
-                     href=self.get_url(None, self.wiki.rss))
-        yield h.link(rel="alternate", type_="application/rss+xml",
                      title=e("%s (ATOM)" % self.wiki.site_name),
                      href=self.get_url(None, self.wiki.atom))
         yield h.script(type_="text/javascript",
@@ -2824,132 +2822,33 @@ It can only be edited by the site admin directly on the disk."""))
 
     @URL('/+feed/atom')
     def atom(self, request):
-        date_format = "%Y-%m-%dT%H:%M:%SZ"
-        first_date = datetime.datetime.now()
-        body = []
-        first_title = u''
-        count = 0
-        unique_titles = {}
-        for title, rev, date, author, comment in self.storage.history():
+        feed = werkzeug.contrib.atom.AtomFeed(self.site_name,
+            feed_url=request.url,
+            url=request.adapter.build(self.view, force_external=True),
+            subtitle=_(u'Track the most recent changes to the wiki '
+                       u'in this feed.'))
+        history = itertools.islice(self.storage.history(), None, 10, None)
+        unique_titles = set()
+        for title, rev, date, author, comment in history:
             if title in unique_titles:
                 continue
-            unique_titles[title] = True
-            count += 1
-            if count > 10:
-                break
-            if not first_title:
-                first_title = title
-                first_rev = rev
-                first_date = date
-            item = u"""<entry>
-    <title>%(title)s</title>
-    <link href="%(page_url)s" />
-    <content>%(comment)s</content>
-    <updated>%(date)s</updated>
-    <author>
-        <name>%(author)s</name>
-        <uri>%(author_url)s</uri>
-    </author>
-    <id>%(url)s</id>
-</entry>""" % {
-                'title': werkzeug.escape(title),
-                'page_url': request.adapter.build(self.view, {'title': title},
-                                                  force_external=True),
-                'comment': werkzeug.escape(comment),
-                'date': date.strftime(date_format),
-                'author': werkzeug.escape(author),
-                'author_url': request.adapter.build(self.view,
-                                                    {'title': author},
-                                                    force_external=True),
-                'url': request.adapter.build(self.revision,
-                                             {'title': title, 'rev': rev},
-                                             force_external=True),
-            }
-            body.append(item)
-        content = u"""<?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
-  <title>%(title)s</title>
-  <link rel="self" href="%(atom)s"/>
-  <link href="%(home)s"/>
-  <id>%(home)s</id>
-  <updated>%(date)s</updated>
-  <logo>%(logo)s</logo>
-%(body)s
-</feed>""" % {
-            'title': self.site_name,
-            'home': request.adapter.build(self.view, force_external=True),
-            'atom': request.adapter.build(self.atom, force_external=True),
-            'date': first_date.strftime(date_format),
-            'logo': request.adapter.build(self.download,
-                                          {'title': self.logo_page},
-                                          force_external=True),
-            'body': u''.join(body),
-        }
-        response = self.response(request, 'atom', content, '/atom',
-                                 'application/xml', first_rev, first_date)
-        response.set_etag('/atom/%d' % self.storage.repo_revision())
-        response.make_conditional(request)
-        return response
-
-    @URL('/+feed/rss')
-    def rss(self, request):
-        """Serve an RSS feed of recent changes."""
-
-        first_date = datetime.datetime.now()
-        rss_body = []
-        first_title = u''
-        count = 0
-        unique_titles = {}
-        for title, rev, date, author, comment in self.storage.history():
-            if title in unique_titles:
-                continue
-            unique_titles[title] = True
-            count += 1
-            if count > 10:
-                break
-            if not first_title:
-                first_title = title
-                first_rev = rev
-                first_date = date
-            item = (u'<item><title>%s</title><link>%s</link>'
-                    u'<description>%s</description><pubDate>%s</pubDate>'
-                    u'<dc:creator>%s</dc:creator><guid>%s</guid></item>' % (
-                werkzeug.escape(title),
-                request.adapter.build(self.view, {'title': title},
-                                                  force_external=True),
-                werkzeug.escape(comment),
-                date.strftime("%a, %d %b %Y %H:%M:%S GMT"),
-                werkzeug.escape(author),
-                request.adapter.build(self.revision,
-                                      {'title': title, 'rev': rev})
-            ))
-            rss_body.append(item)
-        rss_head = u"""<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0"
-xmlns:dc="http://purl.org/dc/elements/1.1/"
-xmlns:atom="http://www.w3.org/2005/Atom"
->
-<channel>
-    <title>%s</title>
-    <atom:link href="%s" rel="self" type="application/rss+xml" />
-    <link>%s</link>
-    <description>%s</description>
-    <generator>Hatta Wiki</generator>
-    <language>en</language>
-    <lastBuildDate>%s</lastBuildDate>
-
-""" % (
-            werkzeug.escape(self.site_name),
-            request.adapter.build(self.rss),
-            request.adapter.build(self.recent_changes),
-            werkzeug.escape(_(u'Track the most recent changes to the wiki '
-                              u'in this feed.')),
-            first_date,
-        )
-        content = [rss_head]+rss_body+[u'</channel></rss>']
-        response = self.response(request, 'rss', content, '/rss',
-                                 'application/xml', first_rev, first_date)
-        response.set_etag('/rss/%d' % self.storage.repo_revision())
+            unique_titles.add(title)
+            if rev>0:
+                url = request.adapter.build(self.diff, {
+                    'title': title,
+                    'from_rev': rev-1,
+                    'to_rev': rev
+                }, force_external=True)
+            else:
+                url = request.adapter.build(self.revision, {
+                    'title': title,
+                    'rev': rev,
+                }, force_external=True)
+            feed.add(title, comment, content_type="text", author=author,
+                     url=url, updated=date)
+        rev = self.storage.repo_revision()
+        response = self.response(request, 'atom', feed.generate(), '/+feed',
+                                 'application/xml', rev)
         response.make_conditional(request)
         return response
 

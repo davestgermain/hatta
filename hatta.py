@@ -2821,6 +2821,7 @@ It can only be edited by the site admin directly on the disk."""))
         return response
 
     @URL('/+feed/atom')
+    @URL('/+feed/rss')
     def atom(self, request):
         feed = werkzeug.contrib.atom.AtomFeed(self.site_name,
             feed_url=request.url,

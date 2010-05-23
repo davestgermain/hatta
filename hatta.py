@@ -2608,7 +2608,17 @@ dd {font-style: italic; }
 #        else:
 #            reindex = False
         self.index = self.index_class(self.cache, self.language, self.storage)
-        self.url_map = werkzeug.routing.Map(URL.rules(self), converters={
+        self.url_rules = URL.rules(self)
+        self.url_map = werkzeug.routing.Map(self.url_rules, converters={
+            'title':WikiTitleConverter,
+            'all':WikiAllConverter
+        })
+
+    def add_url_rule(self, rule):
+        """Let plugins add additional url rules."""
+
+        self.url_rules.append(rule)
+        self.url_map = werkzeug.routing.Map(self.url_rules, converters={
             'title':WikiTitleConverter,
             'all':WikiAllConverter
         })

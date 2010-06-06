@@ -2401,7 +2401,7 @@ class WikiPageBugs(WikiPageText):
 
 
 class WikiTitleConverter(werkzeug.routing.PathConverter):
-    """Behaves like the path converter, except that it escapes slashes."""
+    """Behaves like the path converter, but doesn't match the "+ pages"."""
 
     def to_url(self, value):
         return werkzeug.url_quote(value.strip(), self.map.charset, safe="/")

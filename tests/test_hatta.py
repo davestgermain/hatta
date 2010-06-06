@@ -5,6 +5,7 @@ import hatta
 import werkzeug
 import os
 import lxml.doctestcompare
+from test_parser import HTML
 
 def clear_directory(top):
     for root, dirs, files in os.walk(top, topdown=False):
@@ -176,10 +177,6 @@ u"""* sample list
         for text, expect in self.test_cases.iteritems():
             assert expect == self.parse_text(text)
 
-class Example(object):
-    def __init__(self, want):
-        self.want = want
-
 
 def pytest_funcarg__req(request):
     basedir = str(request.config.ensuretemp('repo'))
@@ -201,11 +198,6 @@ def pytest_funcarg__req(request):
     adapter = wiki.url_map.bind_to_environ(environ)
     return wiki, hatta.WikiRequest(wiki, adapter, environ)
 
-def html_eq(want, got):
-    checker = lxml.doctestcompare.LHTMLOutputChecker()
-    if not checker.check_output(want, got, 0):
-        raise Exception(checker.output_difference(Example(want), got, 0))
-
 class TestHTML(object):
     def test_wiki_request_get_url(self, req):
         wiki, request = req
@@ -220,8 +212,8 @@ class TestHTML(object):
         title = "page <title>"
         page = wiki.get_page(request, title)
         parts = page.render_content(content)
-        html = u"".join(parts)
-        expect = u"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+        html = HTML(u"".join(parts))
+        assert html == u"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
     <title>page &lt;title&gt; - Hatta Wiki</title>
@@ -250,12 +242,12 @@ class TestHTML(object):
         <a href="/+search/page%20%3Ctitle%3E" class="backlinks">Backlinks</a>
     </div></div>
 </body></html>"""
-        html_eq(expect, html)
+
         page_title = "different <title>"
         page = wiki.get_page(request, title)
         parts = page.render_content(content, page_title)
-        html = u"".join(parts)
-        expect = u"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+        html = HTML(u"".join(parts))
+        assert html == u"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
     <title>different &lt;title&gt; - Hatta Wiki</title>
@@ -280,5 +272,5 @@ class TestHTML(object):
     <div class="content">some &lt;content&gt;
        </div>
 </body></html>"""
-        html_eq(expect, html)
+
 

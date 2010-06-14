@@ -1610,19 +1610,19 @@ class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
             self.response = []
             try:
                 del self.content_type
-            except AttributeError:
+            except (AttributeError, KeyError, IndexError):
                 pass
             try:
                 del self.content_length
-            except AttributeError:
+            except (AttributeError, KeyError, IndexError):
                 pass
             try:
                 del self.headers['Content-length']
-            except (KeyError, IndexError):
+            except (AttributeError, KeyError, IndexError):
                 pass
             try:
                 del self.headers['Content-type']
-            except (KeyError, IndexError):
+            except (AttributeError, KeyError, IndexError):
                 pass
         return ret
 

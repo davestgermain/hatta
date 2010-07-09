@@ -33,7 +33,7 @@ from PyQt4.QtGui import (QApplication, QSystemTrayIcon, QMenu, QIcon,
 from PyQt4.QtCore import (QString, QThread, pyqtSignal, pyqtSlot, Qt,
     QPoint, QLocale)
 
-from hatta import WikiConfig, Wiki, WikiRequest, name, url
+from hatta import WikiConfig, Wiki, WikiRequest, project_name, project_url
 
 def we_are_frozen():
     """Returns whether we are frozen via py2exe.
@@ -82,8 +82,10 @@ class HattaThread(QThread):
     def application_wrapper(self, *args, **kwargs):
         try:
             return self.wiki.application(*args, **kwargs)
-        except Exception as (errno, strerror):
-            self.exception_signal.emit(errno, strerror)
+        except e:
+            print e
+#        except Exception as (errno, strerror):
+#            self.exception_signal.emit(errno, strerror)
 
     def quit(self):
         self.wiki.daed = True
@@ -203,8 +205,8 @@ class HattaTrayIcon(QSystemTrayIcon):
     config_filename = join(
         str(QDesktopServices.storageLocation(
             QDesktopServices.DataLocation)),
-        name,
-        name + u'.conf')
+        project_name,
+        project_name + u'.conf')
     dist_icon = os.path.join(module_path(),
                              'share/icons/hicolor/64x64/hatta.png')
     debug_icon = os.path.join(module_path(), 'resources/hatta.png')
@@ -461,12 +463,12 @@ default_config = WikiConfig(
     pages_path=join(
         str(QDesktopServices.storageLocation(
             QDesktopServices.DataLocation)),
-        name,
+        project_name,
         u'pages'),
     cache_path=join(
         str(QDesktopServices.storageLocation(
             QDesktopServices.CacheLocation)),
-        name),
+        project_name),
     # front_page = 'Home'
     # page_charset = 'UTF-8'
 )

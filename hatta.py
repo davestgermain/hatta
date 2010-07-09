@@ -1400,11 +1400,13 @@ without would yet you your yours yourself yourselves""")).split())
 
     def update_words(self, title, text, cursor):
         title_id = self.title_id(title, cursor)
+        cursor.execute('DELETE FROM words WHERE page=?;', (title_id,))
+        if not text:
+            return
         words = self.count_words(self.split_text(text))
         title_words = self.count_words(self.split_text(title))
         for word, count in title_words.iteritems():
             words[word] = words.get(word, 0) + count
-        cursor.execute('DELETE FROM words WHERE page=?;', (title_id,))
         for word, count in words.iteritems():
             cursor.execute('INSERT INTO words VALUES (?, ?, ?);',
                              (word, title_id, count))
@@ -1534,11 +1536,17 @@ without would yet you your yours yourself yourselves""")).split())
             try:
                 text = get_text()
             except NotFoundErr:
-                text = u''
-        extract_links = getattr(page, 'extract_links', lambda x: [])
-        if text:
-            self.update_links(title, extract_links(text), cursor=cursor)
-        self.update_words(title, text, cursor=cursor)
+                text = None
+                title_id = self.title_id(title, cursor)
+                if not list(self.page_backlinks(title)):
+                    cursor.execute("DELETE FROM titles WHERE id=?;", (title_id,))
+        extract_links = getattr(page, 'extract_links', None)
+        if extract_links and text:
+            links = extract_links(text)
+        else:
+            links = []
+        self.update_links(title, links, cursor=cursor)
+        self.update_words(title, text or u'', cursor=cursor)
 
     def update_page(self, page, title, data=None, text=None):
         """Updates the index with new page content, for a single page."""

@@ -490,10 +490,16 @@ class WikiStorage(object):
         mercurial.util.rename(file_name, file_path)
         changectx = self._changectx()
         try:
+            # Mercurial 1.5 and earlier have .add() on the repo
+            add = self.repo.add
+        except AttributeError:
+            # Mercurial 1.6
+            add = self.repo[None].add
+        try:
             filectx_tip = changectx[repo_file]
             current_page_rev = filectx_tip.filerev()
         except mercurial.revlog.LookupError:
-            self.repo.add([repo_file])
+            add([repo_file])
             current_page_rev = -1
         if parent is not None and current_page_rev != parent:
             msg = self.merge_changes(changectx, repo_file, text, user, parent)
@@ -558,10 +564,16 @@ class WikiStorage(object):
         file_path = self._file_path(title)
         self._check_path(file_path)
         try:
+            # Mercurial 1.5 and earlier have .remove() on the repo
+            remove = self.repo.remove
+        except AttributeError:
+            # Mercurial 1.6
+            remove = self.repo[None].remove
+        try:
             os.unlink(file_path)
         except OSError:
             pass
-        self.repo.remove([repo_file])
+        remove([repo_file])
         self._commit([repo_file], text, user)
 
     def open_page(self, title):

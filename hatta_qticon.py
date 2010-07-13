@@ -60,7 +60,7 @@ class HattaThread(QThread):
     """
 
     # For passing multithread exception in Qt.
-    exception_signal = pyqtSignal(int, str)
+    exception_signal = pyqtSignal(str)
 
     def __init__(self, config, error_handler):
         """Create a wiki instance and a server for it."""
@@ -82,10 +82,8 @@ class HattaThread(QThread):
     def application_wrapper(self, *args, **kwargs):
         try:
             return self.wiki.application(*args, **kwargs)
-        except e:
-            print e
-#        except Exception as (errno, strerror):
-#            self.exception_signal.emit(errno, strerror)
+        except Exception as e:
+            self.exception_signal.emit(unicode(e))
 
     def quit(self):
         self.wiki.daed = True
@@ -298,7 +296,7 @@ class HattaTrayIcon(QSystemTrayIcon):
         self._modify_url(port)
         self.should_announce = bool(self.config.get_bool('announce', 1))
 
-        self.preferences_window = PreferenceWindow(self, self.hatta_icon, 
+        self.preferences_window = PreferenceWindow(self, self.hatta_icon,
                                                    self.config)
         self.preferences_window.config_change.connect(
             self.reload_config,
@@ -321,6 +319,7 @@ class HattaTrayIcon(QSystemTrayIcon):
         )
 
         self._prepare_default_menu()
+        self.menu.addActions(self.default_actions)
 
         # Start Zeroconf thread
         if pybonjour:
@@ -345,8 +344,7 @@ class HattaTrayIcon(QSystemTrayIcon):
         """Creates and populates the context menu."""
         action = QAction(_(u'&Preferences'), self)
         action.setToolTip(_(u'Lets you configure the wiki.'))
-        if sys.platform == 'darwin':
-            action.setShortcut(Qt.CTRL + Qt.Key_Comma)
+        action.setShortcut(QKeySequence.Preferences)
         action.triggered.connect(self.preferences_window.show)
         self.default_actions.append(action)
         action = QAction(_(u'&Open wiki'), self)
@@ -383,12 +381,12 @@ class HattaTrayIcon(QSystemTrayIcon):
         global app
         app.quit()
 
-    pyqtSlot(int, str)
-    def on_error(self, errno, strerror):
+    pyqtSlot(str)
+    def on_error(self, strerror):
         """Displays errors from exceptions."""
         QMessageBox.critical(None, 'Exception',
-            _(u'Error %(error_number)d: %(error_string)s') %
-                dict(error_number=errno, error_string=strerror), 1, 2)
+            _(u'Error: %(error_string)s') %
+                dict(error_string=strerror), 1, 2)
 
     def _make_discovery_action(self, name, host, port):
         """Creates a menu action from a discovered wiki."""
@@ -586,7 +584,7 @@ if __name__ == '__main__':
         from locale import getlocale, getdefaultlocale, setlocale, LC_ALL
         setlocale(LC_ALL, '')
         lang = str(QLocale.system().name()).split('_')[0]
-        
+
         localedir = os.path.join(module_path(), 'locale')
         if not os.path.isdir(localedir):
             # Already installed

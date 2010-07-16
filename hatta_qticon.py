@@ -14,7 +14,8 @@ from os.path import join
 from select import select
 from thread import start_new_thread
 from time import sleep
-from urllib import urlopen, unquote
+from traceback import format_exc
+from urllib import urlopen, quote
 from wsgiref import simple_server
 import gettext
 import os
@@ -29,11 +30,13 @@ import webbrowser
 from PyQt4.QtGui import (QApplication, QSystemTrayIcon, QMenu, QIcon,
     QMessageBox, QAction, QKeySequence, QWidget, QVBoxLayout, QGridLayout,
     QLabel, QSpinBox, QToolTip, QLineEdit, QHBoxLayout, QPushButton,
-    QFileDialog, QPixmap, QCheckBox, QDesktopServices)
+    QFileDialog, QPixmap, QCheckBox, QDesktopServices, QDialog)
 from PyQt4.QtCore import (QString, QThread, pyqtSignal, pyqtSlot, Qt,
     QPoint, QLocale)
 
 from hatta import WikiConfig, Wiki, WikiRequest, project_name, project_url
+
+from error_dialog import ErrorDialog
 
 def we_are_frozen():
     """Returns whether we are frozen via py2exe.
@@ -84,6 +87,9 @@ class HattaThread(QThread):
             return self.wiki.application(*args, **kwargs)
         except Exception as e:
             self.exception_signal.emit(unicode(e))
+            # It's very important to shut down the thread, so that the threaded 
+            # werkzeug won't continue to run and send other exceptions.
+            self.quit()
 
     def quit(self):
         self.wiki.daed = True
@@ -383,10 +389,8 @@ class HattaTrayIcon(QSystemTrayIcon):
 
     pyqtSlot(str)
     def on_error(self, strerror):
-        """Displays errors from exceptions."""
-        QMessageBox.critical(None, 'Exception',
-            _(u'Error: %(error_string)s') %
-                dict(error_string=strerror), 1, 2)
+        """Displays error and send bug request."""
+        report_bug('bugs@hatta-wiki.org', strerror)
 
     def _make_discovery_action(self, name, host, port):
         """Creates a menu action from a discovered wiki."""
@@ -579,6 +583,18 @@ class PreferenceWindow(QWidget):
             int(self.port_spin.value()),
             bool(self.should_announce))
 
+
+error_dialog = None
+def report_bug(email, caption):
+    error_dialog.prepare_error(unicode(caption), format_exc())
+    if error_dialog.exec_() == QDialog.Accepted:
+        link = 'mailto:%s?subject=%s&body=%s' % (
+            email,
+            quote(u'[Bug] ' + unicode(caption)),
+            quote(error_dialog.get_bug_dump()))
+        webbrowser.open(link)
+    QApplication.exit()
+
 if __name__ == '__main__':
     try:
         from locale import getlocale, getdefaultlocale, setlocale, LC_ALL
@@ -593,10 +609,14 @@ if __name__ == '__main__':
                 languages=[lang], fallback=True)
         translation.install(unicode=1)
 
-        app = QApplication(sys.argv)
-        QApplication.setQuitOnLastWindowClosed(False)
-        status_icon = HattaTrayIcon()
-        app.exec_()
+        try:
+            app = QApplication(sys.argv)
+            QApplication.setQuitOnLastWindowClosed(False)
+            error_dialog = ErrorDialog()
+            status_icon = HattaTrayIcon()
+            app.exec_()
+        except Exception as e:
+            report_bug('dhubleizh@o2.pl', unicode(e))
     except KeyboardInterrupt:
         pass
 

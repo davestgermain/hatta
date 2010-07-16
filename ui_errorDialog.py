@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'HattaError.ui'
+# Form implementation generated from reading ui file 'resources/HattaError.ui'
 #
-# Created: Fri Jul 16 19:42:07 2010
+# Created: Fri Jul 16 19:56:19 2010
 #      by: PyQt4 UI code generator 4.7.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -41,7 +41,6 @@ class Ui_ErrorDialog(object):
         self.error_icon.setMinimumSize(QtCore.QSize(64, 64))
         self.error_icon.setBaseSize(QtCore.QSize(64, 64))
         self.error_icon.setText("")
-        self.error_icon.setPixmap(QtGui.QPixmap("error.png"))
         self.error_icon.setScaledContents(False)
         self.error_icon.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
         self.error_icon.setObjectName("error_icon")
@@ -114,5 +113,3 @@ class Ui_ErrorDialog(object):
         self.error_descriptions.setText(QtGui.QApplication.translate("ErrorDialog", "We\'re sorry, but unfortunately Hatta has encountered some difficulties. Would you like to send us a bug report, so that we might fix the issue?", None, QtGui.QApplication.UnicodeUTF8))
         self.error_traceback.setPlainText(QtGui.QApplication.translate("ErrorDialog", "Traceback here.", None, QtGui.QApplication.UnicodeUTF8))
         self.details_button.setText(QtGui.QApplication.translate("ErrorDialog", "&Details", None, QtGui.QApplication.UnicodeUTF8))
-
-#import icons_rc

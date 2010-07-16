@@ -38,13 +38,6 @@ from hatta import WikiConfig, Wiki, WikiRequest, project_name, project_url
 
 from error_dialog import ErrorDialog
 
-def we_are_frozen():
-    """Returns whether we are frozen via py2exe.
-    This will affect how we find out where we are located."""
-
-    return hasattr(sys, "frozen") and sys.frozen == "windows_exe"
-
-
 def module_path():
     """ This will get us the program's directory,
     even if we are frozen using py2exe"""
@@ -55,6 +48,12 @@ def module_path():
 
     return os.path.dirname(unicode(__file__, sys.getfilesystemencoding()))
 
+
+def we_are_frozen():
+    """Returns whether we are frozen via py2exe.
+    This will affect how we find out where we are located."""
+
+    return hasattr(sys, "frozen") and sys.frozen == "windows_exe"
 
 class HattaThread(QThread):
     """
@@ -277,7 +276,7 @@ class HattaTrayIcon(QSystemTrayIcon):
         super(HattaTrayIcon, self).__init__()
         # First setup tray icon and display inform user about starting
         self.hatta_icon = QIcon(QPixmap(
-            self.dist_icon if os.path.isfile(self.dist_icon) else 
+            self.dist_icon if os.path.isfile(self.dist_icon) else
             self.debug_icon))
         self.menu = QMenu(QString(_(u'Hatta Wiki menu')))
         self.setDisabled(True)
@@ -593,7 +592,7 @@ def report_bug(email, caption):
             quote(u'[Bug] ' + unicode(caption)),
             quote(error_dialog.get_bug_dump()))
         webbrowser.open(link)
-    QApplication.exit()
+    #QApplication.exit()
 
 if __name__ == '__main__':
     try:
@@ -612,8 +611,9 @@ if __name__ == '__main__':
         try:
             app = QApplication(sys.argv)
             QApplication.setQuitOnLastWindowClosed(False)
-            error_dialog = ErrorDialog()
+            error_dialog = ErrorDialog(module_path())
             status_icon = HattaTrayIcon()
+            raise AttributeError("DUPA")
             app.exec_()
         except Exception as e:
             report_bug('dhubleizh@o2.pl', unicode(e))

@@ -33,7 +33,8 @@ config = dict(
         ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
         ('share/locale/sv/LC_MESSAGES', ['locale/sv/LC_MESSAGES/hatta.mo']),
         ('share/icons/hicolor/scalable', ['resources/hatta.svg']),
-        ('share/icons/hicolor/64x64', ['resources/hatta.png']),
+        ('share/icons/hicolor/64x64', ['resources/hatta.png',
+            'resources/error.png']),
         ('share/applications', ['resources/hatta.desktop']),
         ('share/doc/hatta/examples', [
             'examples/hatta.fcg',
@@ -44,7 +45,7 @@ config = dict(
     platforms='any',
     requires=['werkzeug (>=0.3)', 'mercurial (>=1.0)',
              'pybonjour (>=1.1.1)'],
-    setup_requires = ['pybonjour'],
+    setup_requires=['pybonjour'],
     classifiers=[
         'License :: OSI Approved :: GNU General Public License (GPL)',
         'Intended Audience :: Developers',
@@ -57,17 +58,17 @@ config = dict(
         'Operating System :: OS Independent',
         'Environment :: Web Environment',
     ],
-    options = {
+    options={
         'py2exe': {
-			'includes': ['sip'],
+                        'includes': ['sip'],
             'packages': ['werkzeug', 'dbhash', 'encodings',
                          'Image', 'pygments'],
-            'excludes': ['_ssl', 'tcl', 'tkinter', 'Tkconstants' 
-                         ,'Tkinter'],
+            'excludes': ['_ssl', 'tcl', 'tkinter', 'Tkconstants',
+                         'Tkinter'],
             'dll_excludes': ['tcl84.dll', 'tk84.dll'],
             "compressed": 1,
             "optimize": 2,
-			"bundle_files": 1,
+                    "bundle_files": 1,
         },
         'py2app': {
             'argv_emulation': True,
@@ -120,7 +121,7 @@ if sys.platform == 'darwin':
                 for file in files:
                     if 'debug' in file:
                         print 'removing', file
-                        os.remove(os.path.join(root,file))
+                        os.remove(os.path.join(root, file))
 
             # And run macdeployqt to copy plugins and build a dmg
             print '*** running macdeployqt ***'
@@ -135,8 +136,8 @@ if sys.platform == 'darwin':
     config['cmdclass'] = {'py2app': py2app}
 elif sys.platform == 'win32':
     ### Windows installer ###
-	# Hack to make py2exe import win32com
-	# http://www.py2exe.org/index.cgi/WinShell
+        # Hack to make py2exe import win32com
+        # http://www.py2exe.org/index.cgi/WinShell
     # ModuleFinder can't handle runtime changes to __path__, but win32com uses them
     import time
     try:
@@ -237,7 +238,7 @@ elif sys.platform == 'win32':
             if version.endswith('dev'):
                 from datetime import datetime
                 version = version[:-3] + '.' + datetime.now().strftime('%Y%m%d%H%M')
-                
+
             # create the Installer, using the files py2exe has created.
             script = InnoScript("hatta", lib_dir, dist_dir,
                                 self.console_exe_files+self.windows_exe_files,
@@ -250,14 +251,14 @@ elif sys.platform == 'win32':
             # Note: By default the final setup.exe will be in an
             # Output subdirectory.
     # class BuildInstaller
-    
-	config['zipfile'] = None
+
+        config['zipfile'] = None
     config['cmdclass'] = {"py2exe": BuildInstaller}
     config['windows'] = [{
-		'script': 'hatta_qticon.py',
+            'script': 'hatta_qticon.py',
         'icon_resources': [(1, "resources/hatta.ico")],
     }]
-    
+
     # Adding MS runtime C libraries
     if sys.version.startswith('2.6'):
         from win32com.shell import shellcon, shell
@@ -286,12 +287,12 @@ elif sys.platform == 'win32':
             elif 'dwmapi' in os.path.basename(pathname).lower():
                 return 0
             return origIsSystemDLL(pathname)
-        py2exe.build_exe.isSystemDLL = isSystemDLL    
+        py2exe.build_exe.isSystemDLL = isSystemDLL
 
 else: # Other UNIX-like
     config['scripts'] = ['hatta_qticon.py', 'hatta_gtkicon.py']
 
-if __name__=='__main__':
+if __name__ == '__main__':
     setup(**config)
     try:
         import pybonjour

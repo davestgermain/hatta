@@ -8,11 +8,11 @@ Displays an error message whenever hatta trhows and unexpected exception. Sends
 tracebacks via e-mail.
 """
 import sys, os, locale
+import os.path
 import pprint
 
-from PyQt4.QtGui import QDialog
-from PyQt4.QtCore import (QString, QThread, pyqtSignal, pyqtSlot, Qt,
-    QPoint, QLocale)
+from PyQt4.QtGui import QDialog, QPixmap
+from PyQt4.QtCore import pyqtSlot, Qt
 
 from ui_errorDialog import Ui_ErrorDialog
 
@@ -26,9 +26,14 @@ def pformat(object, indent=4, width=72, depth=10):
 
 class ErrorDialog(QDialog, Ui_ErrorDialog):
     """ Extends the UI with connectivity. """
-    def __init__(self):
+    def __init__(self, module_path):
         QDialog.__init__(self)
         self.setupUi(self)
+        dist_icon = os.path.join(module_path,
+                u'share', u'icons', u'hicolor', u'64x64', u'error.png')
+        debug_icon = os.path.join(module_path, u'resources', u'error.png')
+        self.error_icon.setPixmap(QPixmap(
+                dist_icon if os.path.isfile(dist_icon) else debug_icon))
 
         self._caption = None
         self._traceback = None

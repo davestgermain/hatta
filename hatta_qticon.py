@@ -613,7 +613,6 @@ if __name__ == '__main__':
             QApplication.setQuitOnLastWindowClosed(False)
             error_dialog = ErrorDialog(module_path())
             status_icon = HattaTrayIcon()
-            raise AttributeError("DUPA")
             app.exec_()
         except Exception as e:
             report_bug('dhubleizh@o2.pl', unicode(e))

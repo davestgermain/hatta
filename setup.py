@@ -243,9 +243,9 @@ elif sys.platform == 'win32':
             script = InnoScript("hatta", lib_dir, dist_dir,
                                 self.console_exe_files+self.windows_exe_files,
                                 self.lib_files,
-                                hatta.description, version)
+                                hatta.project_description, version)
             print "*** creating the inno setup script***"
-            script.create(os.path.join(self.dist_dir, hatta.name + '.iss'))
+            script.create(os.path.join(self.dist_dir, hatta.project_name + '.iss'))
             print "*** compiling the inno setup script***"
             script.compile()
             # Note: By default the final setup.exe will be in an
@@ -260,7 +260,7 @@ elif sys.platform == 'win32':
     }]
 
     # Adding MS runtime C libraries
-    if sys.version.startswith('2.6'):
+    if float(sys.version.split(' ', 1)[0]) >= 2.6:
         from win32com.shell import shellcon, shell
         from glob import glob
         windir = shell.SHGetFolderPath(0, shellcon.CSIDL_WINDOWS, 0, 0)

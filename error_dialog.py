@@ -47,7 +47,7 @@ class ErrorDialog(QDialog, Ui_ErrorDialog):
         env.append(('Platform', sys.platform))
         try:
             import sysconfig
-            env.append(('Sysconfig', sysconfig.platform))
+            env.append(('Sysconfig', sysconfig.get_platform()))
         except ImportError:
             try:
                 env.append(('Uname', os.uname()))

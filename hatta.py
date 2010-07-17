@@ -631,16 +631,17 @@ class WikiStorage(object):
         """Find the last revision in which the file existed."""
 
         repo_file = self._title_to_file(title)
-        changectx = self._changectx()
-        stack = [changectx]
-        while repo_file not in changectx:
-            if not stack:
-                return None
+        stack = [self._changectx()]
+        while stack:
             changectx = stack.pop()
+            if repo_file in changectx:
+                return changectx[repo_file]
+            if changectx.rev() == 0:
+                return None
             for parent in changectx.parents():
                 if parent != changectx:
                     stack.append(parent)
-        return changectx[repo_file]
+        return None
 
     def page_history(self, title):
         """Iterate over the page's history."""

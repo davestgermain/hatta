@@ -65,7 +65,7 @@ import mercurial.revlog
 import mercurial.util
 import mercurial.hgweb
 
-__version__ = '1.3.3dev'
+__version__ = '1.4.0'
 project_name = 'Hatta'
 project_url = 'http://hatta-wiki.org/'
 project_description = 'Wiki engine that lives in Mercurial repository.'

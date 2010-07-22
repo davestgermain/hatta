@@ -1571,9 +1571,9 @@ without would yet you your yours yourself yourselves""")).split())
         try:
             self.set_last_revision(self.storage.repo_revision())
             self.reindex_page(page, title, cursor, text)
-            cursor.execute('COMMIT TRANSACTION;')
+            self.con.commit()
         except:
-            cursor.execute('ROLLBACK;')
+            self.con.rollback()
             raise
 
     def reindex(self, wiki, request,  pages):
@@ -1585,10 +1585,10 @@ without would yet you your yours yourself yourselves""")).split())
             for title in pages:
                 page = wiki.get_page(request, title)
                 self.reindex_page(page, title, cursor)
-            cursor.execute('COMMIT TRANSACTION;')
+            self.con.commit()
             self.empty = False
         except:
-            cursor.execute('ROLLBACK;')
+            self.con.rollback()
             raise
 
     def set_last_revision(self, rev):

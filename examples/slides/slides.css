@@ -1,0 +1,44 @@
+
+html { background: #fff url(/+download/slide-background.png) no-repeat 95% 95%; color #444; height: 100%; }
+div.slide { padding: 1em 3em; position: absolute; top: 0; left: 0; bottom: 0; right: 0 }
+
+body {
+    line-height: 1.3;
+    font-family: DejaVu Sans, sans-serif;
+    color: #444;
+}
+
+h1, h2, h3, h4, h5 {
+    color: #888;
+    font-family: serif;
+    text-shadow: 0 0.0125em 0.25em rgba(0, 0, 0, 0.25);
+    letter-spacing: 0.05em;
+}
+
+
+a img {
+    border: none;
+}
+b img {
+    float: left;
+    margin: 0.25em 2em 0.25em 0;
+    display: block;
+}
+i img {
+    float: right;
+    margin: 0.25em 0 0.25em 2em;
+    display: block;
+}
+ul {
+    margin: 0;
+    padding: 0 0 0 2em;
+}
+li {
+    margin: 0.25em 0;
+    padding: 0;
+    list-style: square outside;
+}
+
+code {
+    font-size: 100%;
+}

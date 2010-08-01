@@ -73,6 +73,7 @@ project_description = 'Wiki engine that lives in Mercurial repository.'
 mimetypes.add_type('application/x-python', '.wsgi')
 mimetypes.add_type('application/x-javascript', '.js')
 mimetypes.add_type('text/x-rst', '.rst')
+EXTERNAL_URL_RE = re.compile(ur'^[a-z]+://|^mailto:', re.I|re.U)
 
 _ = lambda x: x # Later replaced with gettext initialization
 
@@ -95,10 +96,8 @@ def external_link(addr):
 
     """
 
-    return (addr.startswith('http://')
-            or addr.startswith('https://')
-            or addr.startswith('ftp://')
-            or addr.startswith('mailto:'))
+    return EXTERNAL_URL_RE.match(addr)
+
 
 def page_mime(title):
     """
@@ -860,7 +859,7 @@ class WikiParser(object):
         "bold": (10, ur"[*][*]"),
         "code": (20, ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
                 ur"*[}]*)[}][}][}]"),
-        "free_link": (30, ur"""(http|https|ftp)://\S+[^\s.,:;!?()'"=+<>-]"""),
+        "free_link": (30, ur"""[a-zA-Z]+://\S+[^\s.,:;!?()'"=+<>-]"""),
         "italic": (40 , ur"//"),
         "link": (50, ur"\[\[(?P<link_target>([^|\]]|\][^|\]])+)"
                 ur"(\|(?P<link_text>([^\]]|\][^\]])+))?\]\]"),

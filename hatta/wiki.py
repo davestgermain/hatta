@@ -11,7 +11,10 @@ import re
 import werkzeug
 import werkzeug.routing
 
-import pygments
+try:
+    import pygments
+except ImportError:
+    pygments = None
 
 from hatta import storage
 from hatta import search

@@ -246,7 +246,7 @@ class Wiki(object):
 #            reindex = True
 #        else:
 #            reindex = False
-        self.index = self.index_class(self.cache, self.language, self.storage, _)
+        self.index = self.index_class(self.cache, self.language, self.storage)
         self.url_rules = URL.rules(self)
         self.url_map = werkzeug.routing.Map(self.url_rules, converters={
             'title':WikiTitleConverter,
@@ -798,7 +798,7 @@ It can only be edited by the site admin directly on the disk."""))
         if not query:
             url = request.get_url(view=self.all_pages, external=True)
             return werkzeug.routing.redirect(url, code=303)
-        words = tuple(self.index.split_text(query, stop=False))
+        words = tuple(self.index.split_text(query))
         if not words:
             words = (query,)
         title = _(u'Searching for "%s"') % u" ".join(words)

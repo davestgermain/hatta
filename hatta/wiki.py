@@ -20,6 +20,10 @@ import parser
 import error
 
 
+mimetypes.add_type('application/x-python', '.wsgi')
+mimetypes.add_type('application/x-javascript', '.js')
+mimetypes.add_type('text/x-rst', '.rst')
+
 
 def page_mime(title):
     """

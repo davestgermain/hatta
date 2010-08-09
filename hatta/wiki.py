@@ -210,18 +210,18 @@ class Wiki(object):
             sys.exit()
         self.dead = False
         self.config = config
+
         self.language = config.get('language', None)
-        global _
         if self.language is not None:
             try:
-                _ = gettext.translation('hatta', 'locale',
+                self.gettext = gettext.translation('hatta', 'locale',
                                         languages=[self.language]).ugettext
             except IOError:
-                _ = gettext.translation('hatta', fallback=True,
+                self.gettext = gettext.translation('hatta', fallback=True,
                                         languages=[self.language]).ugettext
         else:
-            _ = gettext.translation('hatta', fallback=True).ugettext
-        self._ = _
+            self.gettext = gettext.translation('hatta', fallback=True).ugettext
+
         self.path = os.path.abspath(config.get('pages_path', 'docs'))
         self.page_charset = config.get('page_charset', 'utf-8')
         self.menu_page = self.config.get('menu_page', u'Menu')
@@ -234,18 +234,14 @@ class Wiki(object):
         self.pygments_style = self.config.get('pygments_style', 'tango')
         self.subdirectories = self.config.get_bool('subdirectories', False)
         if self.subdirectories:
-            self.storage = storage.WikiSubdirectoryStorage(self.path, self.page_charset, _)
+            self.storage = storage.WikiSubdirectoryStorage(self.path,
+                                                self.page_charset, self.gettext)
         else:
-            self.storage = self.storage_class(self.path, self.page_charset, _)
-        self.cache = config.get('cache_path', None)
-        if self.cache is None:
-            self.cache = os.path.join(self.storage.repo_path, '.hg', 'hatta', 'cache')
-        self.cache = os.path.abspath(self.cache)
-        if not os.path.isdir(self.cache):
-            os.makedirs(self.cache)
-#            reindex = True
-#        else:
-#            reindex = False
+            self.storage = self.storage_class(self.path, self.page_charset,
+                                              self.gettext)
+        self.cache = os.path.abspath(config.get('cache_path',
+                                     os.path.join(self.storage.repo_path,
+                                                  '.hg', 'hatta', 'cache')))
         self.index = self.index_class(self.cache, self.language, self.storage)
         self.url_rules = URL.rules(self)
         self.url_map = werkzeug.routing.Map(self.url_rules, converters={
@@ -312,6 +308,7 @@ class Wiki(object):
         return response
 
     def _check_lock(self, title):
+        _ = self.gettext
         restricted_pages = [
             'scripts.js',
             'robots.txt',
@@ -352,6 +349,7 @@ It can only be edited by the site admin directly on the disk."""))
 
     @URL('/+history/<title:title>/<int:rev>')
     def revision(self, request, title, rev):
+        _ = self.gettext
         text = self.storage.revision_text(title, rev)
         link = werkzeug.html.a(werkzeug.html(title),
                                href=request.get_url(title))
@@ -382,6 +380,7 @@ It can only be edited by the site admin directly on the disk."""))
 
     @URL('/+edit/<title:title>', methods=['POST'])
     def save(self, request, title):
+        _ = self.gettext
         self._check_lock(title)
         url = request.get_url(title)
         if request.form.get('cancel'):
@@ -442,6 +441,7 @@ It can only be edited by the site admin directly on the disk."""))
 
     @URL('/+edit/<title:title>', methods=['GET'])
     def edit(self, request, title, preview=None):
+        _ = self.gettext
         self._check_lock(title)
         exists = title in self.storage
         if exists:
@@ -464,6 +464,7 @@ It can only be edited by the site admin directly on the disk."""))
     @URL('/+feed/atom')
     @URL('/+feed/rss')
     def atom(self, request):
+        _ = self.gettext
         feed = werkzeug.contrib.atom.AtomFeed(self.site_name,
             feed_url=request.url,
             url=request.adapter.build(self.view, force_external=True),
@@ -579,6 +580,7 @@ It can only be edited by the site admin directly on the disk."""))
     def undo(self, request, title):
         """Revert a change to a page."""
 
+        _ = self.gettext
         self._check_lock(title)
         rev = None
         for key in request.form:
@@ -613,6 +615,7 @@ It can only be edited by the site admin directly on the disk."""))
     def history(self, request, title):
         """Display history of changes of a page."""
 
+        _ = self.gettext
         page = self.get_page(request, title)
         content = page.render_content(page.history_list(),
             _(u'History of "%(title)s"') % {'title': title})
@@ -670,6 +673,7 @@ It can only be edited by the site admin directly on the disk."""))
     def diff(self, request, title, from_rev, to_rev):
         """Show the differences between specified revisions."""
 
+        _ = self.gettext
         page = self.get_page(request, title)
         build = request.adapter.build
         from_url = build(self.revision, {'title': title, 'rev': from_rev})
@@ -701,6 +705,7 @@ It can only be edited by the site admin directly on the disk."""))
     def all_pages(self, request):
         """Show index of all pages in the wiki."""
 
+        _ = self.gettext
         page = self.get_page(request, '')
         all_pages = sorted(self.storage.all_pages())
         content = page.pages_list(all_pages, _(u'Index of all pages'))
@@ -714,6 +719,7 @@ It can only be edited by the site admin directly on the disk."""))
     def orphaned(self, request):
         """Show all pages that don't have backlinks."""
 
+        _ = self.gettext
         page = self.get_page(request, '')
         pages = self.index.orphaned_pages()
         content = page.pages_list(pages,
@@ -728,6 +734,7 @@ It can only be edited by the site admin directly on the disk."""))
     def wanted(self, request):
         """Show all pages that don't exist yet, but are linked."""
 
+        _ = self.gettext
         def wanted_pages_list(page):
             """Generate the content of wanted pages page."""
 
@@ -756,6 +763,7 @@ It can only be edited by the site admin directly on the disk."""))
     def search(self, request):
         """Serve the search results page."""
 
+        _ = self.gettext
         def search_snippet(title, words):
             """Extract a snippet of text for search results."""
 
@@ -810,6 +818,7 @@ It can only be edited by the site admin directly on the disk."""))
     def backlinks(self, request, title):
         """Serve the page with backlinks."""
 
+        _ = self.gettext
         self.storage.reopen()
         self.index.update(self, request)
         page = self.get_page(request, title)
@@ -841,6 +850,7 @@ It can only be edited by the site admin directly on the disk."""))
     def pygments_css(self, request):
         """Serve the default pygments style"""
 
+        _ = self.gettext
         if pygments is None:
             raise NotImplementedErr(_(u"Code highlighting is not available."))
 
@@ -879,6 +889,7 @@ It can only be edited by the site admin directly on the disk."""))
     def hgweb(self, request, path=None):
         """Serve the pages repository on the web like a normal hg repository."""
 
+        _ = self.gettext
         if not self.config.get_bool('hgweb', False):
             raise ForbiddenErr(_(u'Repository access disabled.'))
         app = mercurial.hgweb.request.wsgiapplication(
@@ -896,6 +907,7 @@ It can only be edited by the site admin directly on the disk."""))
     def die(self, request):
         """Terminate the standalone server if invoked from localhost."""
 
+        _ = self.gettext
         if not request.remote_addr.startswith('127.'):
             raise ForbiddenErr(_(u'This URL can only be called locally.'))
         def agony():

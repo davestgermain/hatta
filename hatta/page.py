@@ -146,7 +146,7 @@ class WikiPage(object):
 
     def search_form(self):
         html = werkzeug.html
-        _ = self.wiki._
+        _ = self.wiki.gettext
         return html.form(html.div(html.input(name="q", class_="search"),
                 html.input(class_="button", type_="submit", value=_(u'Search')),
             ), method="GET", class_="search",
@@ -160,7 +160,7 @@ class WikiPage(object):
 
     def menu(self):
         """Generate the menu items"""
-        _ = self.wiki._
+        _ = self.wiki.gettext
         if self.wiki.menu_page in self.storage:
             items = self.index.page_links_and_labels(self.wiki.menu_page)
         else:
@@ -206,7 +206,7 @@ class WikiPage(object):
                      src=self.get_url(None, self.wiki.scripts_js))
 
     def footer(self, special_title, edit_url):
-        _ = self.wiki._
+        _ = self.wiki.gettext
         if special_title:
             footer_links = [
                 (_(u'Changes'), 'changes',
@@ -275,7 +275,7 @@ class WikiPage(object):
     def history_list(self):
         """Generate the content of the history page."""
 
-        _ = self.wiki._
+        _ = self.wiki.gettext
         h = werkzeug.html
         max_rev = -1;
         title = self.title
@@ -354,7 +354,7 @@ class WikiPageText(WikiPage):
     def editor_form(self, preview=None):
         """Generate the HTML for the editor."""
 
-        _ = self.wiki._
+        _ = self.wiki.gettext
         author = self.request.get_author()
         lines = []
         try:
@@ -567,7 +567,7 @@ class WikiPageFile(WikiPage):
         return content
 
     def editor_form(self, preview=None):
-        _ = self.wiki._
+        _ = self.wiki.gettext
         author = self.request.get_author()
         if self.title in self.storage:
             comment = _(u'changed')
@@ -638,7 +638,7 @@ class WikiPageCSV(WikiPageFile):
 
     def content_iter(self, lines=None):
         import csv
-        _ = self.wiki._
+        _ = self.wiki.gettext
         # XXX Add preview support
         csv_file = self.storage.open_page(self.title)
         reader = csv.reader(csv_file)

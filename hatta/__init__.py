@@ -17,16 +17,20 @@ the repository will appear in the recent changes and in page's history.
 See hatta.py --help for usage.
 """
 
-from hatta.wiki import Wiki, WikiResponse, WikiRequest
-from hatta.config import WikiConfig, read_config
-from hatta.__main__ import main, application
-from hatta.parser import WikiParser, WikiWikiParser
-from hatta.storage import WikiStorage, WikiSubdirectoryStorage
-from hatta.page import WikiPage, WikiPageText, WikiPageWiki
-from hatta.page import WikiPageColorText, WikiPageFile, WikiPageImage
+# Exposed API
+from wiki import Wiki, WikiResponse, WikiRequest
+from config import WikiConfig, read_config
+from __main__ import main
+from parser import WikiParser, WikiWikiParser
+from storage import WikiStorage, WikiSubdirectoryStorage
+from page import WikiPage, WikiPageText, WikiPageWiki
+from page import WikiPageColorText, WikiPageFile, WikiPageImage
 
+# Project's metainformation
 __version__ = '1.4.0dev'
 project_name = 'Hatta'
 project_url = 'http://hatta-wiki.org/'
 project_description = 'Wiki engine that lives in Mercurial repository.'
 
+# Make it work as Mercurial extension
+from hg_integration import cmdtable

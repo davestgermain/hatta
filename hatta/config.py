@@ -3,6 +3,52 @@
 
 import os
 
+OPTIONS = []
+VALID_NAMES = set()
+
+def _add(short, long, dest, help, default=None, metavar=None, action=None, type=None):
+    OPTIONS.append((short, long, dest, help, default, metavar, action, type))
+    VALID_NAMES.add(dest)
+
+_add('-V', '--version', dest='show_version', default=False,
+    help='Display version and exit', action="store_true")
+_add('-d', '--pages-dir', dest='pages_path',
+    help='Store pages in DIR', metavar='DIR')
+_add('-t', '--cache-dir', dest='cache_path',
+    help='Store cache in DIR', metavar='DIR')
+_add('-i', '--interface', dest='interface',
+    help='Listen on interface INT', metavar='INT')
+_add('-p', '--port', dest='port', type='int',
+    help='Listen on port PORT', metavar='PORT')
+_add('-s', '--script-name', dest='script_name',
+    help='Override SCRIPT_NAME to NAME', metavar='NAME')
+_add('-n', '--site-name', dest='site_name',
+    help='Set the name of the site to NAME', metavar='NAME')
+_add('-m', '--front-page', dest='front_page',
+    help='Use PAGE as the front page', metavar='PAGE')
+_add('-e', '--encoding', dest='page_charset',
+    help='Use encoding ENC to read and write pages', metavar='ENC')
+_add('-c', '--config-file', dest='config_file',
+    help='Read configuration from FILE', metavar='FILE')
+_add('-l', '--language', dest='language',
+    help='Translate interface to LANG', metavar='LANG')
+_add('-r', '--read-only', dest='read_only',
+    help='Whether the wiki should be read-only', action="store_true")
+_add('-g', '--icon-page', dest='icon_page', metavar="PAGE",
+    help='Read icons graphics from PAGE.')
+_add('-w', '--hgweb', dest='hgweb',
+    help='Enable hgweb access to the repository', action="store_true")
+_add('-W', '--wiki-words', dest='wiki_words',
+    help='Enable WikiWord links', action="store_true")
+_add('-I', '--ignore-indent', dest='ignore_indent',
+    help='Treat indented lines as normal text', action="store_true")
+_add('-P', '--pygments-style', dest='pygments_style',
+    help='Use the STYLE pygments style for highlighting',
+    metavar='STYLE')
+_add('-D', '--subdirectories', dest='subdirectories',
+    action="store_true",
+    help='Store subpages as subdirectories in the filesystem')
+
 class WikiConfig(object):
     """
     Responsible for reading and storing site configuration. Contains the
@@ -16,11 +62,11 @@ class WikiConfig(object):
 
     default_filename = u'hatta.conf'
 
-    # Please see the bottom of the script for modifying these values.
-
     def __init__(self, **kw):
         self.config = dict(kw)
         self.parse_environ()
+        self.options = list(OPTIONS)
+        self.valid_names = set(VALID_NAMES)
 
     def sanitize(self):
         """
@@ -39,64 +85,25 @@ class WikiConfig(object):
         for key, value in os.environ.iteritems():
             if key.startswith(prefix):
                 name = key[len(prefix):].lower()
-                self.config[name] = value
+                if name in self.valid_names:
+                    self.config[name] = value
 
     def parse_args(self):
         """Check the commandline arguments for options."""
 
         import optparse
 
-        self.options = []
         parser = optparse.OptionParser()
-
-        def add(*args, **kw):
-            self.options.append(kw['dest'])
-            parser.add_option(*args, **kw)
-
-        add('-V', '--version', dest='show_version', default=False,
-            help='Display version and exit', action="store_true")
-        add('-d', '--pages-dir', dest='pages_path',
-            help='Store pages in DIR', metavar='DIR')
-        add('-t', '--cache-dir', dest='cache_path',
-            help='Store cache in DIR', metavar='DIR')
-        add('-i', '--interface', dest='interface',
-            help='Listen on interface INT', metavar='INT')
-        add('-p', '--port', dest='port', type='int',
-            help='Listen on port PORT', metavar='PORT')
-        add('-s', '--script-name', dest='script_name',
-            help='Override SCRIPT_NAME to NAME', metavar='NAME')
-        add('-n', '--site-name', dest='site_name',
-            help='Set the name of the site to NAME', metavar='NAME')
-        add('-m', '--front-page', dest='front_page',
-            help='Use PAGE as the front page', metavar='PAGE')
-        add('-e', '--encoding', dest='page_charset',
-            help='Use encoding ENC to read and write pages', metavar='ENC')
-        add('-c', '--config-file', dest='config_file',
-            help='Read configuration from FILE', metavar='FILE')
-        add('-l', '--language', dest='language',
-            help='Translate interface to LANG', metavar='LANG')
-        add('-r', '--read-only', dest='read_only',
-            help='Whether the wiki should be read-only', action="store_true")
-        add('-g', '--icon-page', dest='icon_page', metavar="PAGE",
-            help='Read icons graphics from PAGE.')
-        add('-w', '--hgweb', dest='hgweb',
-            help='Enable hgweb access to the repository', action="store_true")
-        add('-W', '--wiki-words', dest='wiki_words',
-            help='Enable WikiWord links', action="store_true")
-        add('-I', '--ignore-indent', dest='ignore_indent',
-            help='Treat indented lines as normal text', action="store_true")
-        add('-P', '--pygments-style', dest='pygments_style',
-            help='Use the STYLE pygments style for highlighting',
-            metavar='STYLE')
-        add('-D', '--subdirectories', dest='subdirectories',
-            action="store_true",
-            help='Store subpages as subdirectories in the filesystem')
+        for short, long, dest, help, default, metavar, action, type in self.options:
+            parser.add_option(short, long, dest=dest, help=help, type=type,
+                              default=default, metavar=metavar, action=action)
 
         options, args = parser.parse_args()
         for option, value in options.__dict__.iteritems():
-            if option in self.options:
-                if value is not None:
-                    self.config[option] = value
+            if value is not None:
+                self.config[option] = value
+        if args:
+            self.config['pages_path'] = args[0]
 
     def parse_files(self, files=None):
         """Check the config files for options."""
@@ -107,9 +114,11 @@ class WikiConfig(object):
             files = [self.get('config_file', self.default_filename)]
         parser = ConfigParser.SafeConfigParser()
         parser.read(files)
-        for section in parser.sections():
-            for option, value in parser.items(section):
-                self.config[option] = value
+        section = 'hatta'
+        for option, value in parser.items(section):
+            if option not in self.valid_names:
+                raise ValueError('Invalid option name "%s".' % option)
+            self.config[option] = value
 
     def save_config(self, filename=None):
         """Saves configuration to a given file."""
@@ -118,7 +127,7 @@ class WikiConfig(object):
 
         import ConfigParser
         parser = ConfigParser.RawConfigParser()
-        section = self.config['site_name']
+        section = 'hatta'
         parser.add_section(section)
         for key, value in self.config.iteritems():
             parser.set(section, str(key), str(value))

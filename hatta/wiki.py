@@ -20,39 +20,6 @@ from hatta import parser
 from hatta import error
 
 
-mimetypes.add_type('application/x-python', '.wsgi')
-mimetypes.add_type('application/x-javascript', '.js')
-mimetypes.add_type('text/x-rst', '.rst')
-
-
-def page_mime(title):
-    """
-    Guess page's mime type ased on corresponding file name.
-    Default ot text/x-wiki for files without an extension.
-
-    >>> page_mime(u'something.txt')
-    'text/plain'
-    >>> page_mime(u'SomePage')
-    'text/x-wiki'
-    >>> page_mime(u'ąęśUnicodePage')
-    'text/x-wiki'
-    >>> page_mime(u'image.png')
-    'image/png'
-    >>> page_mime(u'style.css')
-    'text/css'
-    >>> page_mime(u'archive.tar.gz')
-    'archive/gzip'
-    """
-
-    addr = title.encode('utf-8') # the encoding doesn't relly matter here
-    mime, encoding = mimetypes.guess_type(addr, strict=False)
-    if encoding:
-        mime = 'archive/%s' % encoding
-    if mime is None:
-        mime = 'text/x-wiki'
-    return mime
-
-
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):
     """A typical HTTP response class made out of Werkzeug's mixins."""
@@ -391,7 +358,7 @@ dd {font-style: italic; }
             try:
                 page_class, mime = self.filename_map[title]
             except KeyError:
-                mime = page_mime(title)
+                mime = page.page_mime(title)
                 major, minor = mime.split('/', 1)
                 try:
                     page_class = self.mime_map[mime]
@@ -620,7 +587,7 @@ It can only be edited by the site admin directly on the disk."""))
     def download(self, request, title):
         """Serve the raw content of a page directly from disk."""
 
-        mime = page_mime(title)
+        mime = page.page_mime(title)
         if mime == 'text/x-wiki':
             mime = 'text/plain'
         try:

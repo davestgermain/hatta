@@ -3,6 +3,7 @@
 
 import difflib
 import datetime
+import mimetypes
 import re
 
 import werkzeug
@@ -24,6 +25,35 @@ except ImportError:
 
 from hatta import parser
 from hatta import error
+
+
+def page_mime(title):
+    """
+    Guess page's mime type ased on corresponding file name.
+    Default ot text/x-wiki for files without an extension.
+
+    >>> page_mime(u'something.txt')
+    'text/plain'
+    >>> page_mime(u'SomePage')
+    'text/x-wiki'
+    >>> page_mime(u'ąęśUnicodePage')
+    'text/x-wiki'
+    >>> page_mime(u'image.png')
+    'image/png'
+    >>> page_mime(u'style.css')
+    'text/css'
+    >>> page_mime(u'archive.tar.gz')
+    'archive/gzip'
+    """
+
+    addr = title.encode('utf-8') # the encoding doesn't relly matter here
+    mime, encoding = mimetypes.guess_type(addr, strict=False)
+    if encoding:
+        mime = 'archive/%s' % encoding
+    if mime is None:
+        mime = 'text/x-wiki'
+    return mime
+
 
 class WikiPage(object):
     """Everything needed for rendering a page."""
@@ -730,4 +760,7 @@ mime_map = {
     '': WikiPageFile,
 }
 
+mimetypes.add_type('application/x-python', '.wsgi')
+mimetypes.add_type('application/x-javascript', '.js')
+mimetypes.add_type('text/x-rst', '.rst')
 

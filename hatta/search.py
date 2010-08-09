@@ -6,8 +6,6 @@ import re
 import os
 import thread
 
-from hatta import parser
-
 class WikiSearch(object):
     """
     Responsible for indexing words and links, for fast searching and
@@ -186,8 +184,7 @@ without would yet you your yours yourself yourselves""")).split())
                    'GROUP BY target ORDER BY -COUNT(*);')
             for (refs, db_title,) in con.execute(sql):
                 title = unicode(db_title)
-                if not parser.external_link(title) and not title.startswith('+'):
-                    yield refs, title
+                yield refs, title
         finally:
             con.commit()
 

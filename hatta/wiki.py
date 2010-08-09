@@ -736,10 +736,12 @@ It can only be edited by the site admin directly on the disk."""))
                 _(u"List of pages that are linked to, but don't exist yet.")))
             yield u'<ol class="wanted">'
             for refs, title in self.index.wanted_pages():
-                url = page.get_url(title, self.backlinks)
-                yield h.li(h.b(page.wiki_link(title)),
-                           h.i(u' (', h.a(h(_(u"%d references") % refs),
-                                          href=url, class_="backlinks"), ')'))
+                if not parser.external_link(title) and not title.startswith('+'):
+                    url = page.get_url(title, self.backlinks)
+                    yield h.li(h.b(page.wiki_link(title)),
+                               h.i(u' (',
+                                  h.a(h(_(u"%d references") % refs),
+                                      href=url, class_="backlinks"), ')'))
             yield u'</ol>'
 
         page = self.get_page(request, '')

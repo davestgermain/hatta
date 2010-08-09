@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import werkzeug
+import werkzeug.exceptions
 
 
 class WikiError(werkzeug.exceptions.HTTPException):

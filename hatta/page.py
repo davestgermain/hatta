@@ -1,7 +1,13 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import difflib
+import datetime
+import re
+
 import werkzeug
+import werkzeug.contrib.atom
+
 try:
     import pygments
     import pygments.util
@@ -16,9 +22,8 @@ try:
 except ImportError:
     Image = None
 
-
-import parser
-import error
+from hatta import parser
+from hatta import error
 
 class WikiPage(object):
     """Everything needed for rendering a page."""

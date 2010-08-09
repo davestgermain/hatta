@@ -9,15 +9,15 @@ import mimetypes
 import re
 
 import werkzeug
-import werkzeug.exceptions
 import werkzeug.routing
-import werkzeug.contrib.atom
 
-import storage
-import search
-import page
-import parser
-import error
+import pygments
+
+from hatta import storage
+from hatta import search
+from hatta import page
+from hatta import parser
+from hatta import error
 
 
 mimetypes.add_type('application/x-python', '.wsgi')

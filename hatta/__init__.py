@@ -20,6 +20,10 @@ See hatta.py --help for usage.
 from hatta.wiki import Wiki, WikiResponse, WikiRequest
 from hatta.config import WikiConfig, read_config
 from hatta.__main__ import main, application
+from hatta.parser import WikiParser, WikiWikiParser
+from hatta.storage import WikiStorage, WikiSubdirectoryStorage
+from hatta.page import WikiPage, WikiPageText, WikiPageWiki
+from hatta.page import WikiPageColorText, WikiPageFile, WikiPageImage
 
 __version__ = '1.4.0dev'
 project_name = 'Hatta'

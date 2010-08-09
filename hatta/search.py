@@ -6,7 +6,7 @@ import re
 import os
 import thread
 
-import parser
+from hatta import parser
 
 class WikiSearch(object):
     """

@@ -4,6 +4,8 @@
 import os
 import sys
 
+from hatta import read_config, Wiki
+
 # Avoid WSGI errors, see http://mercurial.selenic.com/bts/issue1095
 sys.stdout = sys.__stdout__
 sys.stderr = sys.__stderr__

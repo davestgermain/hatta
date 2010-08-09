@@ -1,8 +1,21 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import pygments
 import werkzeug
+try:
+    import pygments
+    import pygments.util
+    import pygments.lexers
+    import pygments.formatters
+    import pygments.styles
+except ImportError:
+    pygments = None
+
+try:
+    import Image
+except ImportError:
+    Image = None
+
 
 import parser
 import error

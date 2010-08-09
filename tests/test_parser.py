@@ -56,7 +56,7 @@ def img(addr, label, class_=None, image=None):
     return u'<img src="%s" alt="%s">' % (href, text)
 
 def hgh(text, mime=None, syntax=None, line_no=0):
-    class DummyPage(hatta.WikiPageColorText):
+    class DummyPage(hatta.page.WikiPageColorText):
         def __init__(self):
             self.request = self
             self.request.print_highlight_styles = None
@@ -64,11 +64,11 @@ def hgh(text, mime=None, syntax=None, line_no=0):
 
 def parse(text):
     lines = '\n\r'.join(text.split('\n')).split('\r')
-    return HTML(u''.join(hatta.WikiParser(lines, link, img, hgh)))
+    return HTML(u''.join(hatta.parser.WikiParser(lines, link, img, hgh)))
 
 def wiki_parse(text):
     lines = '\n\r'.join(text.split('\n')).split('\r')
-    return HTML(u''.join(hatta.WikiWikiParser(lines, link, img, hgh)))
+    return HTML(u''.join(hatta.parser.WikiWikiParser(lines, link, img, hgh)))
 
 
 class TestParser(object):
@@ -76,7 +76,7 @@ class TestParser(object):
         text = """[[one link]] some
 text [[another|link]] more
 text [[link]]"""
-        links = list(hatta.WikiParser.extract_links(text))
+        links = list(hatta.parser.WikiParser.extract_links(text))
         assert links == [
             ('one link', 'one link'),
             ('another', 'link'),

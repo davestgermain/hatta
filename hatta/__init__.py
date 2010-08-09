@@ -21,14 +21,12 @@ import base64
 import datetime
 import difflib
 import gettext
-import itertools
 import mimetypes
 import os
 import re
 import sys
 import tempfile
 import thread
-import unicodedata
 
 # Avoid WSGI errors, see http://mercurial.selenic.com/bts/issue1095
 sys.stdout = sys.__stdout__
@@ -63,10 +61,10 @@ import mercurial.revlog
 import mercurial.util
 import mercurial.hgweb
 
-
-from hatta.search import WikiSearch
-
-
+import search
+import page
+import parser
+import error
 
 __version__ = '1.4.0dev'
 project_name = 'Hatta'
@@ -76,30 +74,8 @@ project_description = 'Wiki engine that lives in Mercurial repository.'
 mimetypes.add_type('application/x-python', '.wsgi')
 mimetypes.add_type('application/x-javascript', '.js')
 mimetypes.add_type('text/x-rst', '.rst')
-EXTERNAL_URL_RE = re.compile(ur'^[a-z]+://|^mailto:', re.I|re.U)
 
 _ = lambda x: x # Later replaced with gettext initialization
-
-def external_link(addr):
-    """
-    Decide whether a link is absolute or internal.
-
-    >>> external_link('http://example.com')
-    True
-    >>> external_link('https://example.com')
-    True
-    >>> external_link('ftp://example.com')
-    True
-    >>> external_link('mailto:user@example.com')
-    True
-    >>> external_link('PageTitle')
-    False
-    >>> external_link(u'ąęśćUnicodePage')
-    False
-
-    """
-
-    return EXTERNAL_URL_RE.match(addr)
 
 
 def page_mime(title):
@@ -128,30 +104,6 @@ def page_mime(title):
     if mime is None:
         mime = 'text/x-wiki'
     return mime
-
-
-class WikiError(werkzeug.exceptions.HTTPException):
-    """Base class for all error pages."""
-
-
-class ForbiddenErr(WikiError):
-    code = 403
-
-
-class NotFoundErr(WikiError):
-    code = 404
-
-
-class UnsupportedMediaTypeErr(WikiError):
-    code = 415
-
-
-class NotImplementedErr(WikiError):
-    code = 501
-
-
-class ServiceUnavailableErr(WikiError):
-    code = 503
 
 
 class WikiConfig(object):
@@ -417,10 +369,10 @@ class WikiStorage(object):
 
         abspath = os.path.abspath(path)
         if os.path.islink(path) or os.path.isdir(path):
-            raise ForbiddenErr(
+            raise error.ForbiddenErr(
                 _(u"Can't use symbolic links or directories as pages"))
         if not abspath.startswith(self.path):
-            raise ForbiddenErr(
+            raise error.ForbiddenErr(
                 _(u"Can't read or write outside of the pages repository"))
 
     def _file_path(self, title):
@@ -440,7 +392,7 @@ class WikiStorage(object):
 
     def _file_to_title(self, filepath):
         if not filepath.startswith(self.repo_prefix):
-            raise ForbiddenErr(
+            raise error.ForbiddenErr(
                 _(u"Can't read or write outside of the pages repository"))
         name = filepath[len(self.repo_prefix):].strip('/')
         # Unescape special windows filenames and dot files
@@ -586,7 +538,7 @@ class WikiStorage(object):
         try:
             return open(file_path, "rb")
         except IOError:
-            raise NotFoundErr()
+            raise error.NotFoundErr()
 
     def page_file_meta(self, title):
         """Get page's inode number, size and last modification time."""
@@ -603,7 +555,7 @@ class WikiStorage(object):
 
         filectx_tip = self._find_filectx(title)
         if filectx_tip is None:
-            raise NotFoundErr()
+            raise error.NotFoundErr()
             #return -1, None, u'', u''
         rev = filectx_tip.filerev()
         filectx = filectx_tip.filectx(rev)
@@ -666,11 +618,11 @@ class WikiStorage(object):
 
         filectx_tip = self._find_filectx(title)
         if filectx_tip is None:
-            raise NotFoundErr()
+            raise error.NotFoundErr()
         try:
             data = filectx_tip.filectx(rev).data()
         except IndexError:
-            raise NotFoundErr()
+            raise error.NotFoundErr()
         return data
 
     def revision_text(self, title, rev):
@@ -761,7 +713,7 @@ class WikiSubdirectoryStorage(WikiStorage):
             os.makedirs(dir_path)
         except OSError, e:
             if e.errno == 17 and not os.path.isdir(dir_path):
-                raise ForbiddenErr(
+                raise error.ForbiddenErr(
                     _(u"Can't make subpages of existing pages"))
             elif e.errno != 17:
                 raise
@@ -793,493 +745,6 @@ class WikiSubdirectoryStorage(WikiStorage):
                 if (os.path.isfile(os.path.join(self.path, filename))
                     and not filename.startswith('.')):
                     yield werkzeug.url_unquote(filename)
-
-
-class WikiParser(object):
-    r"""
-    Responsible for generating HTML markup from the wiki markup.
-
-    The parser works on two levels. On the block level, it analyzes lines
-    of text and decides what kind of block element they belong to (block
-    elements include paragraphs, lists, headings, preformatted blocks).
-    Lines belonging to the same block are joined together, and a second
-    pass is made using regular expressions to parse line-level elements,
-    such as links, bold and italic text and smileys.
-
-    Some block-level elements, such as preformatted blocks, consume additional
-    lines from the input until they encounter the end-of-block marker, using
-    lines_until. Most block-level elements are just runs of marked up lines
-    though.
-
-
-    """
-
-    bullets_pat = ur"^\s*[*]+\s+"
-    heading_pat = ur"^\s*=+"
-    quote_pat = ur"^[>]+\s+"
-    block = {
-        # "name": (priority, ur"pattern"),
-        "bullets": (10, bullets_pat),
-        "code": (20, ur"^[{][{][{]+\s*$"),
-        "conflict": (30, ur"^<<<<<<< local\s*$"),
-        "empty": (40, ur"^\s*$"),
-        "heading": (50, heading_pat),
-        "indent": (60, ur"^[ \t]+"),
-        "macro":(70, ur"^<<\w+\s*$"),
-        "quote": (80, quote_pat),
-        "rule": (90, ur"^\s*---+\s*$"),
-        "syntax": (100, ur"^\{\{\{\#![\w+#.-]+\s*$"),
-        "table": (110, ur"^\|"),
-    }
-    image_pat = (ur"\{\{(?P<image_target>([^|}]|}[^|}])*)"
-                 ur"(\|(?P<image_text>([^}]|}[^}])*))?}}")
-    smilies = {
-        r':)': "smile.png",
-        r':(': "frown.png",
-        r':P': "tongue.png",
-        r':D': "grin.png",
-        r';)': "wink.png",
-    }
-    punct = {
-        r'...': "&hellip;",
-        r'--': "&ndash;",
-        r'---': "&mdash;",
-        r'~': "&nbsp;",
-        r'\~': "~",
-        r'~~': "&sim;",
-        r'(C)': "&copy;",
-        r'-->': "&rarr;",
-        r'<--': "&larr;",
-        r'(R)': "&reg;",
-        r'(TM)': "&trade;",
-        r'%%': "&permil;",
-        r'``': "&ldquo;",
-        r"''": "&rdquo;",
-        r",,": "&bdquo;",
-    }
-    markup = {
-        # "name": (priority, ur"pattern"),
-        "bold": (10, ur"[*][*]"),
-        "code": (20, ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
-                ur"*[}]*)[}][}][}]"),
-        "free_link": (30, ur"""[a-zA-Z]+://\S+[^\s.,:;!?()'"=+<>-]"""),
-        "italic": (40 , ur"//"),
-        "link": (50, ur"\[\[(?P<link_target>([^|\]]|\][^|\]])+)"
-                ur"(\|(?P<link_text>([^\]]|\][^\]])+))?\]\]"),
-        "image": (60, image_pat),
-        "linebreak": (70, ur"\\\\"),
-        "macro": (80, ur"[<][<](?P<macro_name>\w+)\s+"
-                 ur"(?P<macro_text>([^>]|[^>][>])+)[>][>]"),
-        "mail": (90, ur"""(mailto:)?\S+@\S+(\.[^\s.,:;!?()'"/=+<>-]+)+"""),
-        "math": (100, ur"\$\$(?P<math_text>[^$]+)\$\$"),
-        "mono": (110, ur"##"),
-        "newline": (120, ur"\n"),
-        "punct": (130, ur'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+"\'—-])|\b|$)' %
-                  ur"|".join(re.escape(k) for k in punct)),
-        "table": (140, ur"=?\|=?"),
-        "text": (150, ur".+?"),
-    }
-
-
-    def __init__(self, lines, wiki_link, wiki_image,
-                 wiki_syntax=None, wiki_math=None, smilies=None):
-        self.wiki_link = wiki_link
-        self.wiki_image = wiki_image
-        self.wiki_syntax = wiki_syntax
-        self.wiki_math = wiki_math
-        self.enumerated_lines = enumerate(lines)
-        if smilies is not None:
-            self.smilies = smilies
-        self.compile_patterns()
-        self.headings = {}
-        self.stack = []
-        self.line_no = 0
-
-    def compile_patterns(self):
-        self.quote_re = re.compile(self.quote_pat, re.U)
-        self.heading_re = re.compile(self.heading_pat, re.U)
-        self.bullets_re = re.compile(self.bullets_pat, re.U)
-        patterns = ((k, p) for (k, (x, p)) in
-                    sorted(self.block.iteritems(), key=lambda x: x[1][0]))
-        self.block_re = re.compile(ur"|".join("(?P<%s>%s)" % pat
-                                   for pat in patterns), re.U)
-        self.code_close_re = re.compile(ur"^\}\}\}\s*$", re.U)
-        self.macro_close_re = re.compile(ur"^>>\s*$", re.U)
-        self.conflict_close_re = re.compile(ur"^>>>>>>> other\s*$", re.U)
-        self.conflict_sep_re = re.compile(ur"^=======\s*$", re.U)
-        self.image_re = re.compile(self.image_pat, re.U)
-        smileys = ur"|".join(re.escape(k) for k in self.smilies)
-        smiley_pat = (ur"(^|\b|(?<=\s))(?P<smiley_face>%s)"
-                      ur"((?=[\s.,:;!?)/&=+-])|$)" % smileys)
-        self.markup['smiley'] = (125, smiley_pat)
-        patterns = ((k, p) for (k, (x, p)) in
-                    sorted(self.markup.iteritems(), key=lambda x: x[1][0]))
-        self.markup_re = re.compile(ur"|".join("(?P<%s>%s)" % pat
-                                    for pat in patterns), re.U)
-
-    def __iter__(self):
-        return self.parse()
-
-    @classmethod
-    def extract_links(cls, text):
-        links = []
-        def link(addr, label=None, class_=None, image=None, alt=None, lineno=0):
-            addr = addr.strip()
-            if external_link(addr):
-                return u''
-            if '#' in addr:
-                addr, chunk = addr.split('#', 1)
-            if addr == u'':
-                return u''
-            links.append((addr, label))
-            return u''
-        lines = text.split('\n')
-        for part in cls(lines, link, link):
-            for ret in links:
-                yield ret
-            links[:] = []
-
-    def parse(self):
-        """Parse a list of lines of wiki markup, yielding HTML for it."""
-
-        self.headings = {}
-        self.stack = []
-        self.line_no = 0
-
-        def key(enumerated_line):
-            line_no, line = enumerated_line
-            match = self.block_re.match(line)
-            if match:
-                return match.lastgroup
-            return "paragraph"
-
-        for kind, block in itertools.groupby(self.enumerated_lines, key):
-            func = getattr(self, "_block_%s" % kind)
-            for part in func(block):
-                yield part
-
-    def parse_line(self, line):
-        """
-        Find all the line-level markup and return HTML for it.
-
-        """
-
-        for match in self.markup_re.finditer(line):
-            func = getattr(self, "_line_%s" % match.lastgroup)
-            yield func(match.groupdict())
-
-    def pop_to(self, stop):
-        """
-            Pop from the stack until the specified tag is encoutered.
-            Return string containing closing tags of everything popped.
-        """
-        tags = []
-        tag = None
-        try:
-            while tag != stop:
-                tag = self.stack.pop()
-                tags.append(tag)
-        except IndexError:
-            pass
-        return u"".join(u"</%s>" % tag for tag in tags)
-
-    def lines_until(self, close_re):
-        """Get lines from input until the closing markup is encountered."""
-
-        self.line_no, line = self.enumerated_lines.next()
-        while not close_re.match(line):
-            yield line.rstrip()
-            line_no, line = self.enumerated_lines.next()
-
-# methods for the markup inside lines:
-
-    def _line_table(self, groups):
-        return groups["table"]
-
-    def _line_linebreak(self, groups):
-        return u'<br>'
-
-    def _line_smiley(self, groups):
-        smiley = groups["smiley_face"]
-        try:
-            url = self.smilies[smiley]
-        except KeyError:
-            url = ''
-        return self.wiki_image(url, smiley, class_="smiley")
-
-    def _line_bold(self, groups):
-        if 'b' in self.stack:
-            return self.pop_to('b')
-        else:
-            self.stack.append('b')
-            return u"<b>"
-
-    def _line_italic(self, groups):
-        if 'i' in self.stack:
-            return self.pop_to('i')
-        else:
-            self.stack.append('i')
-            return u"<i>"
-
-    def _line_mono(self, groups):
-        if 'tt' in self.stack:
-            return self.pop_to('tt')
-        else:
-            self.stack.append('tt')
-            return u"<tt>"
-
-    def _line_punct(self, groups):
-        text = groups["punct"]
-        return self.punct.get(text, text)
-
-    def _line_newline(self, groups):
-        return "\n"
-
-    def _line_text(self, groups):
-        return werkzeug.escape(groups["text"])
-
-    def _line_math(self, groups):
-        if self.wiki_math:
-            return self.wiki_math(groups["math_text"])
-        else:
-            return "<var>%s</var>" % werkzeug.escape(groups["math_text"])
-
-    def _line_code(self, groups):
-        return u'<code>%s</code>' % werkzeug.escape(groups["code_text"])
-
-    def _line_free_link(self, groups):
-        groups['link_target'] = groups['free_link']
-        return self._line_link(groups)
-
-    def _line_mail(self, groups):
-        addr = groups['mail']
-        groups['link_text'] = addr
-        if not addr.startswith(u'mailto:'):
-            addr = u'mailto:%s' % addr
-        groups['link_target'] = addr
-        return self._line_link(groups)
-
-    def _line_link(self, groups):
-        target = groups['link_target']
-        text = groups.get('link_text')
-        if not text:
-            text = target
-            if '#' in text:
-                text, chunk = text.split('#', 1)
-        match = self.image_re.match(text)
-        if match:
-            image = self._line_image(match.groupdict())
-            return self.wiki_link(target, text, image=image)
-        return self.wiki_link(target, text)
-
-    def _line_image(self, groups):
-        target = groups['image_target']
-        alt = groups.get('image_text')
-        if alt is None:
-            alt = target
-        return self.wiki_image(target, alt)
-
-    def _line_macro(self, groups):
-        name = groups['macro_name']
-        text = groups['macro_text'].strip()
-        return u'<span class="%s">%s</span>' % (
-            werkzeug.escape(name, quote=True),
-            werkzeug.escape(text))
-
-# methods for the block (multiline) markup:
-
-    def _block_code(self, block):
-        for self.line_no, part in block:
-            inside = u"\n".join(self.lines_until(self.code_close_re))
-            yield werkzeug.html.pre(werkzeug.html(inside), class_="code",
-                                    id="line_%d" % self.line_no)
-
-    def _block_syntax(self, block):
-        for self.line_no, part in block:
-            syntax = part.lstrip('{#!').strip()
-            inside = u"\n".join(self.lines_until(self.code_close_re))
-            if self.wiki_syntax:
-                return self.wiki_syntax(inside, syntax=syntax,
-                                        line_no=self.line_no)
-            else:
-                return [werkzeug.html.div(werkzeug.html.pre(
-                    werkzeug.html(inside), id="line_%d" % self.line_no),
-                    class_="highlight")]
-
-    def _block_macro(self, block):
-        for self.line_no, part in block:
-            name = part.lstrip('<').strip()
-            inside = u"\n".join(self.lines_until(self.macro_close_re))
-            yield u'<div class="%s">%s</div>' % (
-                werkzeug.escape(name, quote=True),
-                werkzeug.escape(inside))
-
-    def _block_paragraph(self, block):
-        parts = []
-        first_line = None
-        for self.line_no, part in block:
-            if first_line is None:
-                first_line = self.line_no
-            parts.append(part)
-        text = u"".join(self.parse_line(u"".join(parts)))
-        yield werkzeug.html.p(text, self.pop_to(""), id="line_%d" % first_line)
-
-    def _block_indent(self, block):
-        parts = []
-        first_line = None
-        for self.line_no, part in block:
-            if first_line is None:
-                first_line = self.line_no
-            parts.append(part.rstrip())
-        text = u"\n".join(parts)
-        yield werkzeug.html.pre(werkzeug.html(text), id="line_%d" % first_line)
-
-    def _block_table(self, block):
-        first_line = None
-        in_head = False
-        for self.line_no, line in block:
-            if first_line is None:
-                first_line = self.line_no
-                yield u'<table id="line_%d">' % first_line
-            table_row = line.strip()
-            is_header = table_row.startswith('|=') and table_row.endswith('=|')
-            if not in_head and is_header:
-                in_head = True
-                yield '<thead>'
-            elif in_head and not is_header:
-                in_head = False
-                yield '</thead>'
-            yield '<tr>'
-            in_cell = False
-            in_th = False
-
-            for part in self.parse_line(table_row):
-                if part in ('=|', '|', '=|=', '|='):
-                    if in_cell:
-                        if in_th:
-                            yield '</th>'
-                        else:
-                            yield '</td>'
-                        in_cell = False
-                    if part in ('=|=', '|='):
-                        in_th = True
-                    else:
-                        in_th = False
-                else:
-                    if not in_cell:
-                        if in_th:
-                            yield '<th>'
-                        else:
-                            yield '<td>'
-                        in_cell = True
-                    yield part
-            if in_cell:
-                if in_th:
-                    yield '</th>'
-                else:
-                    yield '</td>'
-            yield '</tr>'
-        yield u'</table>'
-
-    def _block_empty(self, block):
-        yield u''
-
-    def _block_rule(self, block):
-        for self.line_no, line in block:
-            yield werkzeug.html.hr()
-
-    def _block_heading(self, block):
-        for self.line_no, line in block:
-            level = min(len(self.heading_re.match(line).group(0).strip()), 5)
-            self.headings[level-1] = self.headings.get(level-1, 0)+1
-            label = u"-".join(str(self.headings.get(i, 0))
-                              for i in range(level))
-            yield werkzeug.html.a(name="head-%s" % label)
-            yield u'<h%d id="line_%d">%s</h%d>' % (level, self.line_no,
-                werkzeug.escape(line.strip("= \t\n\r\v")), level)
-
-    def _block_bullets(self, block):
-        level = 0
-        in_ul = False
-        for self.line_no, line in block:
-            nest = len(self.bullets_re.match(line).group(0).strip())
-            while nest > level:
-                if in_ul:
-                    yield '<li>'
-                yield '<ul id="line_%d">' % self.line_no
-                in_ul = True
-                level += 1
-            while nest < level:
-                yield '</li></ul>'
-                in_ul = False
-                level -= 1
-            if nest == level and not in_ul:
-                yield '</li>'
-            content = line.lstrip().lstrip('*').strip()
-            yield '<li>%s%s' % (u"".join(self.parse_line(content)),
-                                self.pop_to(""))
-            in_ul = False
-        yield '</li></ul>'*level
-
-    def _block_quote(self, block):
-        level = 0
-        in_p = False
-        for self.line_no, line in block:
-            nest = len(self.quote_re.match(line).group(0).strip())
-            if nest == level:
-                yield u'\n'
-            while nest > level:
-                if in_p:
-                    yield '%s</p>' % self.pop_to("")
-                    in_p = False
-                yield '<blockquote>'
-                level += 1
-            while nest < level:
-                if in_p:
-                    yield '%s</p>' % self.pop_to("")
-                    in_p = False
-                yield '</blockquote>'
-                level -= 1
-            content = line.lstrip().lstrip('>').strip()
-            if not in_p:
-                yield '<p id="line_%d">' % self.line_no
-                in_p = True
-            yield u"".join(self.parse_line(content))
-        if in_p:
-            yield '%s</p>' % self.pop_to("")
-        yield '</blockquote>'*level
-
-    def _block_conflict(self, block):
-        for self.line_no, part in block:
-            yield u'<div class="conflict">'
-            local = u"\n".join(self.lines_until(self.conflict_sep_re))
-            yield werkzeug.html.pre(werkzeug.html(local),
-                                    class_="local",
-                                    id="line_%d" % self.line_no)
-            other = u"\n".join(self.lines_until(self.conflict_close_re))
-            yield werkzeug.html.pre(werkzeug.html(other),
-                                    class_="other",
-                                    id="line_%d" % self.line_no)
-            yield u'</div>'
-
-
-class WikiWikiParser(WikiParser):
-    """A version of WikiParser that recognizes WikiWord links."""
-
-    markup = dict(WikiParser.markup)
-    camel_link = ur"\w+[%s]\w+" % re.escape(
-        u''.join(unichr(i) for i in xrange(sys.maxunicode)
-        if unicodedata.category(unichr(i))=='Lu'))
-    markup["camel_link"] = (105, camel_link)
-    markup["camel_nolink"] = (106, ur"[!~](?P<camel_text>%s)" % camel_link)
-
-    def _line_camel_link(self, groups):
-        groups['link_target'] = groups['camel_link']
-        return self._line_link(groups)
-
-    def _line_camel_nolink(self, groups):
-        return werkzeug.escape(groups["camel_text"])
-
 
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
@@ -1405,684 +870,6 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
             temp_file.close()
         self.tmpfiles = []
 
-class WikiPage(object):
-    """Everything needed for rendering a page."""
-
-    def __init__(self, wiki, request, title, mime):
-        self.request = request
-        self.title = title
-        self.mime = mime
-        # for now we just use the globals from wiki object
-        self.get_url = self.request.get_url
-        self.get_download_url = self.request.get_download_url
-        self.wiki = wiki
-        self.storage = self.wiki.storage
-        self.index = self.wiki.index
-        self.config = self.wiki.config
-
-    def date_html(self, datetime):
-        """
-        Create HTML for a date, according to recommendation at
-        http://microformats.org/wiki/date
-        """
-
-        text = datetime.strftime('%Y-%m-%d %H:%M')
-        # We are going for YYYY-MM-DDTHH:MM:SSZ
-        title = datetime.strftime('%Y-%m-%dT%H:%M:%SZ')
-        html = werkzeug.html.abbr(text, class_="date", title=title)
-        return html
-
-
-    def wiki_link(self, addr, label=None, class_=None, image=None, lineno=0):
-        """Create HTML for a wiki link."""
-
-        addr = addr.strip()
-        text = werkzeug.escape(label or addr)
-        chunk = ''
-        if class_ is not None:
-            classes = [class_]
-        else:
-            classes = []
-        if external_link(addr):
-            if addr.startswith('mailto:'):
-                class_ = 'external email'
-                text = text.replace('@', '&#64;').replace('.', '&#46;')
-                href = addr.replace('@', '%40').replace('.', '%2E')
-            else:
-                classes.append('external')
-                href = werkzeug.escape(addr, quote=True)
-        else:
-            if '#' in addr:
-                addr, chunk = addr.split('#', 1)
-                chunk = '#'+chunk
-            if addr.startswith('+'):
-                href = '/'.join([self.request.script_root,
-                                 '+'+werkzeug.escape(addr[1:], quote=True)])
-                classes.append('special')
-            elif addr == u'':
-                href = chunk
-                classes.append('anchor')
-            else:
-                classes.append('wiki')
-                href = self.get_url(addr) + chunk
-                if addr not in self.storage:
-                    classes.append('nonexistent')
-        class_ = ' '.join(classes) or None
-        return werkzeug.html.a(image or text, href=href, class_=class_,
-                               title=addr+chunk)
-
-    def wiki_image(self, addr, alt, class_='wiki', lineno=0):
-        """Create HTML for a wiki image."""
-
-        addr = addr.strip()
-        html = werkzeug.html
-        chunk = ''
-        if external_link(addr):
-            return html.img(src=werkzeug.url_fix(addr), class_="external",
-                            alt=alt)
-        if '#' in addr:
-            addr, chunk = addr.split('#', 1)
-        if addr == '':
-            return html.a(name=chunk)
-        if addr in self.storage:
-            mime = page_mime(addr)
-            if mime.startswith('image/'):
-                return html.img(src=self.get_download_url(addr), class_=class_,
-                                alt=alt)
-            else:
-                return html.img(href=self.get_download_url(addr), alt=alt)
-        else:
-            return html.a(html(alt), href=self.get_url(addr))
-
-    def search_form(self):
-        html = werkzeug.html
-        return html.form(html.div(html.input(name="q", class_="search"),
-                html.input(class_="button", type_="submit", value=_(u'Search')),
-            ), method="GET", class_="search",
-            action=self.get_url(None, self.wiki.search))
-
-    def logo(self):
-        html = werkzeug.html
-        img = html.img(alt=u"[%s]" % self.wiki.front_page,
-                       src=self.get_download_url(self.wiki.logo_page))
-        return html.a(img, class_='logo', href=self.get_url(self.wiki.front_page))
-
-    def menu(self):
-        """Generate the menu items"""
-
-        if self.wiki.menu_page in self.storage:
-            items = self.index.page_links_and_labels(self.wiki.menu_page)
-        else:
-            items = [
-                (self.wiki.front_page, self.wiki.front_page),
-                ('+history', _(u'Recent changes')),
-            ]
-        for link, label in items:
-            if link == self.title:
-                class_="current"
-            else:
-                class_ = None
-            yield self.wiki_link(link, label, class_=class_)
-
-    def header(self, special_title):
-        html = werkzeug.html
-        if self.wiki.logo_page in self.storage:
-            yield self.logo()
-        yield self.search_form()
-        yield html.div(u" ".join(self.menu()), class_="menu")
-        yield html.h1(html(special_title or self.title))
-
-    def html_header(self, special_title, edit_url):
-        e = lambda x: werkzeug.escape(x, quote=True)
-        h = werkzeug.html
-        yield h.title(u'%s - %s' % (e(special_title or self.title),
-                                    e(self.wiki.site_name)))
-        yield h.link(rel="stylesheet", type_="text/css",
-                     href=self.get_url(None, self.wiki.pygments_css))
-        yield h.link(rel="stylesheet", type_="text/css",
-                     href=self.get_url(None, self.wiki.style_css))
-        if special_title:
-            yield h.meta(name="robots", content="NOINDEX,NOFOLLOW")
-        if edit_url:
-            yield h.link(rel="alternate", type_="application/wiki",
-                         href=edit_url)
-        yield h.link(rel="shortcut icon", type_="image/x-icon",
-                     href=self.get_url(None, self.wiki.favicon_ico))
-        yield h.link(rel="alternate", type_="application/rss+xml",
-                     title=e("%s (ATOM)" % self.wiki.site_name),
-                     href=self.get_url(None, self.wiki.atom))
-        yield h.script(type_="text/javascript",
-                     src=self.get_url(None, self.wiki.scripts_js))
-
-    def footer(self, special_title, edit_url):
-        if special_title:
-            footer_links = [
-                (_(u'Changes'), 'changes',
-                 self.get_url(None, self.wiki.recent_changes)),
-                (_(u'Index'), 'index',
-                 self.get_url(None, self.wiki.all_pages)),
-                (_(u'Orphaned'), 'orphaned',
-                 self.get_url(None, self.wiki.orphaned)),
-                (_(u'Wanted'), 'wanted',
-                 self.get_url(None, self.wiki.wanted)),
-            ]
-        else:
-            footer_links = [
-                (_(u'Edit'), 'edit', edit_url),
-                (_(u'History'), 'history',
-                 self.get_url(self.title, self.wiki.history)),
-                (_(u'Backlinks'), 'backlinks',
-                 self.get_url(self.title, self.wiki.backlinks))
-            ]
-        for label, class_, url in footer_links:
-            if url:
-                yield werkzeug.html.a(werkzeug.html(label), href=url,
-                                      class_=class_)
-                yield u'\n'
-
-    def render_content(self, content, special_title=None):
-        """The main page template."""
-
-        edit_url = None
-        if not special_title:
-            try:
-                self.wiki._check_lock(self.title)
-                edit_url = self.get_url(self.title, self.wiki.edit)
-            except ForbiddenErr:
-                pass
-
-        yield u"""\
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-"http://www.w3.org/TR/html4/strict.dtd">
-<html><head>\n"""
-        for part in self.html_header(special_title, edit_url):
-            yield part
-        yield u'\n</head><body><div class="header">\n'
-        for part in self.header(special_title):
-            yield part
-        yield u'\n</div><div class="content">\n'
-        for part in content:
-            yield part
-        if not special_title or not self.title:
-            yield u'\n<div class="footer">\n'
-            for part in self.footer(special_title, edit_url):
-                yield part
-            yield u'</div>'
-        yield u'</div></body></html>'
-
-
-    def pages_list(self, pages, message=None, link=None, _class=None):
-        """Generate the content of a page list page."""
-
-        yield werkzeug.html.p(werkzeug.escape(message) % {'link': link})
-        yield u'<ul class="%s">' % werkzeug.escape(_class or 'pagelist')
-        for title in pages:
-            yield werkzeug.html.li(self.wiki_link(title))
-        yield u'</ul>'
-
-    def history_list(self):
-        """Generate the content of the history page."""
-
-        h = werkzeug.html
-        max_rev = -1;
-        title = self.title
-        link = self.wiki_link(title)
-        yield h.p(h(_(u'History of changes for %(link)s.')) % {'link': link})
-        url = self.request.get_url(title, self.wiki.undo, method='POST')
-        yield u'<form action="%s" method="POST"><ul class="history">' % url
-        try:
-            self.wiki._check_lock(title)
-            read_only = False
-        except ForbiddenErr:
-            read_only = True
-        for rev, date, author, comment in self.wiki.storage.page_history(title):
-            if max_rev < rev:
-                max_rev = rev
-            if rev > 0:
-                date_url = self.request.adapter.build(self.wiki.diff, {
-                    'title': title, 'from_rev': rev-1, 'to_rev': rev})
-            else:
-                date_url = self.request.adapter.build(self.wiki.revision, {
-                    'title': title, 'rev': rev})
-            if read_only:
-                button = u''
-            else:
-                button = h.input(type_="submit", name=str(rev),
-                                 value=h(_(u'Undo')))
-            yield h.li(h.a(self.date_html(date), href=date_url),
-                       button, ' . . . . ',
-                       h.i(self.wiki_link("~%s" % author, author)),
-                       h.div(h(comment), class_="comment"))
-        yield u'</ul>'
-        yield h.input(type_="hidden", name="parent", value=max_rev)
-        yield u'</form>'
-
-
-    def dependencies(self):
-        """Refresh the page when any of those pages was changed."""
-
-        dependencies = set()
-        for title in [self.wiki.logo_page, self.wiki.menu_page]:
-            if title not in self.storage:
-                dependencies.add(werkzeug.url_quote(title))
-        for title in [self.wiki.menu_page]:
-            if title in self.storage:
-                inode, size, mtime = self.storage.page_file_meta(title)
-                etag = '%s/%d-%d' % (werkzeug.url_quote(title), inode, mtime)
-                dependencies.add(etag)
-        return dependencies
-
-class WikiPageText(WikiPage):
-    """Pages of mime type text/* use this for display."""
-
-    def content_iter(self, lines):
-        yield '<pre>'
-        for line in lines:
-            yield werkzeug.html(line)
-        yield '</pre>'
-
-    def plain_text(self):
-        """
-        Get the content of the page with all markup removed, used for
-        indexing.
-        """
-
-        return self.storage.page_text(self.title)
-
-
-    def view_content(self, lines=None):
-        """Read the page content from storage or preview and return iterator."""
-
-        if lines is None:
-            f = self.storage.open_page(self.title)
-            lines = self.storage.page_lines(f)
-        return self.content_iter(lines)
-
-    def editor_form(self, preview=None):
-        """Generate the HTML for the editor."""
-
-        author = self.request.get_author()
-        lines = []
-        try:
-            page_file = self.storage.open_page(self.title)
-            lines = self.storage.page_lines(page_file)
-            (rev, old_date, old_author,
-                old_comment) = self.storage.page_meta(self.title)
-            comment = _(u'modified')
-            if old_author == author:
-                comment = old_comment
-        except NotFoundErr:
-            comment = _(u'created')
-            rev = -1
-        except ForbiddenErr, e:
-            yield werkzeug.html.p(
-                werkzeug.html(_(unicode(e))))
-            return
-        if preview:
-            lines = preview
-            comment = self.request.form.get('comment', comment)
-        html = werkzeug.html
-        yield u'<form action="" method="POST" class="editor"><div>'
-        yield u'<textarea name="text" cols="80" rows="20" id="editortext">'
-        for line in lines:
-            yield werkzeug.escape(line)
-        yield u"""</textarea>"""
-        yield html.input(type_="hidden", name="parent", value=rev)
-        yield html.label(html(_(u'Comment')), html.input(name="comment",
-            value=comment), class_="comment")
-        yield html.label(html(_(u'Author')), html.input(name="author",
-            value=self.request.get_author()), class_="comment")
-        yield html.div(
-                html.input(type_="submit", name="save", value=_(u'Save')),
-                html.input(type_="submit", name="preview", value=_(u'Preview')),
-                html.input(type_="submit", name="cancel", value=_(u'Cancel')),
-                class_="buttons")
-        yield u'</div></form>'
-        if preview:
-            yield html.h1(html(_(u'Preview, not saved')), class_="preview")
-            for part in self.view_content(preview):
-                yield part
-
-    def diff_content(self, from_text, to_text, message=u''):
-        """Generate the HTML markup for a diff."""
-
-        def infiniter(iterator):
-            """Turn an iterator into an infinite one, padding it with None"""
-
-            for i in iterator:
-                yield i
-            while True:
-                yield None
-
-        diff = difflib._mdiff(from_text.split('\n'), to_text.split('\n'))
-        mark_re = re.compile('\0[-+^]([^\1\0]*)\1|([^\0\1])')
-        yield message
-        yield u'<pre class="diff">'
-        for old_line, new_line, changed in diff:
-            old_no, old_text = old_line
-            new_no, new_text = new_line
-            line_no = (new_no or old_no or 1)-1
-            if changed:
-                yield u'<div class="change" id="line_%d">' % line_no
-                old_iter = infiniter(mark_re.finditer(old_text))
-                new_iter = infiniter(mark_re.finditer(new_text))
-                old = old_iter.next()
-                new = new_iter.next()
-                buff = u''
-                while old or new:
-                    while old and old.group(1):
-                        if buff:
-                            yield werkzeug.escape(buff)
-                            buff = u''
-                        yield u'<del>%s</del>' % werkzeug.escape(old.group(1))
-                        old = old_iter.next()
-                    while new and new.group(1):
-                        if buff:
-                            yield werkzeug.escape(buff)
-                            buff = u''
-                        yield u'<ins>%s</ins>' % werkzeug.escape(new.group(1))
-                        new = new_iter.next()
-                    if new:
-                        buff += new.group(2)
-                    old = old_iter.next()
-                    new = new_iter.next()
-                if buff:
-                    yield werkzeug.escape(buff)
-                yield u'</div>'
-            else:
-                yield u'<div class="orig" id="line_%d">%s</div>' % (
-                    line_no, werkzeug.escape(old_text))
-        yield u'</pre>'
-
-class WikiPageColorText(WikiPageText):
-    """Text pages, but displayed colorized with pygments"""
-
-    def view_content(self, lines=None):
-        """Generate HTML for the content."""
-
-        if lines is None:
-            text = self.storage.page_text(self.title)
-        else:
-            text = ''.join(lines)
-        return self.highlight(text, mime=self.mime)
-
-    def highlight(self, text, mime=None, syntax=None, line_no=0):
-        """Colorize the source code."""
-
-        if pygments is None:
-            yield werkzeug.html.pre(werkzeug.html(text))
-            return
-
-        formatter = pygments.formatters.HtmlFormatter()
-        formatter.line_no = line_no
-
-        def wrapper(source, unused_outfile):
-            """Wrap each line of formatted output."""
-
-            yield 0, '<div class="highlight"><pre>'
-            for lineno, line in source:
-                yield (lineno,
-                       werkzeug.html.span(line, id_="line_%d" %
-                                         formatter.line_no))
-                formatter.line_no += 1
-            yield 0, '</pre></div>'
-
-        formatter.wrap = wrapper
-        try:
-            if mime:
-                lexer = pygments.lexers.get_lexer_for_mimetype(mime)
-            elif syntax:
-                lexer = pygments.lexers.get_lexer_by_name(syntax)
-            else:
-                lexer = pygments.lexers.guess_lexer(text)
-        except pygments.util.ClassNotFoundErr:
-            yield werkzeug.html.pre(werkzeug.html(text))
-            return
-        html = pygments.highlight(text, lexer, formatter)
-        yield html
-
-class WikiPageWiki(WikiPageColorText):
-    """Pages of with wiki markup use this for display."""
-
-    def __init__(self, *args, **kw):
-        super(WikiPageWiki, self).__init__(*args, **kw)
-        if self.config.get_bool('wiki_words', False):
-            self.parser = WikiWikiParser
-        else:
-            self.parser = WikiParser
-        if self.config.get_bool('ignore_indent', False):
-            try:
-                del self.parser.block['indent']
-            except KeyError:
-                pass
-
-    def extract_links(self, text=None):
-        """Extract all links from the page."""
-
-        if text is None:
-            try:
-                text = self.storage.page_text(self.title)
-            except NotFoundErr:
-                text = u''
-        return self.parser.extract_links(text)
-
-    def view_content(self, lines=None):
-        if lines is None:
-            f = self.storage.open_page(self.title)
-            lines = self.storage.page_lines(f)
-        if self.wiki.icon_page and self.wiki.icon_page in self.storage:
-            icons = self.index.page_links_and_labels(self.wiki.icon_page)
-            smilies = dict((emo, link) for (link, emo) in icons)
-        else:
-            smilies = None
-        content = self.parser(lines, self.wiki_link, self.wiki_image,
-                             self.highlight, self.wiki_math, smilies)
-        return content
-
-    def wiki_math(self, math):
-        math_url = self.config.get('math_url',
-                            'http://www.mathtran.org/cgi-bin/mathtran?tex=')
-        if '%s' in math_url:
-            url = math_url % werkzeug.url_quote(math)
-        else:
-            url = '%s%s' % (math_url, werkzeug.url_quote(math))
-        label = werkzeug.escape(math, quote=True)
-        return werkzeug.html.img(src=url, alt=label, class_="math")
-
-    def dependencies(self):
-        dependencies = WikiPage.dependencies(self)
-        for title in [self.wiki.icon_page]:
-            if title in self.storage:
-                inode, size, mtime = self.storage.page_file_meta(title)
-                etag = '%s/%d-%d' % (werkzeug.url_quote(title), inode, mtime)
-                dependencies.add(etag)
-        for link in self.index.page_links(self.title):
-            if link not in self.storage:
-                dependencies.add(werkzeug.url_quote(link))
-        return dependencies
-
-class WikiPageFile(WikiPage):
-    """Pages of all other mime types use this for display."""
-
-    def view_content(self, lines=None):
-        if self.title not in self.storage:
-            raise NotFoundErr()
-        content = ['<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>' %
-                   (self.request.get_download_url(self.title),
-                    werkzeug.escape(self.title), self.mime)]
-        return content
-
-    def editor_form(self, preview=None):
-        author = self.request.get_author()
-        if self.title in self.storage:
-            comment = _(u'changed')
-            (rev, old_date, old_author,
-                old_comment) = self.storage.page_meta(self.title)
-            if old_author == author:
-                comment = old_comment
-        else:
-            comment = _(u'uploaded')
-            rev = -1
-        html = werkzeug.html
-        yield html.p(html(
-                _(u"This is a binary file, it can't be edited on a wiki. "
-                  u"Please upload a new version instead.")))
-        yield html.form(html.div(
-            html.div(html.input(type_="file", name="data"), class_="upload"),
-            html.input(type_="hidden", name="parent", value=rev),
-            html.label(html(_(u'Comment')), html.input(name="comment",
-                       value=comment)),
-            html.label(html(_(u'Author')), html.input(name="author",
-                       value=author)),
-            html.div(html.input(type_="submit", name="save", value=_(u'Save')),
-                     html.input(type_="submit", name="cancel",
-                                value=_(u'Cancel')),
-            class_="buttons")), action="", method="POST", class_="editor",
-                                enctype="multipart/form-data")
-
-class WikiPageImage(WikiPageFile):
-    """Pages of mime type image/* use this for display."""
-
-    render_file = '128x128.png'
-
-    def view_content(self, lines=None):
-        if self.title not in self.storage:
-            raise NotFoundErr()
-        content = ['<img src="%s" alt="%s">'
-                   % (self.request.get_url(self.title, self.wiki.render),
-                      werkzeug.escape(self.title))]
-        return content
-
-    def render_mime(self):
-        """Give the filename and mime type of the rendered thumbnail."""
-
-        if not Image:
-            raise NotImplementedError('No Image library available')
-        return  self.render_file, 'image/png'
-
-    def render_cache(self, cache_dir):
-        """Render the thumbnail and save in the cache."""
-
-        if not Image:
-            raise NotImplementedError('No Image library available')
-        page_file = self.storage.open_page(self.title)
-        cache_path = os.path.join(cache_dir, self.render_file)
-        cache_file = open(cache_path, 'wb')
-        try:
-            im = Image.open(page_file)
-            im = im.convert('RGBA')
-            im.thumbnail((128, 128), Image.ANTIALIAS)
-            im.save(cache_file,'PNG')
-        except IOError:
-            raise UnsupportedMediaTypeErr('Image corrupted')
-        cache_file.close()
-        return cache_path
-
-class WikiPageCSV(WikiPageFile):
-    """Display class for type text/csv."""
-
-    def content_iter(self, lines=None):
-        import csv
-        # XXX Add preview support
-        csv_file = self.storage.open_page(self.title)
-        reader = csv.reader(csv_file)
-        html_title = werkzeug.escape(self.title, quote=True)
-        yield u'<table id="%s" class="csvfile">' % html_title
-        try:
-            for row in reader:
-                yield u'<tr>%s</tr>' % (u''.join(u'<td>%s</td>' % cell
-                                                 for cell in row))
-        except csv.Error, e:
-            yield u'</table>'
-            yield werkzeug.html.p(werkzeug.html(
-                _(u'Error parsing CSV file %{file}s on line %{line}d: %{error}s')
-                % {'file': html_title, 'line': reader.line_num, 'error': e}))
-        finally:
-            csv_file.close()
-        yield u'</table>'
-
-    def view_content(self, lines=None):
-        if self.title not in self.storage:
-            raise NotFoundErr()
-        return self.content_iter(lines)
-
-class WikiPageRST(WikiPageText):
-    """
-    Display ReStructured Text.
-    """
-
-    def content_iter(self, lines):
-        try:
-            from docutils.core import publish_parts
-        except ImportError:
-            return super(WikiPageRST, self).content_iter(lines)
-        text = ''.join(lines)
-        SAFE_DOCUTILS = dict(file_insertion_enabled=False, raw_enabled=False)
-        content = publish_parts(text, writer_name='html',
-                                settings_overrides=SAFE_DOCUTILS)['html_body']
-        return [content]
-
-
-class WikiPageBugs(WikiPageText):
-    """
-    Display class for type text/x-bugs
-    Parse the ISSUES file in (roughly) format used by ciss
-    """
-
-    def content_iter(self, lines):
-        last_lines = []
-        in_header = False
-        in_bug = False
-        attributes = {}
-        title = None
-        for line_no, line in enumerate(lines):
-            if last_lines and line.startswith('----'):
-                title = ''.join(last_lines)
-                last_lines = []
-                in_header = True
-                attributes = {}
-            elif in_header and ':' in line:
-                attribute, value = line.split(':', 1)
-                attributes[attribute.strip()] = value.strip()
-            else:
-                if in_header:
-                    if in_bug:
-                        yield '</div>'
-                    #tags = [tag.strip() for tag in
-                    #        attributes.get('tags', '').split()
-                    #        if tag.strip()]
-                    yield '<div id="line_%d">' % (line_no)
-                    in_bug = True
-                    if title:
-                        yield werkzeug.html.h2(werkzeug.html(title))
-                    if attributes:
-                        yield '<dl>'
-                        for attribute, value in attributes.iteritems():
-                            yield werkzeug.html.dt(werkzeug.html(attribute))
-                            yield werkzeug.html.dd(werkzeug.html(value))
-                        yield '</dl>'
-                    in_header = False
-                if not line.strip():
-                    if last_lines:
-                        if last_lines[0][0] in ' \t':
-                            yield werkzeug.html.pre(werkzeug.html(
-                                            ''.join(last_lines)))
-                        else:
-                            yield werkzeug.html.p(werkzeug.html(
-                                            ''.join(last_lines)))
-                        last_lines = []
-                else:
-                    last_lines.append(line)
-        if last_lines:
-            if last_lines[0][0] in ' \t':
-                yield werkzeug.html.pre(werkzeug.html(
-                                ''.join(last_lines)))
-            else:
-                yield werkzeug.html.p(werkzeug.html(
-                                ''.join(last_lines)))
-        if in_bug:
-            yield '</div>'
-
 
 class WikiTitleConverter(werkzeug.routing.PathConverter):
     """Behaves like the path converter, but doesn't match the "+ pages"."""
@@ -2133,26 +920,9 @@ class Wiki(object):
     application and most of the logic.
     """
     storage_class = WikiStorage
-    index_class = WikiSearch
-    filename_map = {
-        'README': (WikiPageText, 'text/plain'),
-        'ISSUES': (WikiPageBugs, 'text/x-bugs'),
-        'ISSUES.txt': (WikiPageBugs, 'text/x-bugs'),
-        'COPYING': (WikiPageText, 'text/plain'),
-        'CHANGES': (WikiPageText, 'text/plain'),
-        'MANIFEST': (WikiPageText, 'text/plain'),
-        'favicon.ico': (WikiPageImage, 'image/x-icon'),
-    }
-    mime_map = {
-        'text': WikiPageColorText,
-        'application/x-javascript': WikiPageColorText,
-        'application/x-python': WikiPageColorText,
-        'text/csv': WikiPageCSV,
-        'text/x-rst': WikiPageRST,
-        'text/x-wiki': WikiPageWiki,
-        'image': WikiPageImage,
-        '': WikiPageFile,
-    }
+    index_class = search.WikiSearch
+    filename_map = page.filename_map
+    mime_map = page.mime_map
     icon = base64.b64decode(
 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhki'
 'AAAAAlwSFlzAAAEnQAABJ0BfDRroQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBo'
@@ -2333,7 +1103,7 @@ dd {font-style: italic; }
                         except KeyError:
                                 page_class = self.mime_map['']
         else:
-            page_class = WikiPage
+            page_class = page.WikiPage
             mime = ''
         return page_class(self, request, title, mime)
 
@@ -2362,12 +1132,12 @@ dd {font-style: italic; }
             'robots.txt',
         ]
         if self.read_only:
-            raise ForbiddenErr(_(u"This site is read-only."))
+            raise error.ForbiddenErr(_(u"This site is read-only."))
         if title in restricted_pages:
-            raise ForbiddenErr(_(u"""Can't edit this page.
+            raise error.ForbiddenErr(_(u"""Can't edit this page.
 It can only be edited by the site admin directly on the disk."""))
         if title in self.index.page_links(self.locked_page):
-            raise ForbiddenErr(_(u"This page is locked."))
+            raise error.ForbiddenErr(_(u"This page is locked."))
 
     def _serve_default(self, request, title, content, mime):
         """Some pages have their default content."""
@@ -2387,7 +1157,7 @@ It can only be edited by the site admin directly on the disk."""))
         page = self.get_page(request, title)
         try:
             content = page.view_content()
-        except NotFoundErr:
+        except error.NotFoundErr:
             url = request.get_url(title, self.edit, external=True)
             return werkzeug.routing.redirect(url, code=303)
         html = page.render_content(content)
@@ -2804,7 +1574,7 @@ It can only be edited by the site admin directly on the disk."""))
 
             try:
                 text = self.storage.page_text(title)
-            except NotFoundErr:
+            except error.NotFoundErr:
                 return u''
             regexp = re.compile(u"|".join(re.escape(w) for w in words),
                                 re.U|re.I)

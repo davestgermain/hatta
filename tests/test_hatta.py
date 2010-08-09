@@ -127,7 +127,7 @@ class TestHattaStandalone(object):
 class TestHattaParser(object):
 
     def parse_text(self, text):
-        parser = hatta.WikiParser
+        parser = hatta.parser.WikiParser
         def link(addr, label=None, class_=None, image=None, alt=None):
             return u"<a></a>"
         def image(addr, label=None, class_=None, image=None, alt=None):

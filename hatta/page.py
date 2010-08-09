@@ -23,8 +23,8 @@ try:
 except ImportError:
     Image = None
 
-from hatta import parser
-from hatta import error
+import parser
+import error
 
 
 def page_mime(title):

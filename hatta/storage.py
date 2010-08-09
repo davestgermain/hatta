@@ -20,7 +20,7 @@ import mercurial.util
 import mercurial.hgweb
 
 
-from hatta import error
+import error
 
 def locked_repo(func):
     """A decorator for locking the repository when calling a method."""

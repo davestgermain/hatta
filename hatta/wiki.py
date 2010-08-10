@@ -626,6 +626,7 @@ It can only be edited by the site admin directly on the disk."""))
     def recent_changes(self, request):
         """Serve the recent changes page."""
 
+        _ = self.gettext
         def changes_list(page):
             """Generate the content of the recent changes page."""
 

@@ -272,14 +272,14 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
             self.con.rollback()
             raise
 
-    def reindex(self, wiki, request,  pages):
+    def reindex(self, wiki, pages):
         """Updates specified pages in bulk."""
 
         cursor = self.con.cursor()
         cursor.execute('BEGIN IMMEDIATE TRANSACTION;')
         try:
             for title in pages:
-                page = wiki.get_page(request, title)
+                page = wiki.get_page(None, title)
                 self.reindex_page(page, title, cursor)
             self.con.commit()
             self.empty = False
@@ -303,7 +303,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         # -1 means "no revision", 1 means revision 0, 2 means revision 1, etc.
         return rev-1
 
-    def update(self, wiki, request):
+    def update(self, wiki):
         """Reindex al pages that changed since last indexing."""
 
         last_rev = self.get_last_revision()
@@ -311,7 +311,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
             changed = self.storage.all_pages()
         else:
             changed = self.storage.changed_since(last_rev)
-        self.reindex(wiki, request, changed)
+        self.reindex(wiki, changed)
         rev = self.storage.repo_revision()
         self.set_last_revision(rev)
 

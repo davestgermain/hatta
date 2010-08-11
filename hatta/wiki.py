@@ -243,6 +243,7 @@ class Wiki(object):
                                      os.path.join(self.storage.repo_path,
                                                   '.hg', 'hatta', 'cache')))
         self.index = self.index_class(self.cache, self.language, self.storage)
+        self.index.update(self)
         self.url_rules = URL.rules(self)
         self.url_map = werkzeug.routing.Map(self.url_rules, converters={
             'title':WikiTitleConverter,
@@ -403,7 +404,7 @@ It can only be edited by the site admin directly on the disk."""))
             except (ValueError, TypeError):
                 parent = None
             self.storage.reopen()
-            self.index.update(self, request)
+            self.index.update(self)
             page = self.get_page(request, title)
             if text is not None:
                 if title == self.locked_page:
@@ -595,7 +596,7 @@ It can only be edited by the site admin directly on the disk."""))
             except (ValueError, TypeError):
                 parent = None
             self.storage.reopen()
-            self.index.update(self, request)
+            self.index.update(self)
             if rev == 0:
                 comment = _(u'Delete page %(title)s') % {'title': title}
                 data = ''
@@ -790,7 +791,7 @@ It can only be edited by the site admin directly on the disk."""))
 
             h = werkzeug.html
             self.storage.reopen()
-            self.index.update(self, request)
+            self.index.update(self)
             result = sorted(self.index.find(words), key=lambda x:-x[0])
             yield werkzeug.html.p(h(_(u'%d page(s) containing all words:')
                                   % len(result)))
@@ -821,7 +822,7 @@ It can only be edited by the site admin directly on the disk."""))
 
         _ = self.gettext
         self.storage.reopen()
-        self.index.update(self, request)
+        self.index.update(self)
         page = self.get_page(request, title)
         message = _(u'Pages that contain a link to %(link)s.')
         link = page.wiki_link(title)

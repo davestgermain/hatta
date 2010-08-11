@@ -1302,9 +1302,9 @@ ur"""━┃┏┓┛┗┣┫┻╋"""
 ur"""┠┯┨┷┿┝┰┥┸╂"""
 ur"""ｦ-ﾟぁ-ん～ーァ-ヶ"""
 ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
-    _con = {}
 
     def __init__(self, cache_path, lang, storage):
+        self._con = {}
         self.path = cache_path
         self.storage = storage
         self.lang = lang

@@ -29,9 +29,9 @@ ur"""━┃┏┓┛┗┣┫┻╋"""
 ur"""┠┯┨┷┿┝┰┥┸╂"""
 ur"""ｦ-ﾟぁ-ん～ーァ-ヶ"""
 ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
-    _con = {}
 
     def __init__(self, cache_path, lang, storage):
+        self._con = {}
         self.path = cache_path
         self.storage = storage
         self.lang = lang
@@ -45,7 +45,9 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
             self.empty = True
         else:
             self.empty = False
-        con = self.con # sqlite3.connect(self.filename)
+        self.init_db(self.con)
+
+    def init_db(self, con):
         con.execute('CREATE TABLE IF NOT EXISTS titles '
                 '(id INTEGER PRIMARY KEY, title VARCHAR);')
         con.execute('CREATE TABLE IF NOT EXISTS words '
@@ -57,8 +59,6 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         con.execute('CREATE TABLE IF NOT EXISTS links '
                 '(src INTEGER, target INTEGER, label VARCHAR, number INTEGER);')
         con.commit()
-
-
 
     @property
     def con(self):

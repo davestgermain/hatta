@@ -63,8 +63,9 @@ class WikiPage(object):
         self.title = title
         self.mime = mime
         # for now we just use the globals from wiki object
-        self.get_url = self.request.get_url
-        self.get_download_url = self.request.get_download_url
+        if request:
+            self.get_url = request.get_url
+            self.get_download_url = request.get_download_url
         self.wiki = wiki
         self.storage = self.wiki.storage
         self.index = self.wiki.index

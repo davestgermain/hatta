@@ -18,6 +18,7 @@ import mercurial.ui
 import mercurial.revlog
 import mercurial.util
 import mercurial.hgweb
+import mercurial.commands
 
 
 import error
@@ -207,7 +208,6 @@ class WikiStorage(object):
             text = msg.encode('utf-8')
         self._commit([repo_file], text, user)
 
-
     def _commit(self, files, text, user):
         try:
             return self.repo.commit(files=files, text=text, user=user,
@@ -217,7 +217,6 @@ class WikiStorage(object):
             match = mercurial.match.exact(self.repo_path, '', list(files))
             return self.repo.commit(match=match, text=text, user=user,
                                     force=True)
-
 
     def save_data(self, title, data, author=u'', comment=u'', parent=None):
         """Save data as specified page."""
@@ -255,6 +254,14 @@ class WikiStorage(object):
     def page_lines(self, page):
         for data in page.xreadlines():
             yield unicode(data, self.charset, 'replace')
+
+    @locked_repo
+    def rename_file(self, path_old, path_new):
+        """Rename files in repository."""
+
+        self._check_path(path_new)
+
+        mercurial.commands.rename(self.ui, self.repo, path_old, path_new)
 
     @locked_repo
     def delete_page(self, title, author=u'', comment=u''):
@@ -429,22 +436,52 @@ class WikiStorage(object):
 class WikiSubdirectoryStorage(WikiStorage):
     """
     A version of WikiStorage that keeps the subpages in real subdirectories in
-    the filesystem.
+    the filesystem. Indexes supported.
 
     """
 
     periods_re = re.compile(r'^[.]|(?<=/)[.]')
     slashes_re = re.compile(r'^[/]|(?<=/)[/]')
 
+    # TODO: make them configurable
+    index = "Index"
+
+    def _file_path(self, title):
+        root = super(WikiSubdirectoryStorage, self)._file_path(title)
+
+        if os.path.isfile(root) and not os.path.islink(root):
+            return root
+        elif os.path.isdir(root):
+            path = os.path.join(root, self.index)
+            if os.path.isfile(path) and not os.path.islink(path):
+                return path
+        return root
+
     def _title_to_file(self, title):
         """Modified escaping allowing (some) slashes and spaces."""
+
+        def exists(path):
+            file_path = os.path.join(self.repo_path, path)
+            return os.path.isfile(file_path) and not os.path.islink(file_path)
+
+        def isdir(path):
+            file_path = os.path.join(self.repo_path, path)
+            return os.path.isdir(file_path) and not os.path.islink(file_path)
 
         title = unicode(title).strip()
         escaped = werkzeug.url_quote(title, safe='/ ')
         escaped = self.periods_re.sub('%2E', escaped)
         escaped = self.slashes_re.sub('%2F', escaped)
-        path = os.path.join(self.repo_prefix, escaped)
-        return path
+        root = os.path.join(self.repo_prefix, escaped)
+
+        if not exists(root):
+            path = os.path.join(root, self.index)
+            if exists(path):
+                return path
+            if isdir(root):
+                return os.path.join(root, self.index)
+
+        return root
 
     @locked_repo
     def save_file(self, title, file_name, author=u'', comment=u'', parent=None):
@@ -456,14 +493,35 @@ class WikiSubdirectoryStorage(WikiStorage):
         file_path = self._file_path(title)
         self._check_path(file_path)
         dir_path = os.path.dirname(file_path)
+
+        # check for existing page with no index yet
+        if os.path.isfile(dir_path) and not os.path.islink(dir_path):
+            index_file = os.path.dirname(self._title_to_file(title).strip("/"))
+            temp_file = tempfile.mktemp(dir=os.path.dirname(index_file))
+            super(WikiSubdirectoryStorage, self).rename_file(index_file,
+                                                             temp_file)
+
         try:
             os.makedirs(dir_path)
         except OSError, e:
-            if e.errno == 17 and not os.path.isdir(dir_path):
-                raise error.ForbiddenErr(
-                    _(u"Can't make subpages of existing pages"))
-            elif e.errno != 17:
+            if e.errno != 17:
                 raise
+
+        try:
+            temp_file
+
+            super(WikiSubdirectoryStorage, self).rename_file(temp_file,
+                                           os.path.join(index_file, self.index))
+
+            try:
+                super(WikiSubdirectoryStorage, self)._commit([index_file,
+                    os.path.join(index_file, self.index)],
+                    "autorenaming index page", "<wiki>")
+            except:
+                super(WikiSubdirectoryStorage, self).repo.rollback()
+        except:
+            pass
+
         super(WikiSubdirectoryStorage, self).save_file(title, file_name,
                                                        author, comment, parent)
 
@@ -480,18 +538,28 @@ class WikiSubdirectoryStorage(WikiStorage):
         file_path = self._file_path(title)
         self._check_path(file_path)
         dir_path = os.path.dirname(file_path)
-        os.removedirs(dir_path)
+        try:
+            os.removedirs(dir_path)
+        except OSError, e:
+            pass # ignore "(39) Directory not empty" error on removing Index
 
     def all_pages(self):
-        """Iterate over the titles of all pages in the wiki. Include subdirectories."""
+        """
+        Iterate over the titles of all pages in the wiki.
+        Include subdirectories but skip over index.
+        """
 
         for (dirpath, dirnames, filenames) in os.walk(self.path):
             path = dirpath[len(self.path)+1:]
             for name in filenames:
-                filename = os.path.join(path, name)
-                if (os.path.isfile(os.path.join(self.path, filename))
-                    and not filename.startswith('.')):
+                if os.path.basename(name) == self.index:
+                    filename = os.path.join(path, os.path.dirname(name))
                     yield werkzeug.url_unquote(filename)
+                else:
+                    filename = os.path.join(path, name)
+                    if (os.path.isfile(os.path.join(self.path, filename))
+                        and not filename.startswith('.')):
+                        yield werkzeug.url_unquote(filename)
 
 
 

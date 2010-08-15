@@ -6,6 +6,9 @@ import re
 import os
 import thread
 
+import error
+
+
 class WikiSearch(object):
     """
     Responsible for indexing words and links, for fast searching and
@@ -244,7 +247,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
             get_text = getattr(page, 'plain_text', lambda: u'')
             try:
                 text = get_text()
-            except NotFoundErr:
+            except error.NotFoundErr:
                 text = None
                 title_id = self.title_id(title, cursor)
                 if not list(self.page_backlinks(title)):

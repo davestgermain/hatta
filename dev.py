@@ -11,7 +11,7 @@ import werkzeug
 if __name__=="__main__":
     config = hatta.WikiConfig()
     config.parse_args()
-    config.parse_files()
+#    config.parse_files()
     application = hatta.Wiki(config).application
     host = config.get('interface', 'localhost')
     port = int(config.get('port', 8080))

@@ -449,14 +449,6 @@ class WikiSubdirectoryStorage(WikiStorage):
     # TODO: make them configurable
     index = "Index"
 
-    def _file_path(self, title):
-        """If the entry is a directory, use an index file."""
-
-        path = super(WikiSubdirectoryStorage, self)._file_path(title)
-        if os.path.isdir(path):
-            path = os.path.join(path, self.index)
-        return path
-
     def _title_to_file(self, title):
         """
         Modified escaping allowing (some) slashes and spaces.

@@ -471,45 +471,48 @@ class WikiSubdirectoryStorage(WikiStorage):
             filepath = os.path.dirname(filepath)
         return super(WikiSubdirectoryStorage, self)._file_to_title(filepath)
 
-    @locked_repo
-    def save_file(self, title, file_name, author=u'', comment=u'', parent=None):
-        """
-        Save the file and make the subdirectories if needed.
-        """
+    def turn_into_subdirectory(self, path):
+        """Turn a single-file page into an index page inside a subdirectory."""
 
         _ = self._
+        self._check_path(path)
+        parent_path = os.path.dirname(path)
+        if not os.path.isdir(parent_path):
+            turn_into_subdirectory(parent_path)
+        temp_file = tempfile.mktemp(dir=parent_path)
+        self.rename_file(path, temp_file)
+        try:
+            os.makedirs(path)
+            try:
+                index_file = os.path.join(path, self.index)
+                self.rename_file(temp_file, index_file)
+                try:
+                    self._commit([index_file, path],
+                                 _(u"made subdirectory page"), "<wiki>")
+                except:
+                    self.rename_file(index_file, temp_file)
+                    raise
+            except:
+                os.rmdir(path)
+                raise
+        except:
+            self.rename_file(temp_file, path_file)
+            raise
+
+    @locked_repo
+    def save_file(self, title, file_name, author=u'', comment=u'', parent=None):
+        """Save the file and make the subdirectories if needed."""
+
         file_path = self._file_path(title)
         self._check_path(file_path)
         dir_path = os.path.dirname(file_path)
-
-        # check for existing page with no index yet
-        if os.path.isfile(dir_path) and not os.path.islink(dir_path):
-            index_file = os.path.dirname(self._title_to_file(title).strip("/"))
-            temp_file = tempfile.mktemp(dir=os.path.dirname(index_file))
-            super(WikiSubdirectoryStorage, self).rename_file(index_file,
-                                                             temp_file)
-
+        if not os.path.isdir(dir_path):
+            self.turn_into_subdirectory(dir_path)
         try:
             os.makedirs(dir_path)
         except OSError, e:
             if e.errno != 17:
                 raise
-
-        try:
-            temp_file
-
-            super(WikiSubdirectoryStorage, self).rename_file(temp_file,
-                                           os.path.join(index_file, self.index))
-
-            try:
-                super(WikiSubdirectoryStorage, self)._commit([index_file,
-                    os.path.join(index_file, self.index)],
-                    "autorenaming index page", "<wiki>")
-            except:
-                super(WikiSubdirectoryStorage, self).repo.rollback()
-        except:
-            pass
-
         super(WikiSubdirectoryStorage, self).save_file(title, file_name,
                                                        author, comment, parent)
 

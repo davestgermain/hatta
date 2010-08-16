@@ -188,7 +188,10 @@ class WikiStorage(object):
         repo_file = self._title_to_file(title)
         file_path = self._file_path(title)
         self._check_path(file_path)
-        mercurial.util.rename(file_name, file_path)
+        try:
+            mercurial.util.rename(file_name, file_path)
+        except OSError, e:
+            raise error.RequestURITooLarge()
         changectx = self._changectx()
         try:
             # Mercurial 1.5 and earlier have .add() on the repo
@@ -447,41 +450,34 @@ class WikiSubdirectoryStorage(WikiStorage):
     index = "Index"
 
     def _file_path(self, title):
-        root = super(WikiSubdirectoryStorage, self)._file_path(title)
+        """If the entry is a directory, use an index file."""
 
-        if os.path.isfile(root) and not os.path.islink(root):
-            return root
-        elif os.path.isdir(root):
-            path = os.path.join(root, self.index)
-            if os.path.isfile(path) and not os.path.islink(path):
-                return path
-        return root
+        path = super(WikiSubdirectoryStorage, self)._file_path(title)
+        if os.path.isdir(path):
+            path = os.path.join(path, self.index)
+        return path
 
     def _title_to_file(self, title):
-        """Modified escaping allowing (some) slashes and spaces."""
-
-        def exists(path):
-            file_path = os.path.join(self.repo_path, path)
-            return os.path.isfile(file_path) and not os.path.islink(file_path)
-
-        def isdir(path):
-            file_path = os.path.join(self.repo_path, path)
-            return os.path.isdir(file_path) and not os.path.islink(file_path)
+        """
+        Modified escaping allowing (some) slashes and spaces.
+        If the entry is a directory, use an index file.
+        """
 
         title = unicode(title).strip()
         escaped = werkzeug.url_quote(title, safe='/ ')
         escaped = self.periods_re.sub('%2E', escaped)
         escaped = self.slashes_re.sub('%2F', escaped)
-        root = os.path.join(self.repo_prefix, escaped)
-
-        if not exists(root):
+        path = os.path.join(self.repo_prefix, escaped)
+        if os.path.isdir(path):
             path = os.path.join(root, self.index)
-            if exists(path):
-                return path
-            if isdir(root):
-                return os.path.join(root, self.index)
+        return path
 
-        return root
+    def _file_to_title(self, filepath):
+        """If the path points to an index file, use the directory."""
+
+        if os.path.basename(filepath) == self.index:
+            filepath = os.path.dirname(filepath)
+        return super(WikiSubdirectoryStorage, self)._file_to_title(filepath)
 
     @locked_repo
     def save_file(self, title, file_name, author=u'', comment=u'', parent=None):

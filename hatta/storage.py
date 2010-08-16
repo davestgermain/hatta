@@ -537,7 +537,8 @@ class WikiSubdirectoryStorage(WikiStorage):
         try:
             os.removedirs(dir_path)
         except OSError, e:
-            pass # ignore "(39) Directory not empty" error on removing Index
+            if e.errno != 39: # ignore "(39) Directory not empty" error on removing Index
+                raise
 
     def all_pages(self):
         """

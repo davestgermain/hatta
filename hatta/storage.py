@@ -478,7 +478,7 @@ class WikiSubdirectoryStorage(WikiStorage):
         self._check_path(path)
         parent_path = os.path.dirname(path)
         if not os.path.isdir(parent_path):
-            turn_into_subdirectory(parent_path)
+            self.turn_into_subdirectory(parent_path)
         temp_file = tempfile.mktemp(dir=parent_path)
         self.rename_file(path, temp_file)
         try:

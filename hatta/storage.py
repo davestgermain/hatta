@@ -191,7 +191,10 @@ class WikiStorage(object):
         try:
             mercurial.util.rename(file_name, file_path)
         except OSError, e:
-            raise error.RequestURITooLarge()
+            if e.errno == 36: # File name too long
+                raise error.RequestURITooLarge()
+            else:
+                raise
         changectx = self._changectx()
         try:
             # Mercurial 1.5 and earlier have .add() on the repo
@@ -257,14 +260,6 @@ class WikiStorage(object):
     def page_lines(self, page):
         for data in page.xreadlines():
             yield unicode(data, self.charset, 'replace')
-
-    @locked_repo
-    def rename_file(self, path_old, path_new):
-        """Rename files in repository."""
-
-        self._check_path(path_new)
-
-        mercurial.commands.rename(self.ui, self.repo, path_old, path_new)
 
     @locked_repo
     def delete_page(self, title, author=u'', comment=u''):
@@ -460,8 +455,8 @@ class WikiSubdirectoryStorage(WikiStorage):
         escaped = self.periods_re.sub('%2E', escaped)
         escaped = self.slashes_re.sub('%2F', escaped)
         path = os.path.join(self.repo_prefix, escaped)
-        if os.path.isdir(path):
-            path = os.path.join(root, self.index)
+        if os.path.isdir(os.path.join(self.repo_path, path)):
+            path = os.path.join(path, self.index)
         return path
 
     def _file_to_title(self, filepath):
@@ -476,40 +471,36 @@ class WikiSubdirectoryStorage(WikiStorage):
 
         _ = self._
         self._check_path(path)
-        parent_path = os.path.dirname(path)
-        if not os.path.isdir(parent_path):
-            self.turn_into_subdirectory(parent_path)
-        temp_file = tempfile.mktemp(dir=parent_path)
-        self.rename_file(path, temp_file)
+        dir_path = os.path.dirname(path)
+        if not os.path.isdir(dir_path):
+            self.turn_into_subdirectory(dir_path)
+        if not os.path.exists(path):
+            os.mkdir(path)
+            return
         try:
+            temp_dir = tempfile.mkdtemp(dir=self.path)
+            temp_path = os.path.join(temp_dir, 'saved')
+            mercurial.commands.rename(self.ui, self.repo, path, temp_path)
             os.makedirs(path)
+            index_path = os.path.join(path, self.index)
+            mercurial.commands.rename(self.ui, self.repo, temp_path, index_path)
+        finally:
             try:
-                index_file = os.path.join(path, self.index)
-                self.rename_file(temp_file, index_file)
-                try:
-                    self._commit([index_file, path],
-                                 _(u"made subdirectory page"), "<wiki>")
-                except:
-                    self.rename_file(index_file, temp_file)
-                    raise
-            except:
-                os.rmdir(path)
-                raise
-        except:
-            self.rename_file(temp_file, path_file)
-            raise
+                os.rmdir(temp_dir)
+            except OSError:
+                pass
+        self._commit([index_path, path], _(u"made subdirectory page"), "<wiki>")
 
     @locked_repo
     def save_file(self, title, file_name, author=u'', comment=u'', parent=None):
         """Save the file and make the subdirectories if needed."""
 
-        file_path = self._file_path(title)
-        self._check_path(file_path)
-        dir_path = os.path.dirname(file_path)
+        path = self._file_path(title)
+        dir_path = os.path.dirname(path)
         if not os.path.isdir(dir_path):
             self.turn_into_subdirectory(dir_path)
         try:
-            os.makedirs(dir_path)
+            os.makedirs(os.path.join(self.repo_path, dir_path))
         except OSError, e:
             if e.errno != 17:
                 raise

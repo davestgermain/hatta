@@ -117,25 +117,44 @@ class TestSubdirectoryStorage(object):
 
     def test_create_parent(self, subdir_repo):
         """
-        Make sure you can't create a parent page of existsing page.
+        Make sure you can create a parent page of existsing page.
         """
 
         subdir_repo.save_text(u'xxx/yyy', self.text, self.author, self.comment,
                               parent=-1)
-        py.test.raises(hatta.error.ForbiddenErr, subdir_repo.save_text,
-                       u'xxx', self.text, self.author, self.comment,
-                       parent=-1)
+        subdir_repo.save_text(u'xxx', self.text, self.author, self.comment,
+                              parent=-1)
+        assert os.path.exists(os.path.join(subdir_repo.path, 'xxx'))
+        assert os.path.exists(os.path.join(subdir_repo.path, 'xxx/yyy'))
+        assert os.path.exists(os.path.join(subdir_repo.path, 'xxx/Index'))
 
     def test_create_subpage(self, subdir_repo):
         """
-        Make sure you can't create a subpage of existsing page.
+        Make sure you can create a subpage of existsing page.
         """
 
         subdir_repo.save_text(u'xxx', self.text, self.author, self.comment,
                               parent=-1)
-        py.test.raises(hatta.error.ForbiddenErr, subdir_repo.save_text,
-                       u'xxx/yyy', self.text, self.author, self.comment,
-                       parent=-1)
+        subdir_repo.save_text(u'xxx/yyy', self.text, self.author, self.comment,
+                              parent=-1)
+        assert os.path.exists(os.path.join(subdir_repo.path, 'xxx'))
+        assert os.path.exists(os.path.join(subdir_repo.path, 'xxx/yyy'))
+        assert os.path.exists(os.path.join(subdir_repo.path, 'xxx/Index'))
+
+    def test_create_subsubpage(self, subdir_repo):
+        """
+        Make sure you can create a subpage of existsing page.
+        """
+
+        subdir_repo.save_text(u'xxx', self.text, self.author, self.comment,
+                              parent=-1)
+        subdir_repo.save_text(u'xxx/yyy/zzz', self.text, self.author, self.comment,
+                              parent=-1)
+        assert os.path.exists(os.path.join(subdir_repo.path, 'xxx'))
+        assert os.path.exists(os.path.join(subdir_repo.path, 'xxx/yyy'))
+        assert not os.path.exists(os.path.join(subdir_repo.path, 'xxx/yyy/Index'))
+        assert os.path.exists(os.path.join(subdir_repo.path, 'xxx/yyy/zzz'))
+        assert os.path.exists(os.path.join(subdir_repo.path, 'xxx/Index'))
 
 class TestMercurialStorage(object):
     """

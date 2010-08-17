@@ -22,6 +22,7 @@ import parser
 import error
 import data
 
+import mercurial # import it after storage!
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):
@@ -410,10 +411,10 @@ It can only be edited by the site admin directly on the disk."""))
                 if title == self.locked_page:
                     for link, label in page.extract_links(text):
                         if title == link:
-                            raise ForbiddenErr(
+                            raise error.ForbiddenErr(
                                 _(u"This page is locked."))
                 if u'href="' in comment or u'http:' in comment:
-                    raise ForbiddenErr()
+                    raise error.ForbiddenErr()
                 if text.strip() == '':
                     self.storage.delete_page(title, author, comment)
                     url = request.get_url(self.front_page)
@@ -854,7 +855,8 @@ It can only be edited by the site admin directly on the disk."""))
 
         _ = self.gettext
         if pygments is None:
-            raise NotImplementedErr(_(u"Code highlighting is not available."))
+            raise error.NotImplementedErr(
+                _(u"Code highlighting is not available."))
 
         pygments_style = self.pygments_style
         if pygments_style not in pygments.styles.STYLE_MAP:
@@ -893,7 +895,7 @@ It can only be edited by the site admin directly on the disk."""))
 
         _ = self.gettext
         if not self.config.get_bool('hgweb', False):
-            raise ForbiddenErr(_(u'Repository access disabled.'))
+            raise error.ForbiddenErr(_(u'Repository access disabled.'))
         app = mercurial.hgweb.request.wsgiapplication(
             lambda: mercurial.hgweb.hgweb(self.storage.repo, self.site_name))
         def hg_app(env, start):
@@ -911,7 +913,7 @@ It can only be edited by the site admin directly on the disk."""))
 
         _ = self.gettext
         if not request.remote_addr.startswith('127.'):
-            raise ForbiddenErr(_(u'This URL can only be called locally.'))
+            raise error.ForbiddenErr(_(u'This URL can only be called locally.'))
         def agony():
             yield u'Oh dear!'
             self.dead = True

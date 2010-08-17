@@ -241,7 +241,7 @@ class WikiPage(object):
             try:
                 self.wiki._check_lock(self.title)
                 edit_url = self.get_url(self.title, self.wiki.edit)
-            except ForbiddenErr:
+            except error.ForbiddenErr:
                 pass
 
         yield u"""\
@@ -287,7 +287,7 @@ class WikiPage(object):
         try:
             self.wiki._check_lock(title)
             read_only = False
-        except ForbiddenErr:
+        except error.ForbiddenErr:
             read_only = True
         for rev, date, author, comment in self.wiki.storage.page_history(title):
             if max_rev < rev:
@@ -630,7 +630,7 @@ class WikiPageImage(WikiPageFile):
             im.thumbnail((128, 128), Image.ANTIALIAS)
             im.save(cache_file,'PNG')
         except IOError:
-            raise UnsupportedMediaTypeErr('Image corrupted')
+            raise error.UnsupportedMediaTypeErr('Image corrupted')
         cache_file.close()
         return cache_path
 

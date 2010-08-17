@@ -33,7 +33,7 @@ class Wiki(hatta.Wiki):
             page = self.get_page(request, t)
             try:
                 html = ''.join(page.view_content())
-            except hatta.NotFoundErr:
+            except hatta.error.NotFoundErr:
                 continue
             slide_title = (u'<h1>%s</h1>' % werkzeug.escape(label))
             contents.append(slide_title + html)

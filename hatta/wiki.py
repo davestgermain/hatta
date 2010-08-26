@@ -6,6 +6,7 @@ import os
 import sys
 import mimetypes
 import re
+import tempfile
 
 import werkzeug
 import werkzeug.routing

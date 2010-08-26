@@ -39,6 +39,27 @@ def locked_repo(func):
 
     return new_func
 
+def _find_repo_path(path):
+    """Go up the directory tree looking for a repository."""
+
+    while not os.path.isdir(os.path.join(path, ".hg")):
+        old_path, path = path, os.path.dirname(path)
+        if path == old_path:
+            return None
+    return path
+
+def _get_ui():
+    try:
+        ui = mercurial.ui.ui(report_untrusted=False,
+                                  interactive=False, quiet=True)
+    except TypeError:
+        # Mercurial 1.3 changed the way we setup the ui object.
+        ui = mercurial.ui.ui()
+        ui.quiet = True
+        ui._report_untrusted = False
+        ui.setconfig('ui', 'interactive', False)
+    return ui
+
 
 class WikiStorage(object):
     """
@@ -59,30 +80,18 @@ class WikiStorage(object):
         self.path = os.path.abspath(path)
         if not os.path.exists(self.path):
             os.makedirs(self.path)
-        self.repo_path = self._find_repo_path(self.path)
-        try:
-            self.ui = mercurial.ui.ui(report_untrusted=False,
-                                      interactive=False, quiet=True)
-        except TypeError:
-            # Mercurial 1.3 changed the way we setup the ui object.
-            self.ui = mercurial.ui.ui()
-            self.ui.quiet = True
-            self.ui._report_untrusted = False
-            self.ui.setconfig('ui', 'interactive', False)
+        self.ui = _get_ui()
+        self.repo_path = _find_repo_path(self.path)
         if self.repo_path is None:
+            # Create the repository if needed.
             self.repo_path = self.path
-            create = True
-        else:
-            create = False
+            mercurial.hg.repository(self.ui, self.repo_path, create=True)
         self.repo_prefix = self.path[len(self.repo_path):].strip('/')
         self._repos = {}
-        # Create the repository if needed.
-        mercurial.hg.repository(self.ui, self.repo_path, create=create)
 
     def reopen(self):
         """Close and reopen the repo, to make sure we are up to date."""
 
-        #self.repo = mercurial.hg.repository(self.ui, self.repo_path)
         self._repos = {}
 
     @property
@@ -97,14 +106,6 @@ class WikiStorage(object):
             self._repos[thread_id] = repo
             return repo
 
-    def _find_repo_path(self, path):
-        """Go up the directory tree looking for a repository."""
-
-        while not os.path.isdir(os.path.join(path, ".hg")):
-            old_path, path = path, os.path.dirname(path)
-            if path == old_path:
-                return None
-        return path
 
     def _check_path(self, path):
         """

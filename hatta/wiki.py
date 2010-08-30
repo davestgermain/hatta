@@ -4,9 +4,9 @@
 import gettext
 import os
 import sys
-import mimetypes
 import re
 import tempfile
+import itertools
 
 import werkzeug
 import werkzeug.routing
@@ -16,6 +16,7 @@ try:
 except ImportError:
     pygments = None
 
+import hatta
 import storage
 import search
 import page
@@ -156,13 +157,13 @@ class WikiTitleConverter(werkzeug.routing.PathConverter):
     def to_url(self, value):
         return werkzeug.url_quote(value.strip(), self.map.charset, safe="/")
 
-    regex='([^+%]|%[^2]|%2[^Bb]).*'
+    regex = '([^+%]|%[^2]|%2[^Bb]).*'
 
 
 class WikiAllConverter(werkzeug.routing.BaseConverter):
     """Matches everything."""
 
-    regex='.*'
+    regex = '.*'
 
 
 class URL(object):
@@ -208,7 +209,7 @@ class Wiki(object):
 
     def __init__(self, config):
         if config.get_bool('show_version', False):
-            sys.stdout.write("Hatta %s\n" % __version__)
+            sys.stdout.write("Hatta %s\n" % hatta.__version__)
             sys.exit()
         self.dead = False
         self.config = config
@@ -275,7 +276,7 @@ class Wiki(object):
                 except KeyError:
                     try:
                         plus_pos = minor.find('+')
-                        if plus_pos>0:
+                        if plus_pos > 0:
                             minor_base = minor[plus_pos:]
                         else:
                             minor_base = ''
@@ -285,7 +286,7 @@ class Wiki(object):
                         try:
                             page_class = self.mime_map[major]
                         except KeyError:
-                                page_class = self.mime_map['']
+                            page_class = self.mime_map['']
         else:
             page_class = page.WikiPage
             mime = ''
@@ -479,7 +480,7 @@ It can only be edited by the site admin directly on the disk."""))
             if title in unique_titles:
                 continue
             unique_titles.add(title)
-            if rev>0:
+            if rev > 0:
                 url = request.adapter.build(self.diff, {
                     'title': title,
                     'from_rev': rev-1,
@@ -901,7 +902,7 @@ It can only be edited by the site admin directly on the disk."""))
             lambda: mercurial.hgweb.hgweb(self.storage.repo, self.site_name))
         def hg_app(env, start):
             env = request.environ
-            prefix='/+hg'
+            prefix = '/+hg'
             if env['PATH_INFO'].startswith(prefix):
                 env["PATH_INFO"] = env["PATH_INFO"][len(prefix):]
                 env["SCRIPT_NAME"] += prefix

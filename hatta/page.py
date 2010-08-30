@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import difflib
-import datetime
 import mimetypes
 import re
+import os
 
 import werkzeug
 import werkzeug.contrib.atom
@@ -71,15 +71,15 @@ class WikiPage(object):
         self.index = self.wiki.index
         self.config = self.wiki.config
 
-    def date_html(self, datetime):
+    def date_html(self, date_time):
         """
         Create HTML for a date, according to recommendation at
         http://microformats.org/wiki/date
         """
 
-        text = datetime.strftime('%Y-%m-%d %H:%M')
+        text = date_time.strftime('%Y-%m-%d %H:%M')
         # We are going for YYYY-MM-DDTHH:MM:SSZ
-        title = datetime.strftime('%Y-%m-%dT%H:%M:%SZ')
+        title = date_time.strftime('%Y-%m-%dT%H:%M:%SZ')
         html = werkzeug.html.abbr(text, class_="date", title=title)
         return html
 
@@ -171,7 +171,7 @@ class WikiPage(object):
             ]
         for link, label in items:
             if link == self.title:
-                class_="current"
+                class_ = "current"
             else:
                 class_ = None
             yield self.wiki_link(link, label, class_=class_)
@@ -278,7 +278,7 @@ class WikiPage(object):
 
         _ = self.wiki.gettext
         h = werkzeug.html
-        max_rev = -1;
+        max_rev = -1
         title = self.title
         link = self.wiki_link(title)
         yield h.p(h(_(u'History of changes for %(link)s.')) % {'link': link})
@@ -369,7 +369,7 @@ class WikiPageText(WikiPage):
         except error.NotFoundErr:
             comment = _(u'created')
             rev = -1
-        except ForbiddenErr, e:
+        except error.ForbiddenErr, e:
             yield werkzeug.html.p(
                 werkzeug.html(_(unicode(e))))
             return

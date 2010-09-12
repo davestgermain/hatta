@@ -330,7 +330,7 @@ It can only be edited by the site admin directly on the disk."""))
 
         if title in self.storage:
             return self.download(request, title)
-        response = werkzeug.Response(content, mimetype=mime)
+        response = WikiResponse(content, mimetype=mime)
         response.set_etag('/%s/-1' % title)
         response.make_conditional(request)
         return response
@@ -380,7 +380,7 @@ It can only be edited by the site admin directly on the disk."""))
                 version, x, x, x = self.storage.page_history(title).next()
             except StopIteration:
                 version = 0
-        return werkzeug.Response('%d' % version, mimetype="text/plain")
+        return WikiResponse('%d' % version, mimetype="text/plain")
 
     @URL('/+edit/<title:title>', methods=['POST'])
     def save(self, request, title):
@@ -455,11 +455,11 @@ It can only be edited by the site admin directly on the disk."""))
         special_title = _(u'Editing "%(title)s"') % {'title': title}
         html = page.render_content(content, special_title)
         if not exists:
-            response = werkzeug.Response(html, mimetype="text/html",
+            response = WikiResponse(html, mimetype="text/html",
                                      status='404 Not found')
 
         elif preview:
-            response = werkzeug.Response(html, mimetype="text/html")
+            response = WikiResponse(html, mimetype="text/html")
         else:
             response = self.response(request, title, html, '/edit')
         response.headers.add('Cache-Control', 'no-cache')
@@ -702,7 +702,7 @@ It can only be edited by the site admin directly on the disk."""))
                 _(u"Diff not available for this kind of pages.")))]
         special_title = _(u'Diff for "%(title)s"') % {'title': title}
         html = page.render_content(content, special_title)
-        response = werkzeug.Response(html, mimetype='text/html')
+        response = WikiResponse(html, mimetype='text/html')
         return response
 
 
@@ -919,7 +919,7 @@ It can only be edited by the site admin directly on the disk."""))
         def agony():
             yield u'Oh dear!'
             self.dead = True
-        return werkzeug.Response(agony(), mimetype='text/plain')
+        return WikiResponse(agony(), mimetype='text/plain')
 
     @werkzeug.responder
     def application(self, environ, start):

@@ -7,6 +7,7 @@ import thread
 import re
 import werkzeug
 import datetime
+import errno
 
 # Note: we have to set these before importing Mercurial
 os.environ['HGENCODING'] = 'utf-8'
@@ -191,7 +192,7 @@ class WikiStorage(object):
         try:
             mercurial.util.rename(file_name, file_path)
         except OSError, e:
-            if e.errno == 36: # File name too long
+            if e.errno == errno.ENAMETOOLONG: # "File name too long"
                 raise error.RequestURITooLarge()
             else:
                 raise
@@ -502,7 +503,7 @@ class WikiSubdirectoryStorage(WikiStorage):
         try:
             os.makedirs(os.path.join(self.repo_path, dir_path))
         except OSError, e:
-            if e.errno != 17:
+            if e.errno != errno.EEXIST: # "File exists"
                 raise
         super(WikiSubdirectoryStorage, self).save_file(title, file_name,
                                                        author, comment, parent)
@@ -523,7 +524,7 @@ class WikiSubdirectoryStorage(WikiStorage):
         try:
             os.removedirs(dir_path)
         except OSError, e:
-            if e.errno != 39: # ignore "(39) Directory not empty" error on removing Index
+            if e.errno != errno.ENOTEMPTY: # "Directory not empty"
                 raise
 
     def all_pages(self):

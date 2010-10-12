@@ -106,8 +106,6 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         self.adapter = adapter
         self.tmpfiles = []
         self.tmppath = wiki.path
-        # Whether to print the css for highlighting
-        self.print_highlight_styles = True
 
     def get_url(self, title=None, view=None, method='GET',
                 external=False, **kw):
@@ -236,12 +234,13 @@ class Wiki(object):
         self.icon_page = self.config.get('icon_page', None)
         self.pygments_style = self.config.get('pygments_style', 'tango')
         self.subdirectories = self.config.get_bool('subdirectories', False)
+        self.unix_eol = self.config.get_bool('unix_eol', False)
         if self.subdirectories:
             self.storage = storage.WikiSubdirectoryStorage(self.path,
                                                 self.page_charset, self.gettext)
         else:
             self.storage = self.storage_class(self.path, self.page_charset,
-                                              self.gettext)
+                                              self.gettext, self.unix_eol)
         self.cache = os.path.abspath(config.get('cache_path',
                                      os.path.join(self.storage.repo_path,
                                                   '.hg', 'hatta', 'cache')))

@@ -6,7 +6,10 @@ import os
 OPTIONS = []
 VALID_NAMES = set()
 
-def _add(short, long, dest, help, default=None, metavar=None, action=None, type=None):
+def _add(short, long, dest, help, default=None, metavar=None,
+         action=None, type=None):
+    """Helper for building the list of options."""
+
     OPTIONS.append((short, long, dest, help, default, metavar, action, type))
     VALID_NAMES.add(dest)
 
@@ -48,6 +51,9 @@ _add('-P', '--pygments-style', dest='pygments_style',
 _add('-D', '--subdirectories', dest='subdirectories',
     action="store_true",
     help='Store subpages as subdirectories in the filesystem')
+_add('-U', '--unix-eol', dest='unix_eol',
+    action="store_true",
+    help='Convert all text pages to UNIX-style CR newlines')
 
 class WikiConfig(object):
     """

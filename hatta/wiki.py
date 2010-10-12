@@ -232,6 +232,7 @@ class Wiki(object):
         self.site_name = self.config.get('site_name', u'Hatta Wiki')
         self.read_only = self.config.get_bool('read_only', False)
         self.icon_page = self.config.get('icon_page', None)
+        self.alias_page = self.config.get('alias_page', 'Alias')
         self.pygments_style = self.config.get('pygments_style', 'tango')
         self.subdirectories = self.config.get_bool('subdirectories', False)
         self.unix_eol = self.config.get_bool('unix_eol', False)

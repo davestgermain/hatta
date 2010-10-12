@@ -70,6 +70,11 @@ class WikiPage(object):
         self.storage = self.wiki.storage
         self.index = self.wiki.index
         self.config = self.wiki.config
+        if self.wiki.alias_page and self.wiki.alias_page in self.storage:
+            self.aliases = dict(
+                self.index.page_links_and_labels(self.wiki.alias_page))
+        else:
+            self.aliases = {}
 
     def date_html(self, date_time):
         """
@@ -83,6 +88,22 @@ class WikiPage(object):
         html = werkzeug.html.abbr(text, class_="date", title=title)
         return html
 
+    def link_alias(self, addr):
+        """Find a target address for an alias."""
+
+        try:
+            alias, target = addr.split(':', 1)
+        except ValueError:
+            return
+        try:
+            pattern = self.aliases[alias]
+        except KeyError:
+            return
+        try:
+            link = pattern % target
+        except TypeError:
+            link = pattern + target
+        return link
 
     def wiki_link(self, addr, label=None, class_=None, image=None, lineno=0):
         """Create HTML for a wiki link."""
@@ -95,29 +116,39 @@ class WikiPage(object):
         else:
             classes = []
         if parser.external_link(addr):
+            classes.append('external')
             if addr.startswith('mailto:'):
-                class_ = 'external email'
+                # Obfuscate e-mails a little bit.
+                classes.append('mail')
                 text = text.replace('@', '&#64;').replace('.', '&#46;')
-                href = addr.replace('@', '%40').replace('.', '%2E')
+                href = werkzeug.escape(addr,
+                                       quote=True).replace('@',
+                                                           '%40').replace('.',
+                                                                          '%2E')
             else:
-                classes.append('external')
                 href = werkzeug.escape(addr, quote=True)
         else:
             if '#' in addr:
                 addr, chunk = addr.split('#', 1)
-                chunk = '#'+chunk
-            if addr.startswith('+'):
-                href = '/'.join([self.request.script_root,
-                                 '+'+werkzeug.escape(addr[1:], quote=True)])
-                classes.append('special')
-            elif addr == u'':
-                href = chunk
-                classes.append('anchor')
+                chunk = '#' + chunk
+            alias = self.link_alias(addr)
+            if alias:
+                href = werkzeug.url_fix(alias + chunk)
+                classes.append('external')
+                classes.append('alias')
             else:
-                classes.append('wiki')
-                href = self.get_url(addr) + chunk
-                if addr not in self.storage:
-                    classes.append('nonexistent')
+                if addr.startswith('+'):
+                    href = '/'.join([self.request.script_root,
+                                     '+' + werkzeug.escape(addr[1:], quote=True)])
+                    classes.append('special')
+                elif addr == u'':
+                    href = chunk
+                    classes.append('anchor')
+                else:
+                    classes.append('wiki')
+                    href = self.get_url(addr) + chunk
+                    if addr not in self.storage:
+                        classes.append('nonexistent')
         class_ = ' '.join(classes) or None
         return werkzeug.html.a(image or text, href=href, class_=class_,
                                title=addr+chunk)
@@ -546,7 +577,7 @@ class WikiPageWiki(WikiPageColorText):
 
     def dependencies(self):
         dependencies = WikiPage.dependencies(self)
-        for title in [self.wiki.icon_page]:
+        for title in [self.wiki.icon_page, self.wiki.alias_page]:
             if title in self.storage:
                 inode, size, mtime = self.storage.page_file_meta(title)
                 etag = '%s/%d-%d' % (werkzeug.url_quote(title), inode, mtime)

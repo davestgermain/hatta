@@ -94,11 +94,11 @@ class WikiPage(object):
         try:
             alias, target = addr.split(':', 1)
         except ValueError:
-            return
+            return self.wiki.alias_page
         try:
             pattern = self.aliases[alias]
         except KeyError:
-            return
+            return self.wiki.alias_page
         try:
             link = pattern % target
         except TypeError:
@@ -131,24 +131,23 @@ class WikiPage(object):
             if '#' in addr:
                 addr, chunk = addr.split('#', 1)
                 chunk = '#' + chunk
-            alias = self.link_alias(addr)
-            if alias:
+            if addr.startswith(':'):
+                alias = self.link_alias(addr[1:])
                 href = werkzeug.url_fix(alias + chunk)
                 classes.append('external')
                 classes.append('alias')
+            elif addr.startswith('+'):
+                href = '/'.join([self.request.script_root,
+                                 '+' + werkzeug.escape(addr[1:], quote=True)])
+                classes.append('special')
+            elif addr == u'':
+                href = chunk
+                classes.append('anchor')
             else:
-                if addr.startswith('+'):
-                    href = '/'.join([self.request.script_root,
-                                     '+' + werkzeug.escape(addr[1:], quote=True)])
-                    classes.append('special')
-                elif addr == u'':
-                    href = chunk
-                    classes.append('anchor')
-                else:
-                    classes.append('wiki')
-                    href = self.get_url(addr) + chunk
-                    if addr not in self.storage:
-                        classes.append('nonexistent')
+                classes.append('wiki')
+                href = self.get_url(addr) + werkzeug.url_quote(chunk)
+                if addr not in self.storage:
+                    classes.append('nonexistent')
         class_ = ' '.join(classes) or None
         return werkzeug.html.a(image or text, href=href, class_=class_,
                                title=addr+chunk)
@@ -166,7 +165,13 @@ class WikiPage(object):
             addr, chunk = addr.split('#', 1)
         if addr == '':
             return html.a(name=chunk)
-        if addr in self.storage:
+        elif addr.startswith(':'):
+            if chunk:
+                chunk = '#' + chunk
+            alias = self.link_alias(addr[1:])
+            href = werkzeug.url_fix(alias + chunk)
+            return html.img(src=href, class_="external alias", alt=alt)
+        elif addr in self.storage:
             mime = page_mime(addr)
             if mime.startswith('image/'):
                 return html.img(src=self.get_download_url(addr), class_=class_,

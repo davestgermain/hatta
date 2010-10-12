@@ -160,7 +160,8 @@ class WikiParser(object):
         links = []
         def link(addr, label=None, class_=None, image=None, alt=None, lineno=0):
             addr = addr.strip()
-            if external_link(addr):
+            if external_link(addr) or addr.startswith(':'):
+                # Don't index external links and aliases
                 return u''
             if '#' in addr:
                 addr, chunk = addr.split('#', 1)

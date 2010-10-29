@@ -36,7 +36,7 @@
 {% endblock %}
 
 {% block search %}
-    <form action="/+search" id="hatta-search" method="GET"
+    <form action="{{ url(None, wiki.search) }}" id="hatta-search" method="GET"
       ><div><input
         id="hatta-search" name="q"><input
         class="button" type="submit" value="Search"

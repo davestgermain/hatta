@@ -49,12 +49,12 @@ class WikiParser(object):
 
     """
 
-    bullets_pat = ur"^\s*[*]+\s+"
+    list_pat = ur"^\s*[*#]+\s+"
     heading_pat = ur"^\s*=+"
     quote_pat = ur"^[>]+\s+"
     block = {
         # "name": (priority, ur"pattern"),
-        "bullets": (10, bullets_pat),
+        "list": (10, list_pat),
         "code": (20, ur"^[{][{][{]+\s*$"),
         "conflict": (30, ur"^<<<<<<< local\s*$"),
         "empty": (40, ur"^\s*$"),
@@ -133,7 +133,7 @@ class WikiParser(object):
     def compile_patterns(self):
         self.quote_re = re.compile(self.quote_pat, re.U)
         self.heading_re = re.compile(self.heading_pat, re.U)
-        self.bullets_re = re.compile(self.bullets_pat, re.U)
+        self.list_re = re.compile(self.list_pat, re.U)
         patterns = ((k, p) for (k, (x, p)) in
                     sorted(self.block.iteritems(), key=lambda x: x[1][0]))
         self.block_re = re.compile(ur"|".join("(?P<%s>%s)" % pat
@@ -434,15 +434,22 @@ class WikiParser(object):
             yield u'<h%d id="line_%d">%s</h%d>' % (level, self.line_no,
                 werkzeug.escape(line.strip("= \t\n\r\v")), level)
 
-    def _block_bullets(self, block):
+    def _block_list(self, block):
         level = 0
         in_ul = False
+        kind = None
         for self.line_no, line in block:
-            nest = len(self.bullets_re.match(line).group(0).strip())
+            bullets = self.list_re.match(line).group(0).strip()
+            nest = len(bullets)
+            if kind is None:
+                if bullets.startswith('*'):
+                    kind = 'ul'
+                else:
+                    kind = 'ol'
             while nest > level:
                 if in_ul:
                     yield '<li>'
-                yield '<ul id="line_%d">' % self.line_no
+                yield '<%s id="line_%d">' % (kind, self.line_no)
                 in_ul = True
                 level += 1
             while nest < level:
@@ -451,11 +458,11 @@ class WikiParser(object):
                 level -= 1
             if nest == level and not in_ul:
                 yield '</li>'
-            content = line.lstrip().lstrip('*').strip()
+            content = line.lstrip().lstrip('*#').strip()
             yield '<li>%s%s' % (u"".join(self.parse_line(content)),
                                 self.pop_to(""))
             in_ul = False
-        yield '</li></ul>'*level
+        yield ('</li></%s>' % kind) * level
 
     def _block_quote(self, block):
         level = 0

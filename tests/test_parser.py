@@ -160,6 +160,50 @@ test</p>"""
             </ul>
         """
 
+    def test_basic_numbers(self):
+        html = parse(u'test\n# test line one\n # test line two\ntest')
+        assert html == """
+            <p id="line_0">test</p>
+            <ol id="line_1">
+                <li>test line one</li>
+                <li>test line two</li>
+            </ol>
+            <p id="line_3">test</p>
+        """
+
+    def test_nested_numbers(self):
+        html = parse(u'# test line one\n# test line two\n## Nested item')
+        assert html == """
+            <ol id="line_0">
+                <li>test line one</li>
+                <li>test line two<ol id="line_2">
+                <li>Nested item</li>
+            </ol></li>
+            </ol>
+        """
+
+    def test_mixed_numbers_bullets(self):
+        html = parse(u'# test line one\n* test line two\n*# Nested item')
+        assert html == """
+            <ol id="line_0">
+                <li>test line one</li>
+                <li>test line two<ol id="line_2">
+                <li>Nested item</li>
+            </ol></li>
+            </ol>
+        """
+
+    def test_mixed_bullets_numbers(self):
+        html = parse(u'* test line one\n# test line two\n*# Nested item')
+        assert html == """
+            <ul id="line_0">
+                <li>test line one</li>
+                <li>test line two<ul id="line_2">
+                <li>Nested item</li>
+            </ul></li>
+            </ul>
+        """
+
     def test_basic_emphasis(self):
         html = parse(u'test //test test// test **test test** test')
         assert html == """<p id="line_0">test <i>test test</i> test <b>test test</b> test</p>"""

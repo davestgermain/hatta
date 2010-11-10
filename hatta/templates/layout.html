@@ -3,14 +3,17 @@
 <html><head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <title>{% block title %}{% endblock %}</title>
-{% block links %}{% endblock %}
-{% block meta %}{% endblock %}
+    {% block links %}{% endblock %}
+    {% block meta %}{% endblock %}
 </head><body><div id="hatta-header"> 
-{% block header %}{% endblock %}
+    {% block logo %}{% endblock %}
+    {% block search %}{% endblock %}
+    {% block menu %}{% endblock %}
+    {% block page_title %}{% endblock %}
 </div><div id="hatta-content"> 
-{% block content %}{% endblock %}
+    {% block content %}{% endblock %}
 <div id="hatta-footer"> 
-{% block footer %}{% endblock %}
+    {% block footer %}{% endblock %}
 </div></div>
-{% block scripts %}{% endblock %}
+    {% block scripts %}{% endblock %}
 </body></html>

@@ -292,7 +292,7 @@ class Wiki(object):
                         except KeyError:
                             page_class = self.mime_map['']
         else:
-            page_class = page.WikiPage
+            page_class = page.WikiPageSpecial
             mime = ''
         return page_class(self, request, title, mime)
 

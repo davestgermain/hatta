@@ -215,25 +215,13 @@ class WikiPage(object):
 
     def footer_links(self, special_title, edit_url):
         _ = self.wiki.gettext
-        if special_title:
-            footer_links = [
-                (_(u'Changes'), 'changes',
-                 self.get_url(None, self.wiki.recent_changes)),
-                (_(u'Index'), 'index',
-                 self.get_url(None, self.wiki.all_pages)),
-                (_(u'Orphaned'), 'orphaned',
-                 self.get_url(None, self.wiki.orphaned)),
-                (_(u'Wanted'), 'wanted',
-                 self.get_url(None, self.wiki.wanted)),
-            ]
-        else:
-            footer_links = [
-                (_(u'Edit'), 'edit', edit_url),
-                (_(u'History'), 'history',
-                 self.get_url(self.title, self.wiki.history)),
-                (_(u'Backlinks'), 'backlinks',
-                 self.get_url(self.title, self.wiki.backlinks))
-            ]
+        footer_links = [
+            (_(u'Edit'), 'edit', edit_url),
+            (_(u'History'), 'history',
+             self.get_url(self.title, self.wiki.history)),
+            (_(u'Backlinks'), 'backlinks',
+             self.get_url(self.title, self.wiki.backlinks))
+        ]
         return footer_links
 
     def template(self, template_name, **kwargs):
@@ -326,6 +314,25 @@ class WikiPage(object):
                 etag = '%s/%d-%d' % (werkzeug.url_quote(title), inode, mtime)
                 dependencies.add(etag)
         return dependencies
+
+
+class WikiPageSpecial(WikiPage):
+    """Special pages, like recent changes, index, etc."""
+
+    def footer_links(self, special_title, edit_url):
+        _ = self.wiki.gettext
+        footer_links = [
+            (_(u'Changes'), 'changes',
+             self.get_url(None, self.wiki.recent_changes)),
+            (_(u'Index'), 'index',
+             self.get_url(None, self.wiki.all_pages)),
+            (_(u'Orphaned'), 'orphaned',
+             self.get_url(None, self.wiki.orphaned)),
+            (_(u'Wanted'), 'wanted',
+             self.get_url(None, self.wiki.wanted)),
+        ]
+        return footer_links
+
 
 class WikiPageText(WikiPage):
     """Pages of mime type text/* use this for display."""

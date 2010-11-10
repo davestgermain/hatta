@@ -31,7 +31,7 @@
     {% endif %}
 {% endblock %}
 
-{% block header %}
+{% block logo %}
     {% if wiki.logo_page in page.storage %}
         <a id="hatta-logo"
            href="{{ url(wiki.front_page) }}"><img
@@ -39,15 +39,26 @@
              alt="[{{ wiki.logo_page }}]"
         ></a>
     {% endif %}
+{% endblock %}
+
+{% block search %}
     <form action="/+search" id="hatta-search" method="GET"
       ><div><input
         id="hatta-search" name="q"><input
         class="button" type="submit" value="Search"
-    ></div></form><div id="hatta-menu">
+    ></div></form>
+{% endblock %}
+
+{% block menu %}
+    <div id="hatta-menu">
     {% for part in page.menu() %}
         {{ part|safe }}
     {% endfor %}
-    </div><h1>{{ special_title or title }}</h1>
+    </div>
+{% endblock %}
+
+{% block page_title %}
+    <h1>{{ special_title or title }}</h1>
 {% endblock %}
 
 {% block content %}{% for part in content %}{{ part|safe }}{% endfor %}{% endblock %}

@@ -213,36 +213,6 @@ class WikiPage(object):
                 class_ = None
             yield self.wiki_link(link, label, class_=class_)
 
-    def header(self, special_title):
-        html = werkzeug.html
-        if self.wiki.logo_page in self.storage:
-            yield self.logo()
-        yield self.search_form()
-        yield html.div(u" ".join(self.menu()), class_="menu")
-        yield html.h1(html(special_title or self.title))
-
-    def html_header(self, special_title, edit_url):
-        e = lambda x: werkzeug.escape(x, quote=True)
-        h = werkzeug.html
-        yield h.title(u'%s - %s' % (e(special_title or self.title),
-                                    e(self.wiki.site_name)))
-        yield h.link(rel="stylesheet", type_="text/css",
-                     href=self.get_url(None, self.wiki.pygments_css))
-        yield h.link(rel="stylesheet", type_="text/css",
-                     href=self.get_url(None, self.wiki.style_css))
-        if special_title:
-            yield h.meta(name="robots", content="NOINDEX,NOFOLLOW")
-        if edit_url:
-            yield h.link(rel="alternate", type_="application/wiki",
-                         href=edit_url)
-        yield h.link(rel="shortcut icon", type_="image/x-icon",
-                     href=self.get_url(None, self.wiki.favicon_ico))
-        yield h.link(rel="alternate", type_="application/rss+xml",
-                     title=e("%s (ATOM)" % self.wiki.site_name),
-                     href=self.get_url(None, self.wiki.atom))
-        yield h.script(type_="text/javascript",
-                     src=self.get_url(None, self.wiki.scripts_js))
-
     def footer(self, special_title, edit_url):
         _ = self.wiki.gettext
         if special_title:
@@ -281,6 +251,7 @@ class WikiPage(object):
             'download_url': self.get_download_url,
             'config': self.config,
             'page': self,
+            '_': self.wiki.gettext,
         }
         context.update(kwargs)
         return template.generate(**context)

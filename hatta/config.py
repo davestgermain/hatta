@@ -121,7 +121,11 @@ class WikiConfig(object):
         parser = ConfigParser.SafeConfigParser()
         parser.read(files)
         section = 'hatta'
-        for option, value in parser.items(section):
+        try:
+            options = parser.items(section)
+        except ConfigParser.NoSectionError:
+            return
+        for option, value in options:
             if option not in self.valid_names:
                 raise ValueError('Invalid option name "%s".' % option)
             self.config[option] = value

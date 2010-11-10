@@ -255,6 +255,7 @@ class Wiki(object):
         })
         self.template_env = jinja2.Environment(
                             loader=jinja2.PackageLoader('hatta', 'templates'))
+        self.template_env.autoescape = True
 
     def add_url_rule(self, rule):
         """Let plugins add additional url rules."""

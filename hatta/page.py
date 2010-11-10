@@ -8,6 +8,7 @@ import os
 
 import werkzeug
 import werkzeug.contrib.atom
+import jinja2
 
 try:
     import pygments
@@ -269,6 +270,21 @@ class WikiPage(object):
                                       class_=class_)
                 yield u'\n'
 
+    def template(self, template_name, **kwargs):
+        template = self.wiki.template_env.get_template(template_name)
+        context = {
+            'request': self.request,
+            'wiki': self.wiki,
+            'title': self.title,
+            'mime': self.mime,
+            'url': self.get_url,
+            'download_url': self.get_download_url,
+            'config': self.config,
+            'page': self,
+        }
+        context.update(kwargs)
+        return template.generate(**context)
+
     def render_content(self, content, special_title=None):
         """The main page template."""
 
@@ -485,6 +501,10 @@ class WikiPageText(WikiPage):
                     line_no, werkzeug.escape(old_text))
         yield u'</pre>'
 
+    def render_content(self, content, special_title=None):
+        return self.template('page.html', content=content,
+                             title=special_title or self.title)
+
 class WikiPageColorText(WikiPageText):
     """Text pages, but displayed colorized with pygments"""
 
@@ -591,6 +611,7 @@ class WikiPageWiki(WikiPageColorText):
             if link not in self.storage:
                 dependencies.add(werkzeug.url_quote(link))
         return dependencies
+
 
 class WikiPageFile(WikiPage):
     """Pages of all other mime types use this for display."""

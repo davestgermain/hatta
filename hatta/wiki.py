@@ -10,6 +10,7 @@ import itertools
 
 import werkzeug
 import werkzeug.routing
+import jinja2
 
 try:
     import pygments
@@ -252,6 +253,8 @@ class Wiki(object):
             'title':WikiTitleConverter,
             'all':WikiAllConverter
         })
+        self.template_env = jinja2.Environment(
+                            loader=jinja2.PackageLoader('hatta', 'templates'))
 
     def add_url_rule(self, rule):
         """Let plugins add additional url rules."""

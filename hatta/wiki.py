@@ -625,8 +625,7 @@ It can only be edited by the site admin directly on the disk."""))
 
         _ = self.gettext
         page = self.get_page(request, title)
-        content = page.render_content(page.history_list(),
-            _(u'History of "%(title)s"') % {'title': title})
+        content = page.render_history()
         response = self.response(request, title, content, '/history')
         return response
 

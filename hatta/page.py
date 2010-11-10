@@ -59,6 +59,8 @@ def page_mime(title):
 class WikiPage(object):
     """Everything needed for rendering a page."""
 
+    template_name = 'page.html'
+
     def __init__(self, wiki, request, title, mime):
         self.request = request
         self.title = title
@@ -182,20 +184,6 @@ class WikiPage(object):
         else:
             return html.a(html(alt), href=self.get_url(addr))
 
-    def search_form(self):
-        html = werkzeug.html
-        _ = self.wiki.gettext
-        return html.form(html.div(html.input(name="q", class_="search"),
-                html.input(class_="button", type_="submit", value=_(u'Search')),
-            ), method="GET", class_="search",
-            action=self.get_url(None, self.wiki.search))
-
-    def logo(self):
-        html = werkzeug.html
-        img = html.img(alt=u"[%s]" % self.wiki.front_page,
-                       src=self.get_download_url(self.wiki.logo_page))
-        return html.a(img, class_='logo', href=self.get_url(self.wiki.front_page))
-
     def menu(self):
         """Generate the menu items"""
         _ = self.wiki.gettext
@@ -213,19 +201,15 @@ class WikiPage(object):
                 class_ = None
             yield self.wiki_link(link, label, class_=class_)
 
-    def footer_links(self, special_title, edit_url):
-        _ = self.wiki.gettext
-        footer_links = [
-            (_(u'Edit'), 'edit', edit_url),
-            (_(u'History'), 'history',
-             self.get_url(self.title, self.wiki.history)),
-            (_(u'Backlinks'), 'backlinks',
-             self.get_url(self.title, self.wiki.backlinks))
-        ]
-        return footer_links
-
     def template(self, template_name, **kwargs):
         template = self.wiki.template_env.get_template(template_name)
+        edit_url = None
+        if self.title:
+            try:
+                self.wiki._check_lock(self.title)
+                edit_url = self.get_url(self.title, self.wiki.edit)
+            except error.ForbiddenErr:
+                pass
         context = {
             'request': self.request,
             'wiki': self.wiki,
@@ -235,6 +219,7 @@ class WikiPage(object):
             'download_url': self.get_download_url,
             'config': self.config,
             'page': self,
+            'edit_url': edit_url,
             '_': self.wiki.gettext,
         }
         context.update(kwargs)
@@ -243,14 +228,7 @@ class WikiPage(object):
         return stream
 
     def render_content(self, content, special_title=None):
-        edit_url = None
-        if not special_title:
-            try:
-                self.wiki._check_lock(self.title)
-                edit_url = self.get_url(self.title, self.wiki.edit)
-            except error.ForbiddenErr:
-                pass
-        return self.template('page.html', content=content, edit_url=edit_url,
+        return self.template(self.template_name, content=content,
                              special_title=special_title)
 
     def pages_list(self, pages, message=None, link=None, _class=None):
@@ -262,22 +240,16 @@ class WikiPage(object):
             yield werkzeug.html.li(self.wiki_link(title))
         yield u'</ul>'
 
-    def history_list(self):
+    def render_history(self):
         """Generate the content of the history page."""
 
         _ = self.wiki.gettext
-        h = werkzeug.html
         max_rev = -1
         title = self.title
-        link = self.wiki_link(title)
-        yield h.p(h(_(u'History of changes for %(link)s.')) % {'link': link})
-        url = self.request.get_url(title, self.wiki.undo, method='POST')
-        yield u'<form action="%s" method="POST"><ul class="history">' % url
-        try:
-            self.wiki._check_lock(title)
-            read_only = False
-        except error.ForbiddenErr:
-            read_only = True
+        history = []
+        text = _(u'History of changes for %(link)s.') % {
+            'link': self.wiki_link(self.title),
+        }
         for rev, date, author, comment in self.wiki.storage.page_history(title):
             if max_rev < rev:
                 max_rev = rev
@@ -287,18 +259,11 @@ class WikiPage(object):
             else:
                 date_url = self.request.adapter.build(self.wiki.revision, {
                     'title': title, 'rev': rev})
-            if read_only:
-                button = u''
-            else:
-                button = h.input(type_="submit", name=str(rev),
-                                 value=h(_(u'Undo')))
-            yield h.li(h.a(self.date_html(date), href=date_url),
-                       button, ' . . . . ',
-                       h.i(self.wiki_link("~%s" % author, author)),
-                       h.div(h(comment), class_="comment"))
-        yield u'</ul>'
-        yield h.input(type_="hidden", name="parent", value=max_rev)
-        yield u'</form>'
+            history.append((date, date_url, rev, author, comment))
+        return self.template('history.html', history=history, text=text,
+                             date_html=self.date_html, parent=max_rev,
+                special_title=_(u'History of "%(title)s"') % {'title': title})
+
 
 
     def dependencies(self):
@@ -319,19 +284,7 @@ class WikiPage(object):
 class WikiPageSpecial(WikiPage):
     """Special pages, like recent changes, index, etc."""
 
-    def footer_links(self, special_title, edit_url):
-        _ = self.wiki.gettext
-        footer_links = [
-            (_(u'Changes'), 'changes',
-             self.get_url(None, self.wiki.recent_changes)),
-            (_(u'Index'), 'index',
-             self.get_url(None, self.wiki.all_pages)),
-            (_(u'Orphaned'), 'orphaned',
-             self.get_url(None, self.wiki.orphaned)),
-            (_(u'Wanted'), 'wanted',
-             self.get_url(None, self.wiki.wanted)),
-        ]
-        return footer_links
+    template_name = 'page_special.html'
 
 
 class WikiPageText(WikiPage):

@@ -1,0 +1,23 @@
+{% extends 'page.html' %} 
+
+{% block meta %}<meta name="robots" content="NOINDEX, NOFOLLOW">{% endblock %}
+{% block page_title %}<h1>{{ _('History of %s') % title }}</h1>{% endblock %}
+
+{% block content %}
+    <p>{{ text|safe }}</p>
+    <form action="{{ url(title, wiki.undo, method='POST') }}" method="POST">
+        <ul id="hatta-history">
+            {% for date, date_url, rev, author, comment in history %}
+                <li><a href="{{ date_url }}"
+                    >{{ date_html(date)|safe }}</a>
+                {% if edit_url %}
+                <input type="submit" name="{{ rev }}" value="{{ _('Undo') }}">
+                {% endif %}
+                . . . .
+                <i>{{ page.wiki_link('~%s' % author, author)|safe }}</i>
+                <div class="hatta-comment">{{ comment }}</div></li>
+            {% endfor %}
+        </ul>
+        <input type="hidden" name="parent" value="{{ parent_rev }}">
+    </form>
+{% endblock %}

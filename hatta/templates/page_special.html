@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block meta %}<meta name="robots" content="NOINDEX, NOFOLLOW">{% endblock %}
+
+{% block page_title %}<h1>{{ special_title }}</h1>{% endblock %}
+
+{% block footer %}
+    <a href="/+history/" class="changes">Changes</a>
+    <a href="/+index" class="index">Index</a>
+    <a href="/+orphaned" class="orphaned">Orphaned</a>
+    <a href="/+wanted" class="wanted">Wanted</a>
+{% endblock %}

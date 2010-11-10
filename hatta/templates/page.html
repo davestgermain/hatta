@@ -50,16 +50,16 @@
     </div><h1>{{ special_title or title|e }}</h1>
 {% endblock %}
 
-{% block content %}
-    {% for part in content %}
-        {{ part }}
-    {% endfor %}
-{% endblock %}
+{% block content %}{% for part in content %}{{ part }}{% endfor %}{% endblock %}
 
 {% block footer %}
-    {% if not special_title or not title %}
-        {% for part in page.footer(special_title, edit_url) %}
-            {{ part }}
-        {% endfor %}
-    {% endif %}
+    {% for label, class_, href in page.footer_links(special_title, edit_url) %}
+        {% if href %}
+            <a href={{ href }}
+            {% if class_ %}
+               class="{{class_}}"
+            {% endif %}
+            >{{ label|e }}</a>
+        {% endif %}
+    {% endfor %}
 {% endblock %}

@@ -213,7 +213,7 @@ class WikiPage(object):
                 class_ = None
             yield self.wiki_link(link, label, class_=class_)
 
-    def footer(self, special_title, edit_url):
+    def footer_links(self, special_title, edit_url):
         _ = self.wiki.gettext
         if special_title:
             footer_links = [
@@ -234,11 +234,7 @@ class WikiPage(object):
                 (_(u'Backlinks'), 'backlinks',
                  self.get_url(self.title, self.wiki.backlinks))
             ]
-        for label, class_, url in footer_links:
-            if url:
-                yield werkzeug.html.a(werkzeug.html(label), href=url,
-                                      class_=class_)
-                yield u'\n'
+        return footer_links
 
     def template(self, template_name, **kwargs):
         template = self.wiki.template_env.get_template(template_name)

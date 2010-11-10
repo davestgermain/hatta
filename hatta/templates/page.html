@@ -1,26 +1,40 @@
 {% extends 'layout.html' %}
+
+{% block links %}
+    {% for part in page.html_header(special_title, edit_url) %}
+        {{ part }}
+    {% endfor %}
+{% endblock %}
+
 {% block header %}
-{% if wiki.logo_page %}
-<a id="hatta-logo"
-   href="{{ url(wiki.front_page) }}"><img
-     src="{{ download_url(wiki.logo_page) }}"
-     alt="[{{ wiki.logo_page }}]"
-></a>
-{% endif %}
-<form action="/+search" id="hatta-search" method="GET"
-  ><div><input
-    id="hatta-search" name="q"><input
-    id="hatta-button" type="submit" value="Search"
-></div></form><div id="hatta-menu">
-{% for item in page.menu() %}
-    {{ item }}
-{% endfor %}
-</div><h1>{{ title }}</h1>
+    {% if wiki.logo_page %}
+        <a id="hatta-logo"
+           href="{{ url(wiki.front_page) }}"><img
+             src="{{ download_url(wiki.logo_page) }}"
+             alt="[{{ wiki.logo_page }}]"
+        ></a>
+    {% endif %}
+    <form action="/+search" id="hatta-search" method="GET"
+      ><div><input
+        id="hatta-search" name="q"><input
+        class="button" type="submit" value="Search"
+    ></div></form><div id="hatta-menu">
+    {% for part in page.menu() %}
+        {{ part }}
+    {% endfor %}
+    </div><h1>{{ title }}</h1>
 {% endblock %}
+
 {% block content %}
-{% for part in content %}
-{{ part }}
-{% endfor %}
+    {% for part in content %}
+        {{ part }}
+    {% endfor %}
 {% endblock %}
+
 {% block footer %}
+    {% if not special_title or not title %}
+        {% for part in page.footer(special_title, edit_url) %}
+            {{ part }}
+        {% endfor %}
+    {% endif %}
 {% endblock %}

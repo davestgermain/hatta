@@ -73,7 +73,7 @@ b.highlight, pre.diff ins { font-weight: bold; background: #fcaf3e;
 color: #ce5c00; text-decoration: none }
 pre.diff del { background: #eeeeec; color: #888a85; text-decoration: none }
 pre.diff div.change { border-left: 2px solid #fcaf3e }
-div.footer { border-top: solid 1px #babdb6; text-align: right }
+div#hatta-footer { border-top: solid 1px #babdb6; text-align: right }
 h1, h2, h3, h4 { color: #babdb6; font-weight: normal; letter-spacing: 0.125em}
 div.buttons { text-align: center }
 input.button, div.buttons input { font-weight: bold; font-size: 100%;
@@ -83,16 +83,16 @@ input.button, div.buttons input { font-weight: bold; font-size: 100%;
     border: solid 1px #babdb6; }
 .editor label { display:block; text-align: right }
 .editor .upload { margin: 2em auto; text-align: center }
-form.search input.search, .editor label input { font-size: 100%;
+form#hatta-search input#hatta-search, .editor label input { font-size: 100%;
     border: solid 1px #babdb6; margin: 0.125em 0 }
 .editor label.comment input  { width: 32em }
-a.logo { float: left; display: block; margin: 0.25em }
-div.header h1 { margin: 0; }
-div.content { clear: left }
-form.search { margin:0; text-align: right; font-size: 80% }
+a#hatta-logo { float: left; display: block; margin: 0.25em }
+div#hatta-header h1 { margin: 0; }
+div#hatta-content { clear: left }
+form#hatta-search { margin:0; text-align: right; font-size: 80% }
 div.snippet { font-size: 80%; color: #888a85 }
-div.header div.menu { float: right; margin-top: 1.25em }
-div.header div.menu a.current { color: #000 }
+div#hatta-header div#hatta-menu { float: right; margin-top: 1.25em }
+div#hatta-header div#hatta-menu a.current { color: #000 }
 hr { background: transparent; border:none; height: 0;
      border-bottom: 1px solid #babdb6; clear: both }
 blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}

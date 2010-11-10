@@ -286,8 +286,6 @@ class WikiPage(object):
         return template.generate(**context)
 
     def render_content(self, content, special_title=None):
-        """The main page template."""
-
         edit_url = None
         if not special_title:
             try:
@@ -295,26 +293,8 @@ class WikiPage(object):
                 edit_url = self.get_url(self.title, self.wiki.edit)
             except error.ForbiddenErr:
                 pass
-
-        yield u"""\
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-"http://www.w3.org/TR/html4/strict.dtd">
-<html><head>\n"""
-        for part in self.html_header(special_title, edit_url):
-            yield part
-        yield u'\n</head><body><div class="header">\n'
-        for part in self.header(special_title):
-            yield part
-        yield u'\n</div><div class="content">\n'
-        for part in content:
-            yield part
-        if not special_title or not self.title:
-            yield u'\n<div class="footer">\n'
-            for part in self.footer(special_title, edit_url):
-                yield part
-            yield u'</div>'
-        yield u'</div></body></html>'
-
+        return self.template('page.html', content=content, edit_url=edit_url,
+                             special_title=special_title)
 
     def pages_list(self, pages, message=None, link=None, _class=None):
         """Generate the content of a page list page."""
@@ -500,10 +480,6 @@ class WikiPageText(WikiPage):
                 yield u'<div class="orig" id="line_%d">%s</div>' % (
                     line_no, werkzeug.escape(old_text))
         yield u'</pre>'
-
-    def render_content(self, content, special_title=None):
-        return self.template('page.html', content=content,
-                             title=special_title or self.title)
 
 class WikiPageColorText(WikiPageText):
     """Text pages, but displayed colorized with pygments"""

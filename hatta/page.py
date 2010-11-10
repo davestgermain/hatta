@@ -250,7 +250,9 @@ class WikiPage(object):
             '_': self.wiki.gettext,
         }
         context.update(kwargs)
-        return template.generate(**context)
+        stream = template.stream(**context)
+        stream.enable_buffering(10)
+        return stream
 
     def render_content(self, content, special_title=None):
         edit_url = None

@@ -1,0 +1,15 @@
+{% extends "page_special.html" %} 
+
+{% block title %}{{ _("Recent changes") }}{% endblock %}
+
+{% block content %}
+    <ul class="changes">
+    {% for date, date_url, title, author, comment in changes %}
+        <li><a href="{{ date_url }}">{{ date_html(date)|safe }}</a>
+            <b>{{ page.wiki_link(title)|safe }}</b> . . . .
+            <i>{{ page.wiki_link('~%s' % author, author)|safe }}</i>
+            <div class="comment">{{ comment }}</div>
+        </li>
+    {% endfor %}
+    </ul>
+{% endblock %}

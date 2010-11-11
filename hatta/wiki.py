@@ -627,9 +627,22 @@ It can only be edited by the site admin directly on the disk."""))
     def history(self, request, title):
         """Display history of changes of a page."""
 
+        max_rev = -1
+        history = []
         page = self.get_page(request, title)
-        content = page.render_history()
-        response = self.response(request, title, content, '/history')
+        for rev, date, author, comment in self.storage.page_history(title):
+            if max_rev < rev:
+                max_rev = rev
+            if rev > 0:
+                date_url = request.adapter.build(self.diff, {
+                    'title': title, 'from_rev': rev-1, 'to_rev': rev})
+            else:
+                date_url = request.adapter.build(self.revision, {
+                    'title': title, 'rev': rev})
+            history.append((date, date_url, rev, author, comment))
+        html = page.template('history.html', history=history,
+                             date_html=hatta.page.date_html, parent=max_rev)
+        response = self.response(request, title, html, '/history')
         return response
 
     @URL('/+history/')
@@ -637,11 +650,7 @@ It can only be edited by the site admin directly on the disk."""))
         """Serve the recent changes page."""
 
         _ = self.gettext
-        def changes_list(page):
-            """Generate the content of the recent changes page."""
-
-            h = werkzeug.html
-            yield u'<ul>'
+        def _changes_list():
             last = {}
             lastrev = {}
             count = 0
@@ -666,16 +675,12 @@ It can only be edited by the site admin directly on the disk."""))
                 last[title] = author, comment
                 lastrev[title] = rev
 
-                yield h.li(h.a(hatta.page.date_html(date), href=date_url), ' ',
-                    h.b(page.wiki_link(title)), u' . . . . ',
-                    h.i(page.wiki_link('~%s' % author, author)),
-                    h.div(h(comment), class_="comment")
-                )
-            yield u'</ul>'
+                yield date, date_url, title, author, comment
 
         page = self.get_page(request, '')
-        content = page.render_content(changes_list(page), _(u'Recent changes'))
-        response = WikiResponse(content, mimetype='text/html')
+        html = page.template('changes.html', changes=_changes_list(),
+                             date_html=hatta.page.date_html)
+        response = WikiResponse(html, mimetype='text/html')
         response.set_etag('/history/%d' % self.storage.repo_revision())
         response.make_conditional(request)
         return response

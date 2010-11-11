@@ -227,26 +227,6 @@ class WikiPage(object):
         return self.template(self.template_name, content=content,
                              special_title=special_title)
 
-    def render_history(self):
-        """Generate the content of the history page."""
-
-        _ = self.wiki.gettext
-        max_rev = -1
-        title = self.title
-        history = []
-        for rev, date, author, comment in self.wiki.storage.page_history(title):
-            if max_rev < rev:
-                max_rev = rev
-            if rev > 0:
-                date_url = self.request.adapter.build(self.wiki.diff, {
-                    'title': title, 'from_rev': rev-1, 'to_rev': rev})
-            else:
-                date_url = self.request.adapter.build(self.wiki.revision, {
-                    'title': title, 'rev': rev})
-            history.append((date, date_url, rev, author, comment))
-        return self.template('history.html', history=history,
-                             date_html=date_html, parent=max_rev)
-
     def dependencies(self):
         """Refresh the page when any of those pages was changed."""
 

@@ -1,0 +1,10 @@
+{% extends 'page_special.html' %} 
+
+{% block content %}
+    <p>{{ message|format(link=link|safe) }}</p>
+    <ul class="{{ class_|d('pagelist') }}">
+    {% for page_title in pages %}
+        <li>{{ page.wiki_link(page_title)|safe }}</li>
+    {% endfor %}
+    </ul>
+{% endblock %}

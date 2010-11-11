@@ -1,0 +1,16 @@
+{% extends "page_special.html" %} 
+
+{% block title %}{{ _("Wanted pages") }}{% endblock %}
+
+{% block content %}
+    <p>{{ _("List of pages that are linked to, but don't exist yet.") }}</p>
+    <ul class="wanted">
+    {% for refs, page_title in pages %}
+        <li><b>{{ page.wiki_link(page_title)|safe }}</b>
+        <i>(<a href="{{ url(page_title, wiki.backlinks) }}"
+               class="backlinks"
+>{{ ngettext("%(num)d reference", "%(num)d references", refs) }}</a>)</i>
+        </li>
+    {% endfor %}
+    </ul>
+{% endblock %}

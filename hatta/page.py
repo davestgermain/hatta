@@ -55,7 +55,7 @@ def page_mime(title):
         mime = 'text/x-wiki'
     return mime
 
-def date_html(self, date_time):
+def date_html(date_time):
     """
     Create HTML for a date, according to recommendation at
     http://microformats.org/wiki/date
@@ -226,15 +226,6 @@ class WikiPage(object):
     def render_content(self, content, special_title=None):
         return self.template(self.template_name, content=content,
                              special_title=special_title)
-
-    def pages_list(self, pages, message=None, link=None, _class=None):
-        """Generate the content of a page list page."""
-
-        yield werkzeug.html.p(werkzeug.escape(message) % {'link': link})
-        yield u'<ul class="%s">' % werkzeug.escape(_class or 'pagelist')
-        for title in pages:
-            yield werkzeug.html.li(self.wiki_link(title))
-        yield u'</ul>'
 
     def render_history(self):
         """Generate the content of the history page."""

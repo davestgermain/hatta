@@ -1,0 +1,17 @@
+{% extends 'page.html' %} 
+
+{% block meta %}<meta name="robots" content="NOINDEX, NOFOLLOW">{% endblock %}
+
+{% block page_title %}
+    <h1>{{ _("Links to %(title)s", title=title) }}</h1>
+{% endblock %}
+
+{% block content %}
+    <p>{{ _("Pages that contain a link to %(link)s.",
+            link=page.wiki_link(title)|safe)}}</p>
+    <ul class="backlinks">
+    {% for page_title in pages %}
+        <li>{{ page.wiki_link(page_title)|safe }}</li>
+    {% endfor %}
+    </ul>
+{% endblock %}

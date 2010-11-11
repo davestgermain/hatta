@@ -666,7 +666,7 @@ It can only be edited by the site admin directly on the disk."""))
                 last[title] = author, comment
                 lastrev[title] = rev
 
-                yield h.li(h.a(page.date_html(date), href=date_url), ' ',
+                yield h.li(h.a(hatta.page.date_html(date), href=date_url), ' ',
                     h.b(page.wiki_link(title)), u' . . . . ',
                     h.i(page.wiki_link('~%s' % author, author)),
                     h.div(h(comment), class_="comment")
@@ -718,9 +718,11 @@ It can only be edited by the site admin directly on the disk."""))
 
         _ = self.gettext
         page = self.get_page(request, '')
-        all_pages = sorted(self.storage.all_pages())
-        content = page.pages_list(all_pages, _(u'Index of all pages'))
-        html = page.render_content(content, _(u'Page Index'))
+        html = page.template('list.html',
+                             pages=sorted(self.storage.all_pages()),
+                             class_='index',
+                             message=_(u'Index of all pages'),
+                             special_title=_(u'Page Index'))
         response = WikiResponse(html, mimetype='text/html')
         response.set_etag('/+index/%d' % self.storage.repo_revision())
         response.make_conditional(request)
@@ -732,10 +734,11 @@ It can only be edited by the site admin directly on the disk."""))
 
         _ = self.gettext
         page = self.get_page(request, '')
-        pages = self.index.orphaned_pages()
-        content = page.pages_list(pages,
-                                  _(u'List of pages with no links to them'))
-        html = page.render_content(content, _(u'Orphaned pages'))
+        html = page.template('list.html',
+                             pages=self.index.orphaned_pages(),
+                             class_='orphaned',
+                             message=_(u'List of pages with no links to them'),
+                             special_title=_(u'Orphaned pages'))
         response = WikiResponse(html, mimetype='text/html')
         response.set_etag('/+orphaned/%d' % self.storage.repo_revision())
         response.make_conditional(request)
@@ -746,25 +749,13 @@ It can only be edited by the site admin directly on the disk."""))
         """Show all pages that don't exist yet, but are linked."""
 
         _ = self.gettext
-        def wanted_pages_list(page):
-            """Generate the content of wanted pages page."""
-
-            h = werkzeug.html
-            yield h.p(h(
-                _(u"List of pages that are linked to, but don't exist yet.")))
-            yield u'<ol class="wanted">'
+        def _wanted_pages_list():
             for refs, title in self.index.wanted_pages():
-                if not parser.external_link(title) and not title.startswith('+'):
-                    url = page.get_url(title, self.backlinks)
-                    yield h.li(h.b(page.wiki_link(title)),
-                               h.i(u' (',
-                                  h.a(h(_(u"%d references") % refs),
-                                      href=url, class_="backlinks"), ')'))
-            yield u'</ol>'
+                if not (parser.external_link(title) or title.startswith('+')):
+                    yield refs, title
 
         page = self.get_page(request, '')
-        content = wanted_pages_list(page)
-        html = page.render_content(content, _(u'Wanted pages'))
+        html = page.template('wanted.html', pages=_wanted_pages_list())
         response = WikiResponse(html, mimetype='text/html')
         response.set_etag('/+wanted/%d' % self.storage.repo_revision())
         response.make_conditional(request)
@@ -833,11 +824,8 @@ It can only be edited by the site admin directly on the disk."""))
         self.storage.reopen()
         self.index.update(self)
         page = self.get_page(request, title)
-        message = _(u'Pages that contain a link to %(link)s.')
-        link = page.wiki_link(title)
-        pages = self.index.page_backlinks(title)
-        content = page.pages_list(pages, message, link, _class='backlinks')
-        html = page.render_content(content, _(u'Links to "%s"') % title)
+        html = page.template('backlinks.html',
+                             pages=self.index.page_backlinks(title))
         response = WikiResponse(html, mimetype='text/html')
         response.set_etag('/+search/%d' % self.storage.repo_revision())
         response.make_conditional(request)

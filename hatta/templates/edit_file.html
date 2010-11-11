@@ -1,0 +1,23 @@
+{% extends "page.html" %}
+
+{% block page_title %}<h1>{{ _("Editing \"%(title)s\"", title=title) }}</h1>{% endblock %}
+{% block title %}{{ _("Editing \"%(title)s\"", title=title) }}{% endblock %}
+
+{% block content %}
+    <p>{{ _("This is a binary file, it can't be edited on a wiki. "
+            "Please upload a new version instead.") }}</p>
+    <form action="" method="POST" class="editor" enctype="multipart/form-data"><div>
+        <div class="upload"><input type="file" name="data"></div>
+        <label class="comment">{{ _("Comment") }} <input
+            name="comment" value="{{ comment }}"></label>
+        <label class="comment">{{ _("Author") }} <input
+            name="author" value="{{ author }}"></label>
+        <div class="buttons">
+            <input type="submit" name="save" value="{{ _("Save") }}">
+            <input type="submit" name="cancel" value="{{ _("Cancel") }}">
+        </div>
+        <input type="hidden" name="parent" value="{{ parent }}">
+    </div></form>
+{% endblock %}
+
+{% block footer %}{% endblock %}

@@ -223,10 +223,6 @@ class WikiPage(object):
         stream.enable_buffering(10)
         return stream
 
-    def render_content(self, content, special_title=None):
-        return self.template(self.template_name, content=content,
-                             special_title=special_title)
-
     def dependencies(self):
         """Refresh the page when any of those pages was changed."""
 
@@ -240,6 +236,21 @@ class WikiPage(object):
                 etag = '%s/%d-%d' % (werkzeug.url_quote(title), inode, mtime)
                 dependencies.add(etag)
         return dependencies
+
+    def render_editor(self, preview=None):
+        _ = self.wiki.gettext
+        author = self.request.get_author()
+        if self.title in self.storage:
+            comment = _(u'changed')
+            (rev, old_date, old_author,
+                old_comment) = self.storage.page_meta(self.title)
+            if old_author == author:
+                comment = old_comment
+        else:
+            comment = _(u'uploaded')
+            rev = -1
+        return self.template('edit_file.html', comment=comment,
+                             author=author, parent=rev)
 
 
 class WikiPageSpecial(WikiPage):
@@ -274,7 +285,7 @@ class WikiPageText(WikiPage):
             lines = self.storage.page_lines(f)
         return self.content_iter(lines)
 
-    def editor_form(self, preview=None):
+    def render_editor(self, preview=None):
         """Generate the HTML for the editor."""
 
         _ = self.wiki.gettext
@@ -292,33 +303,13 @@ class WikiPageText(WikiPage):
             comment = _(u'created')
             rev = -1
         except error.ForbiddenErr, e:
-            yield werkzeug.html.p(
-                werkzeug.html(_(unicode(e))))
-            return
+            return werkzeug.html.p(werkzeug.html(_(unicode(e))))
         if preview:
             lines = preview
             comment = self.request.form.get('comment', comment)
-        html = werkzeug.html
-        yield u'<form action="" method="POST" class="editor"><div>'
-        yield u'<textarea name="text" cols="80" rows="20" id="editortext">'
-        for line in lines:
-            yield werkzeug.escape(line)
-        yield u"""</textarea>"""
-        yield html.input(type_="hidden", name="parent", value=rev)
-        yield html.label(html(_(u'Comment')), html.input(name="comment",
-            value=comment), class_="comment")
-        yield html.label(html(_(u'Author')), html.input(name="author",
-            value=self.request.get_author()), class_="comment")
-        yield html.div(
-                html.input(type_="submit", name="save", value=_(u'Save')),
-                html.input(type_="submit", name="preview", value=_(u'Preview')),
-                html.input(type_="submit", name="cancel", value=_(u'Cancel')),
-                class_="buttons")
-        yield u'</div></form>'
-        if preview:
-            yield html.h1(html(_(u'Preview, not saved')), class_="preview")
-            for part in self.view_content(preview):
-                yield part
+        return self.template('edit_text.html', comment=comment,
+                             preview=preview,
+                             author=author, parent=rev, lines=lines)
 
     def diff_content(self, from_text, to_text, message=u''):
         """Generate the HTML markup for a diff."""
@@ -418,6 +409,7 @@ class WikiPageColorText(WikiPageText):
         html = pygments.highlight(text, lexer, formatter)
         yield html
 
+
 class WikiPageWiki(WikiPageColorText):
     """Pages of with wiki markup use this for display."""
 
@@ -490,34 +482,6 @@ class WikiPageFile(WikiPage):
                     werkzeug.escape(self.title), self.mime)]
         return content
 
-    def editor_form(self, preview=None):
-        _ = self.wiki.gettext
-        author = self.request.get_author()
-        if self.title in self.storage:
-            comment = _(u'changed')
-            (rev, old_date, old_author,
-                old_comment) = self.storage.page_meta(self.title)
-            if old_author == author:
-                comment = old_comment
-        else:
-            comment = _(u'uploaded')
-            rev = -1
-        html = werkzeug.html
-        yield html.p(html(
-                _(u"This is a binary file, it can't be edited on a wiki. "
-                  u"Please upload a new version instead.")))
-        yield html.form(html.div(
-            html.div(html.input(type_="file", name="data"), class_="upload"),
-            html.input(type_="hidden", name="parent", value=rev),
-            html.label(html(_(u'Comment')), html.input(name="comment",
-                       value=comment)),
-            html.label(html(_(u'Author')), html.input(name="author",
-                       value=author)),
-            html.div(html.input(type_="submit", name="save", value=_(u'Save')),
-                     html.input(type_="submit", name="cancel",
-                                value=_(u'Cancel')),
-            class_="buttons")), action="", method="POST", class_="editor",
-                                enctype="multipart/form-data")
 
 class WikiPageImage(WikiPageFile):
     """Pages of mime type image/* use this for display."""
@@ -556,6 +520,7 @@ class WikiPageImage(WikiPageFile):
             raise error.UnsupportedMediaTypeErr('Image corrupted')
         cache_file.close()
         return cache_path
+
 
 class WikiPageCSV(WikiPageFile):
     """Display class for type text/csv."""

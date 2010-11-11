@@ -3,11 +3,12 @@
 {% block meta %}<meta name="robots" content="NOINDEX, NOFOLLOW">{% endblock %}
 
 {% block page_title %}
-    <h1>{{ _('History of %(title)s', title=title) }}</h1>
+    <h1>{{ _("History of %(title)s", title=title) }}</h1>
 {% endblock %}
+{% block title %}{{ _("History of %(title)s", title=title) }} - {{ wiki.site_name }}{% endblock %}
 
 {% block content %}
-    <p>{{ _('History of changes for %(link)s.', link=page.wiki_link(title)|safe) }}</p>
+    <p>{{ _("History of changes for %(link)s.", link=page.wiki_link(title)|safe) }}</p>
     <form action="{{ url(title, wiki.undo, method='POST') }}" method="POST">
         <ul id="hatta-history">
             {% for date, date_url, rev, author, comment in history %}

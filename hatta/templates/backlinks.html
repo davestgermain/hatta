@@ -5,6 +5,7 @@
 {% block page_title %}
     <h1>{{ _("Links to %(title)s", title=title) }}</h1>
 {% endblock %}
+{% block title %}{{ _("Links to %(title)s", title=title) }} - {{ wiki.site_name }}{% endblock %}
 
 {% block content %}
     <p>{{ _("Pages that contain a link to %(link)s.",

@@ -1,6 +1,7 @@
 {% extends "page_special.html" %} 
 
-{% block title %}{{ _("Recent changes") }}{% endblock %}
+{% block page_title %}{{ _("Recent changes") }}{% endblock %}
+{% block title %}{{ _("Recent changes") }} - {{ wiki.site_name }}{% endblock %}
 
 {% block content %}
     <ul class="changes">

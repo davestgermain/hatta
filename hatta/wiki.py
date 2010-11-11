@@ -354,7 +354,7 @@ It can only be edited by the site admin directly on the disk."""))
         except error.NotFoundErr:
             url = request.get_url(title, self.edit, external=True)
             return werkzeug.routing.redirect(url, code=303)
-        html = page.render_content(content)
+        html = page.template(page.template_name, content=content)
         dependencies = page.dependencies()
         etag = '/(%s)' % u','.join(dependencies)
         return self.response(request, title, html, etag=etag)
@@ -374,7 +374,8 @@ It can only be edited by the site admin directly on the disk."""))
         ]
         special_title = _(u'Revision of "%(title)s"') % {'title': title}
         page = self.get_page(request, title)
-        html = page.render_content(content, special_title)
+        html = page.template('page_special.html', content=content,
+                             special_title=special_title)
         response = self.response(request, title, html, rev=rev, etag='/old')
         return response
 
@@ -459,9 +460,7 @@ It can only be edited by the site admin directly on the disk."""))
         if exists:
             self.storage.reopen()
         page = self.get_page(request, title)
-        content = page.editor_form(preview)
-        special_title = _(u'Editing "%(title)s"') % {'title': title}
-        html = page.render_content(content, special_title)
+        html = page.render_editor(preview)
         if not exists:
             response = WikiResponse(html, mimetype="text/html",
                                      status='404 Not found')
@@ -712,7 +711,8 @@ It can only be edited by the site admin directly on the disk."""))
             content = [werkzeug.html.p(werkzeug.html(
                 _(u"Diff not available for this kind of pages.")))]
         special_title = _(u'Diff for "%(title)s"') % {'title': title}
-        html = page.render_content(content, special_title)
+        html = page.template('page_special.html', content=content,
+                            special_title=special_title)
         response = WikiResponse(html, mimetype='text/html')
         return response
 
@@ -818,7 +818,8 @@ It can only be edited by the site admin directly on the disk."""))
             words = (query,)
         title = _(u'Searching for "%s"') % u" ".join(words)
         content = page_search(words, page, request)
-        html = page.render_content(content, title)
+        html = page.template('page_special.html', content=content,
+                             special_title=title)
         return WikiResponse(html, mimetype='text/html')
 
     @URL('/+search/<title:title>', methods=['GET', 'POST'])

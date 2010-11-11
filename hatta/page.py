@@ -55,6 +55,14 @@ def page_mime(title):
         mime = 'text/x-wiki'
     return mime
 
+def date_html(self, date_time):
+    """
+    Create HTML for a date, according to recommendation at
+    http://microformats.org/wiki/date
+    """
+
+    return date_time.strftime(
+        '<abbr class="date" title="%Y-%m-%dT%H:%M:%SZ">%Y-%m-%d %H:%M</abbr>')
 
 class WikiPage(object):
     """Everything needed for rendering a page."""
@@ -79,17 +87,6 @@ class WikiPage(object):
         else:
             self.aliases = {}
 
-    def date_html(self, date_time):
-        """
-        Create HTML for a date, according to recommendation at
-        http://microformats.org/wiki/date
-        """
-
-        text = date_time.strftime('%Y-%m-%d %H:%M')
-        # We are going for YYYY-MM-DDTHH:MM:SSZ
-        title = date_time.strftime('%Y-%m-%dT%H:%M:%SZ')
-        html = werkzeug.html.abbr(text, class_="date", title=title)
-        return html
 
     def link_alias(self, addr):
         """Find a target address for an alias."""
@@ -220,7 +217,6 @@ class WikiPage(object):
             'config': self.config,
             'page': self,
             'edit_url': edit_url,
-            '_': self.wiki.gettext,
         }
         context.update(kwargs)
         stream = template.stream(**context)
@@ -247,9 +243,6 @@ class WikiPage(object):
         max_rev = -1
         title = self.title
         history = []
-        text = _(u'History of changes for %(link)s.') % {
-            'link': self.wiki_link(self.title),
-        }
         for rev, date, author, comment in self.wiki.storage.page_history(title):
             if max_rev < rev:
                 max_rev = rev
@@ -260,11 +253,8 @@ class WikiPage(object):
                 date_url = self.request.adapter.build(self.wiki.revision, {
                     'title': title, 'rev': rev})
             history.append((date, date_url, rev, author, comment))
-        return self.template('history.html', history=history, text=text,
-                             date_html=self.date_html, parent=max_rev,
-                special_title=_(u'History of "%(title)s"') % {'title': title})
-
-
+        return self.template('history.html', history=history,
+                             date_html=date_html, parent=max_rev)
 
     def dependencies(self):
         """Refresh the page when any of those pages was changed."""

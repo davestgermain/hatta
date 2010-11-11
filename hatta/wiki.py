@@ -216,14 +216,21 @@ class Wiki(object):
         self.language = config.get('language', None)
         if self.language is not None:
             try:
-                self.gettext = gettext.translation('hatta', 'locale',
-                                        languages=[self.language]).ugettext
-            except IOError:
-                self.gettext = gettext.translation('hatta', fallback=True,
-                                        languages=[self.language]).ugettext
-        else:
-            self.gettext = gettext.translation('hatta', fallback=True).ugettext
+                translation = gettext.translation('hatta', 'locale',
+                                        languages=[self.language])
 
+            except IOError:
+                translation = gettext.translation('hatta', fallback=True,
+                                        languages=[self.language])
+        else:
+            translation = gettext.translation('hatta', fallback=True)
+        self.gettext = translation.ugettext
+        self.template_env = jinja2.Environment(
+                            extensions=['jinja2.ext.i18n'],
+                            loader=jinja2.PackageLoader('hatta', 'templates'),
+                            )
+        self.template_env.autoescape = True
+        self.template_env.install_gettext_translations(translation, True)
         self.path = os.path.abspath(config.get('pages_path', 'docs'))
         self.page_charset = config.get('page_charset', 'utf-8')
         self.menu_page = self.config.get('menu_page', u'Menu')
@@ -253,9 +260,6 @@ class Wiki(object):
             'title':WikiTitleConverter,
             'all':WikiAllConverter
         })
-        self.template_env = jinja2.Environment(
-                            loader=jinja2.PackageLoader('hatta', 'templates'))
-        self.template_env.autoescape = True
 
     def add_url_rule(self, rule):
         """Let plugins add additional url rules."""
@@ -623,7 +627,6 @@ It can only be edited by the site admin directly on the disk."""))
     def history(self, request, title):
         """Display history of changes of a page."""
 
-        _ = self.gettext
         page = self.get_page(request, title)
         content = page.render_history()
         response = self.response(request, title, content, '/history')

@@ -67,8 +67,6 @@ def date_html(date_time):
 class WikiPage(object):
     """Everything needed for rendering a page."""
 
-    template_name = 'page.html'
-
     def __init__(self, wiki, request, title, mime):
         self.request = request
         self.title = title
@@ -255,8 +253,6 @@ class WikiPage(object):
 
 class WikiPageSpecial(WikiPage):
     """Special pages, like recent changes, index, etc."""
-
-    template_name = 'page_special.html'
 
 
 class WikiPageText(WikiPage):

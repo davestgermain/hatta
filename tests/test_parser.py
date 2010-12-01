@@ -182,6 +182,20 @@ test</p>"""
             </ol>
         """
 
+    def test_very_nested_numbers(self):
+        html = parse(u'# 1\n# 2\n## 2.1\n### 2.1.1\n# 3')
+        assert html == """
+            <ol id="line_0">
+                <li>1</li>
+                <li>2<ol id="line_2">
+                    <li>2.1<ol id="line_3">
+                        <li>2.1.1</li>
+                    </ol></li>
+                </ol></li>
+                <li>3</li>
+            </ol>
+        """
+
     def test_mixed_numbers_bullets(self):
         html = parse(u'# test line one\n* test line two\n*# Nested item')
         assert html == """

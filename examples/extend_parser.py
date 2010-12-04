@@ -20,7 +20,10 @@ class MyWikiParser(hatta.WikiParser):
     }
 
 class MyWikiPageWiki(hatta.WikiPageWiki):
-    parser = MyWikiParser
+    
+    def __init__(self, *args, **kw):
+        super(MyWikiPageWiki, self).__init__(*args, **kw)
+        self.parser = MyWikiParser
 
 if __name__=='__main__':
     config = hatta.read_config()

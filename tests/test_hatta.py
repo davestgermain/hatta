@@ -4,6 +4,7 @@
 import hatta
 import werkzeug
 import os
+import py.test
 import lxml.doctestcompare
 from test_parser import HTML
 
@@ -206,6 +207,7 @@ class TestHTML(object):
         assert request.get_url('title', wiki.edit) == u'/+edit/title'
         assert request.get_url(None, wiki.favicon_ico) == u'/favicon.ico'
 
+    @py.test.mark.xfail
     def test_html_page(self, req):
         wiki, request = req
         content = ["some &lt;content&gt;"]

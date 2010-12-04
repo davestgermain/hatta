@@ -458,7 +458,7 @@ class WikiParser(object):
                 in_ul = True
                 level += 1
             while nest < level:
-                yield '</li></ul>'
+                yield '</li></%s>' % kind
                 in_ul = False
                 level -= 1
             if nest == level and not in_ul:

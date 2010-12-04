@@ -20,8 +20,8 @@ import mercurial.util
 import mercurial.hgweb
 import mercurial.commands
 
-
 import error
+
 
 def locked_repo(func):
     """A decorator for locking the repository when calling a method."""
@@ -39,6 +39,7 @@ def locked_repo(func):
 
     return new_func
 
+
 def _find_repo_path(path):
     """Go up the directory tree looking for a repository."""
 
@@ -47,6 +48,7 @@ def _find_repo_path(path):
         if path == old_path:
             return None
     return path
+
 
 def _get_ui():
     try:
@@ -67,10 +69,10 @@ class WikiStorage(object):
     change history, using Mercurial repository as the storage method.
     """
 
-    def __init__(self, path, charset=None, _=lambda x:x, unix_eol=False):
+    def __init__(self, path, charset=None, _=lambda x: x, unix_eol=False):
         """
         Takes the path to the directory where the pages are to be kept.
-        If the directory doen't exist, it will be created. If it's inside
+        If the directory doesn't exist, it will be created. If it's inside
         a Mercurial repository, that repository will be used, otherwise
         a new repository will be created in it.
         """
@@ -107,7 +109,6 @@ class WikiStorage(object):
             self._repos[thread_id] = repo
             return repo
 
-
     def _check_path(self, path):
         """
         Ensure that the path is within allowed bounds.
@@ -138,12 +139,13 @@ class WikiStorage(object):
         return os.path.join(self.repo_prefix, filename)
 
     def _file_to_title(self, filepath):
+        _ = self._
         if not filepath.startswith(self.repo_prefix):
             raise error.ForbiddenErr(
                 _(u"Can't read or write outside of the pages repository"))
         name = filepath[len(self.repo_prefix):].strip('/')
-        # Unescape special windows filenames and dot files
-        if name.startswith('_') and len(name)>1:
+        # Un-escape special windows filenames and dot files
+        if name.startswith('_') and len(name) > 1:
             name = name[1:]
         return werkzeug.url_unquote(name)
 
@@ -181,7 +183,8 @@ class WikiStorage(object):
         return msg
 
     @locked_repo
-    def save_file(self, title, file_name, author=u'', comment=u'', parent=None):
+    def save_file(self, title, file_name, author=u'', comment=u'',
+                  parent=None):
         """Save an existing file as specified page."""
 
         _ = self._
@@ -193,7 +196,8 @@ class WikiStorage(object):
         try:
             mercurial.util.rename(file_name, file_path)
         except OSError, e:
-            if e.errno == errno.ENAMETOOLONG: # "File name too long"
+            if e.errno == errno.ENAMETOOLONG:
+                # "File name too long"
                 raise error.RequestURITooLarge()
             else:
                 raise
@@ -326,7 +330,6 @@ class WikiStorage(object):
 
         return self._changectx().rev()
 
-
     def _changectx(self):
         """Get the changectx of the tip."""
 
@@ -361,7 +364,7 @@ class WikiStorage(object):
             return
         maxrev = filectx_tip.filerev()
         minrev = 0
-        for rev in range(maxrev, minrev-1, -1):
+        for rev in range(maxrev, minrev - 1, -1):
             filectx = filectx_tip.filectx(rev)
             date = datetime.datetime.fromtimestamp(filectx.date()[0])
             author = unicode(filectx.user(), "utf-8",
@@ -394,7 +397,7 @@ class WikiStorage(object):
         changectx = self._changectx()
         maxrev = changectx.rev()
         minrev = 0
-        for wiki_rev in range(maxrev, minrev-1, -1):
+        for wiki_rev in range(maxrev, minrev - 1, -1):
             change = self.repo.changectx(wiki_rev)
             date = datetime.datetime.fromtimestamp(change.date()[0])
             author = unicode(change.user(), "utf-8",
@@ -420,7 +423,9 @@ class WikiStorage(object):
                 yield werkzeug.url_unquote(filename)
 
     def changed_since(self, rev):
-        """Return all pages that changed since specified repository revision."""
+        """
+        Return all pages that changed since specified repository revision.
+        """
 
         try:
             last = self.repo.lookup(int(rev))
@@ -431,7 +436,7 @@ class WikiStorage(object):
         current = self.repo.lookup('tip')
         status = self.repo.status(current, last)
         modified, added, removed, deleted, unknown, ignored, clean = status
-        for filename in modified+added+removed+deleted:
+        for filename in modified + added + removed + deleted:
             if filename.startswith(self.repo_prefix):
                 yield self._file_to_title(filename)
 
@@ -488,16 +493,19 @@ class WikiSubdirectoryStorage(WikiStorage):
             mercurial.commands.rename(self.ui, self.repo, path, temp_path)
             os.makedirs(path)
             index_path = os.path.join(path, self.index)
-            mercurial.commands.rename(self.ui, self.repo, temp_path, index_path)
+            mercurial.commands.rename(self.ui, self.repo, temp_path,
+                                      index_path)
         finally:
             try:
                 os.rmdir(temp_dir)
             except OSError:
                 pass
-        self._commit([index_path, path], _(u"made subdirectory page"), "<wiki>")
+        self._commit([index_path, path], _(u"made subdirectory page"),
+                     "<wiki>")
 
     @locked_repo
-    def save_file(self, title, file_name, author=u'', comment=u'', parent=None):
+    def save_file(self, title, file_name, author=u'', comment=u'',
+                  parent=None):
         """Save the file and make the subdirectories if needed."""
 
         path = self._file_path(title)
@@ -507,7 +515,8 @@ class WikiSubdirectoryStorage(WikiStorage):
         try:
             os.makedirs(os.path.join(self.repo_path, dir_path))
         except OSError, e:
-            if e.errno != errno.EEXIST: # "File exists"
+            if e.errno != errno.EEXIST:
+                # "File exists"
                 raise
         super(WikiSubdirectoryStorage, self).save_file(title, file_name,
                                                        author, comment, parent)
@@ -521,14 +530,16 @@ class WikiSubdirectoryStorage(WikiStorage):
         commit after removing empty directories.
         """
 
-        super(WikiSubdirectoryStorage, self).delete_page(title, author, comment)
+        super(WikiSubdirectoryStorage, self).delete_page(title, author,
+                                                         comment)
         file_path = self._file_path(title)
         self._check_path(file_path)
         dir_path = os.path.dirname(file_path)
         try:
             os.removedirs(dir_path)
         except OSError, e:
-            if e.errno != errno.ENOTEMPTY: # "Directory not empty"
+            if e.errno != errno.ENOTEMPTY:
+                # "Directory not empty"
                 raise
 
     def all_pages(self):
@@ -538,7 +549,7 @@ class WikiSubdirectoryStorage(WikiStorage):
         """
 
         for (dirpath, dirnames, filenames) in os.walk(self.path):
-            path = dirpath[len(self.path)+1:]
+            path = dirpath[len(self.path) + 1:]
             for name in filenames:
                 if os.path.basename(name) == self.index:
                     filename = os.path.join(path, os.path.dirname(name))
@@ -548,6 +559,3 @@ class WikiSubdirectoryStorage(WikiStorage):
                     if (os.path.isfile(os.path.join(self.path, filename))
                         and not filename.startswith('.')):
                         yield werkzeug.url_unquote(filename)
-
-
-

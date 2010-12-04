@@ -12,10 +12,11 @@ import werkzeug
 import werkzeug.routing
 import jinja2
 
+pygments = None
 try:
     import pygments
 except ImportError:
-    pygments = None
+    pass
 
 import hatta
 import storage
@@ -25,7 +26,8 @@ import parser
 import error
 import data
 
-import mercurial # import it after storage!
+import mercurial  # import it after storage!
+
 
 class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
                    werkzeug.CommonResponseDescriptorsMixin):
@@ -131,7 +133,8 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
             auth = werkzeug.url_unquote(self.environ.get('REMOTE_USER', ""))
         except UnicodeError:
             auth = None
-        author = (self.form.get("author") or cookie or auth or self.remote_addr)
+        author = (self.form.get("author") or cookie or auth or
+                  self.remote_addr)
         return author
 
     def _get_file_stream(self, total_content_length=None, content_type=None,
@@ -246,7 +249,8 @@ class Wiki(object):
         self.unix_eol = self.config.get_bool('unix_eol', False)
         if self.subdirectories:
             self.storage = storage.WikiSubdirectoryStorage(self.path,
-                                                self.page_charset, self.gettext)
+                                                           self.page_charset,
+                                                           self.gettext)
         else:
             self.storage = self.storage_class(self.path, self.page_charset,
                                               self.gettext, self.unix_eol)
@@ -257,8 +261,8 @@ class Wiki(object):
         self.index.update(self)
         self.url_rules = URL.rules(self)
         self.url_map = werkzeug.routing.Map(self.url_rules, converters={
-            'title':WikiTitleConverter,
-            'all':WikiAllConverter
+            'title': WikiTitleConverter,
+            'all': WikiAllConverter,
         })
 
     def add_url_rule(self, rule):
@@ -266,8 +270,8 @@ class Wiki(object):
 
         self.url_rules.append(rule)
         self.url_map = werkzeug.routing.Map(self.url_rules, converters={
-            'title':WikiTitleConverter,
-            'all':WikiAllConverter
+            'title': WikiTitleConverter,
+            'all': WikiAllConverter,
         })
 
     def get_page(self, request, title):
@@ -307,7 +311,8 @@ class Wiki(object):
         response = WikiResponse(content, mimetype=mime)
         if rev is None:
             inode, _size, mtime = self.storage.page_file_meta(title)
-            response.set_etag(u'%s/%s/%d-%d' % (etag, werkzeug.url_quote(title),
+            response.set_etag(u'%s/%s/%d-%d' % (etag,
+                                                werkzeug.url_quote(title),
                                                 inode, mtime))
             if size == -1:
                 size = _size
@@ -369,7 +374,7 @@ It can only be edited by the site admin directly on the disk."""))
             werkzeug.html.p(
                 werkzeug.html(
                     _(u'Content of revision %(rev)d of page %(title)s:'))
-                % {'rev': rev, 'title': link }),
+                % {'rev': rev, 'title': link}),
             werkzeug.html.pre(werkzeug.html(text)),
         ]
         special_title = _(u'Revision of "%(title)s"') % {'title': title}
@@ -430,7 +435,8 @@ It can only be edited by the site admin directly on the disk."""))
                     self.storage.delete_page(title, author, comment)
                     url = request.get_url(self.front_page)
                 else:
-                    self.storage.save_text(title, text, author, comment, parent)
+                    self.storage.save_text(title, text, author, comment,
+                                           parent)
             else:
                 text = u''
                 upload = request.files['data']
@@ -454,7 +460,6 @@ It can only be edited by the site admin directly on the disk."""))
 
     @URL('/+edit/<title:title>', methods=['GET'])
     def edit(self, request, title, preview=None):
-        _ = self.gettext
         self._check_lock(title)
         exists = title in self.storage
         if exists:
@@ -490,8 +495,8 @@ It can only be edited by the site admin directly on the disk."""))
             if rev > 0:
                 url = request.adapter.build(self.diff, {
                     'title': title,
-                    'from_rev': rev-1,
-                    'to_rev': rev
+                    'from_rev': rev - 1,
+                    'to_rev': rev,
                 }, force_external=True)
             else:
                 url = request.adapter.build(self.revision, {
@@ -516,7 +521,7 @@ It can only be edited by the site admin directly on the disk."""))
         try:
             wrap_file = werkzeug.wrap_file
         except AttributeError:
-            wrap_file = lambda x, y:y
+            wrap_file = lambda x, y: y
         f = wrap_file(request.environ, self.storage.open_page(title))
         response = self.response(request, title, f, '/download', mime, size=-1)
         response.direct_passthrough = True
@@ -580,7 +585,7 @@ It can only be edited by the site admin directly on the disk."""))
         try:
             wrap_file = werkzeug.wrap_file
         except AttributeError:
-            wrap_file = lambda x, y:y
+            wrap_file = lambda x, y: y
         f = wrap_file(request.environ, open(cache_file))
         response = self.response(request, title, f, '/render', cache_mime,
                                  size=cache_size)
@@ -614,7 +619,7 @@ It can only be edited by the site admin directly on the disk."""))
             else:
                 comment = _(u'Undo of change %(rev)d of page %(title)s') % {
                     'rev': rev, 'title': title}
-                data = self.storage.page_revision(title, rev-1)
+                data = self.storage.page_revision(title, rev - 1)
                 self.storage.save_data(title, data, author, comment, parent)
             page = self.get_page(request, title)
             self.index.update_page(page, title, data=data)
@@ -634,7 +639,7 @@ It can only be edited by the site admin directly on the disk."""))
                 max_rev = rev
             if rev > 0:
                 date_url = request.adapter.build(self.diff, {
-                    'title': title, 'from_rev': rev-1, 'to_rev': rev})
+                    'title': title, 'from_rev': rev - 1, 'to_rev': rev})
             else:
                 date_url = request.adapter.build(self.revision, {
                     'title': title, 'rev': rev})
@@ -648,7 +653,6 @@ It can only be edited by the site admin directly on the disk."""))
     def recent_changes(self, request):
         """Serve the recent changes page."""
 
-        _ = self.gettext
         def _changes_list():
             last = {}
             lastrev = {}
@@ -662,8 +666,8 @@ It can only be edited by the site admin directly on the disk."""))
                 if rev > 0:
                     date_url = request.adapter.build(self.diff, {
                         'title': title,
-                        'from_rev': rev-1,
-                        'to_rev': lastrev.get(title, rev)
+                        'from_rev': rev - 1,
+                        'to_rev': lastrev.get(title, rev),
                     })
                 elif rev == 0:
                     date_url = request.adapter.build(self.revision, {
@@ -716,7 +720,6 @@ It can only be edited by the site admin directly on the disk."""))
         response = WikiResponse(html, mimetype='text/html')
         return response
 
-
     @URL('/+index')
     def all_pages(self, request):
         """Show index of all pages in the wiki."""
@@ -753,7 +756,6 @@ It can only be edited by the site admin directly on the disk."""))
     def wanted(self, request):
         """Show all pages that don't exist yet, but are linked."""
 
-        _ = self.gettext
         def _wanted_pages_list():
             for refs, title in self.index.wanted_pages():
                 if not (parser.external_link(title) or title.startswith('+')):
@@ -771,6 +773,7 @@ It can only be edited by the site admin directly on the disk."""))
         """Serve the search results page."""
 
         _ = self.gettext
+
         def search_snippet(title, words):
             """Extract a snippet of text for search results."""
 
@@ -779,7 +782,7 @@ It can only be edited by the site admin directly on the disk."""))
             except error.NotFoundErr:
                 return u''
             regexp = re.compile(u"|".join(re.escape(w) for w in words),
-                                re.U|re.I)
+                                re.U | re.I)
             match = regexp.search(text)
             if match is None:
                 return u""
@@ -797,7 +800,7 @@ It can only be edited by the site admin directly on the disk."""))
             h = werkzeug.html
             self.storage.reopen()
             self.index.update(self)
-            result = sorted(self.index.find(words), key=lambda x:-x[0])
+            result = sorted(self.index.find(words), key=lambda x: -x[0])
             yield werkzeug.html.p(h(_(u'%d page(s) containing all words:')
                                   % len(result)))
             yield u'<ol class="search">'
@@ -805,7 +808,7 @@ It can only be edited by the site admin directly on the disk."""))
                 yield h.li(h.b(page.wiki_link(title)), u' ', h.i(str(score)),
                            h.div(search_snippet(title, words),
                                  _class="snippet"),
-                           id_="search-%d" % (number+1))
+                           id_="search-%d" % (number + 1))
             yield u'</ol>'
 
         query = request.values.get('q', u'').strip()
@@ -826,7 +829,6 @@ It can only be edited by the site admin directly on the disk."""))
     def backlinks(self, request, title):
         """Serve the page with backlinks."""
 
-        _ = self.gettext
         self.storage.reopen()
         self.index.update(self)
         page = self.get_page(request, title)
@@ -886,20 +888,22 @@ It can only be edited by the site admin directly on the disk."""))
                   'Disallow: /+feed\r\n'
                   'Disallow: /+history\r\n'
                   'Disallow: /+search\r\n'
-                  'Disallow: /+hg\r\n'
-                 )
+                  'Disallow: /+hg\r\n')
         return self._serve_default(request, 'robots.txt', robots,
                                    'text/plain')
 
     @URL('/+hg<all:path>', methods=['GET', 'POST', 'HEAD'])
     def hgweb(self, request, path=None):
-        """Serve the pages repository on the web like a normal hg repository."""
+        """
+        Serve the pages repository on the web like a normal hg repository.
+        """
 
         _ = self.gettext
         if not self.config.get_bool('hgweb', False):
             raise error.ForbiddenErr(_(u'Repository access disabled.'))
         app = mercurial.hgweb.request.wsgiapplication(
             lambda: mercurial.hgweb.hgweb(self.storage.repo, self.site_name))
+
         def hg_app(env, start):
             env = request.environ
             prefix = '/+hg'
@@ -915,7 +919,9 @@ It can only be edited by the site admin directly on the disk."""))
 
         _ = self.gettext
         if not request.remote_addr.startswith('127.'):
-            raise error.ForbiddenErr(_(u'This URL can only be called locally.'))
+            raise error.ForbiddenErr(
+                _(u'This URL can only be called locally.'))
+
         def agony():
             yield u'Oh dear!'
             self.dead = True
@@ -937,4 +943,3 @@ It can only be edited by the site admin directly on the disk."""))
             request.cleanup()
             del request
             del adapter
-

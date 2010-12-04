@@ -8,8 +8,8 @@ import os
 
 import werkzeug
 import werkzeug.contrib.atom
-import jinja2
 
+pygments = None
 try:
     import pygments
     import pygments.util
@@ -17,12 +17,13 @@ try:
     import pygments.formatters
     import pygments.styles
 except ImportError:
-    pygments = None
+    pass
 
+Image = None
 try:
     import Image
 except ImportError:
-    Image = None
+    pass
 
 import parser
 import error
@@ -47,13 +48,14 @@ def page_mime(title):
     'archive/gzip'
     """
 
-    addr = title.encode('utf-8') # the encoding doesn't relly matter here
+    addr = title.encode('utf-8')  # the encoding doesn't relly matter here
     mime, encoding = mimetypes.guess_type(addr, strict=False)
     if encoding:
         mime = 'archive/%s' % encoding
     if mime is None:
         mime = 'text/x-wiki'
     return mime
+
 
 def date_html(date_time):
     """
@@ -63,6 +65,7 @@ def date_html(date_time):
 
     return date_time.strftime(
         '<abbr class="date" title="%Y-%m-%dT%H:%M:%SZ">%Y-%m-%d %H:%M</abbr>')
+
 
 class WikiPage(object):
     """Everything needed for rendering a page."""
@@ -84,7 +87,6 @@ class WikiPage(object):
                 self.index.page_links_and_labels(self.wiki.alias_page))
         else:
             self.aliases = {}
-
 
     def link_alias(self, addr):
         """Find a target address for an alias."""
@@ -120,9 +122,7 @@ class WikiPage(object):
                 classes.append('mail')
                 text = text.replace('@', '&#64;').replace('.', '&#46;')
                 href = werkzeug.escape(addr,
-                                       quote=True).replace('@',
-                                                           '%40').replace('.',
-                                                                          '%2E')
+                    quote=True).replace('@', '%40').replace('.', '%2E')
             else:
                 href = werkzeug.escape(addr, quote=True)
         else:
@@ -148,7 +148,7 @@ class WikiPage(object):
                     classes.append('nonexistent')
         class_ = ' '.join(classes) or None
         return werkzeug.html.a(image or text, href=href, class_=class_,
-                               title=addr+chunk)
+                               title=addr + chunk)
 
     def wiki_image(self, addr, alt, class_='wiki', lineno=0):
         """Create HTML for a wiki image."""
@@ -272,9 +272,10 @@ class WikiPageText(WikiPage):
 
         return self.storage.page_text(self.title)
 
-
     def view_content(self, lines=None):
-        """Read the page content from storage or preview and return iterator."""
+        """
+        Read the page content from storage or preview and return iterator.
+        """
 
         if lines is None:
             f = self.storage.open_page(self.title)
@@ -325,7 +326,7 @@ class WikiPageText(WikiPage):
         for old_line, new_line, changed in diff:
             old_no, old_text = old_line
             new_no, new_text = new_line
-            line_no = (new_no or old_no or 1)-1
+            line_no = (new_no or old_no or 1) - 1
             if changed:
                 yield u'<div class="change" id="line_%d">' % line_no
                 old_iter = infiniter(mark_re.finditer(old_text))
@@ -357,6 +358,7 @@ class WikiPageText(WikiPage):
                 yield u'<div class="orig" id="line_%d">%s</div>' % (
                     line_no, werkzeug.escape(old_text))
         yield u'</pre>'
+
 
 class WikiPageColorText(WikiPageText):
     """Text pages, but displayed colorized with pygments"""
@@ -511,7 +513,7 @@ class WikiPageImage(WikiPageFile):
             im = Image.open(page_file)
             im = im.convert('RGBA')
             im.thumbnail((128, 128), Image.ANTIALIAS)
-            im.save(cache_file,'PNG')
+            im.save(cache_file, 'PNG')
         except IOError:
             raise error.UnsupportedMediaTypeErr('Image corrupted')
         cache_file.close()
@@ -536,8 +538,9 @@ class WikiPageCSV(WikiPageFile):
         except csv.Error, e:
             yield u'</table>'
             yield werkzeug.html.p(werkzeug.html(
-                _(u'Error parsing CSV file %{file}s on line %{line}d: %{error}s')
-                % {'file': html_title, 'line': reader.line_num, 'error': e}))
+                _(u'Error parsing CSV file %{file}s on'
+                  u'line %{line}d: %{error}s') %
+                {'file': html_title, 'line': reader.line_num, 'error': e}))
         finally:
             csv_file.close()
         yield u'</table>'
@@ -546,6 +549,7 @@ class WikiPageCSV(WikiPageFile):
         if self.title not in self.storage:
             raise error.NotFoundErr()
         return self.content_iter(lines)
+
 
 class WikiPageRST(WikiPageText):
     """
@@ -648,4 +652,3 @@ mime_map = {
 mimetypes.add_type('application/x-python', '.wsgi')
 mimetypes.add_type('application/x-javascript', '.js')
 mimetypes.add_type('text/x-rst', '.rst')
-

@@ -6,6 +6,7 @@ import os
 from config import WikiConfig
 from __main__ import main
 
+
 def run_wiki(ui, repo, directory=None, **opts):
     """Start serving Hatta in the provided repository."""
 

@@ -11,6 +11,7 @@ from wiki import Wiki
 sys.stdout = sys.__stdout__
 sys.stderr = sys.__stderr__
 
+
 def application(env, start):
     """Detect that we are being run as WSGI application."""
 
@@ -22,6 +23,7 @@ def application(env, start):
     wiki = Wiki(config)
     application = wiki.application
     return application(env, start)
+
 
 def main(config=None, wiki=None):
     """Start a standalone WSGI server."""
@@ -47,7 +49,8 @@ def main(config=None, wiki=None):
             return
     apps = [('', app)]
     name = wiki.site_name
-    server = wsgiserver.CherryPyWSGIServer((host, port), apps, server_name=name)
+    server = wsgiserver.CherryPyWSGIServer((host, port), apps,
+                                           server_name=name)
     try:
         server.start()
     except KeyboardInterrupt:
@@ -55,4 +58,3 @@ def main(config=None, wiki=None):
 
 if __name__ == "__main__":
     main()
-

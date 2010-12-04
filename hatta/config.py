@@ -3,8 +3,10 @@
 
 import os
 
+
 OPTIONS = []
 VALID_NAMES = set()
+
 
 def _add(short, long, dest, help, default=None, metavar=None,
          action=None, type=None):
@@ -55,6 +57,7 @@ _add('-U', '--unix-eol', dest='unix_eol',
     action="store_true",
     help='Convert all text pages to UNIX-style CR newlines')
 
+
 class WikiConfig(object):
     """
     Responsible for reading and storing site configuration. Contains the
@@ -100,7 +103,8 @@ class WikiConfig(object):
         import optparse
 
         parser = optparse.OptionParser()
-        for short, long, dest, help, default, metavar, action, type in self.options:
+        for (short, long, dest, help, default, metavar, action,
+             type) in self.options:
             parser.add_option(short, long, dest=dest, help=help, type=type,
                               default=default, metavar=metavar, action=action)
 
@@ -216,4 +220,3 @@ def read_config():
     config.parse_files()
     # config.sanitize()
     return config
-

@@ -60,7 +60,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         con.execute('CREATE INDEX IF NOT EXISTS index2 '
                          'ON words (word);')
         con.execute('CREATE TABLE IF NOT EXISTS links '
-                '(src INTEGER, target INTEGER, label VARCHAR, number INTEGER);')
+            '(src INTEGER, target INTEGER, label VARCHAR, number INTEGER);')
         con.commit()
 
     @property
@@ -98,7 +98,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
     def count_words(self, words):
         count = {}
         for word in words:
-            count[word] = count.get(word, 0)+1
+            count[word] = count.get(word, 0) + 1
         return count
 
     def title_id(self, title, con):
@@ -160,11 +160,10 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         finally:
             con.commit()
 
-
     def page_backlinks(self, title):
         """Gives a list of pages linking to specified page."""
 
-        con = self.con # sqlite3.connect(self.filename)
+        con = self.con  # sqlite3.connect(self.filename)
         try:
             sql = ('SELECT DISTINCT(titles.title) '
                    'FROM links, titles '
@@ -178,7 +177,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
     def page_links(self, title):
         """Gives a list of links on specified page."""
 
-        con = self.con # sqlite3.connect(self.filename)
+        con = self.con  # sqlite3.connect(self.filename)
         try:
             title_id = self.title_id(title, con)
             sql = 'SELECT target FROM links WHERE src=? ORDER BY number;'
@@ -187,11 +186,12 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         finally:
             con.commit()
 
-    def page_links_and_labels (self, title):
-        con = self.con # sqlite3.connect(self.filename)
+    def page_links_and_labels(self, title):
+        con = self.con  # sqlite3.connect(self.filename)
         try:
             title_id = self.title_id(title, con)
-            sql = 'SELECT target, label FROM links WHERE src=? ORDER BY number;'
+            sql = ('SELECT target, label FROM links'
+                   'WHERE src=? ORDER BY number;')
             for link, label in con.execute(sql, (title_id,)):
                 yield unicode(link), unicode(label)
         finally:
@@ -223,7 +223,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
             # Check for the rest of words
             for title_id, title, first_count in first_counts:
                 # Score for the first word
-                score = float(first_count)/first_rank
+                score = float(first_count) / first_rank
                 for rank, word in rest:
                     sql = ('SELECT SUM(count) FROM words '
                            'WHERE page=? AND word LIKE ?;')
@@ -233,9 +233,9 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
                         # If page misses any of the words, its score is 0
                         score = 0
                         break
-                    score += float(count)/rank
+                    score += float(count) / rank
                 if score > 0:
-                    yield int(100*score), unicode(title)
+                    yield int(100 * score), unicode(title)
         finally:
             con.commit()
 
@@ -250,7 +250,8 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
                 text = None
                 title_id = self.title_id(title, cursor)
                 if not list(self.page_backlinks(title)):
-                    cursor.execute("DELETE FROM titles WHERE id=?;", (title_id,))
+                    cursor.execute("DELETE FROM titles WHERE id=?;",
+                                   (title_id,))
         extract_links = getattr(page, 'extract_links', None)
         if extract_links and text:
             links = extract_links(text)
@@ -292,7 +293,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
 
         # We use % here because the sqlite3's substitiution doesn't work
         # We store revision 0 as 1, 1 as 2, etc. because 0 means "no revision"
-        self.con.execute('PRAGMA USER_VERSION=%d;' % (int(rev+1),))
+        self.con.execute('PRAGMA USER_VERSION=%d;' % (int(rev + 1),))
 
     def get_last_revision(self):
         """Retrieve the last indexed repository revision."""
@@ -301,7 +302,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         c = con.execute('PRAGMA USER_VERSION;')
         rev = c.fetchone()[0]
         # -1 means "no revision", 1 means revision 0, 2 means revision 1, etc.
-        return rev-1
+        return rev - 1
 
     def update(self, wiki):
         """Reindex al pages that changed since last indexing."""
@@ -314,4 +315,3 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         self.reindex(wiki, changed)
         rev = self.storage.repo_revision()
         self.set_last_revision(rev)
-

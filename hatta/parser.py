@@ -7,7 +7,9 @@ import unicodedata
 import itertools
 import werkzeug
 
-EXTERNAL_URL_RE = re.compile(ur'^[a-z]+://|^mailto:', re.I|re.U)
+
+EXTERNAL_URL_RE = re.compile(ur'^[a-z]+://|^mailto:', re.I | re.U)
+
 
 def external_link(addr):
     """
@@ -29,6 +31,7 @@ def external_link(addr):
     """
 
     return EXTERNAL_URL_RE.match(addr)
+
 
 class WikiParser(object):
     r"""
@@ -60,7 +63,7 @@ class WikiParser(object):
         "empty": (40, ur"^\s*$"),
         "heading": (50, heading_pat),
         "indent": (60, ur"^[ \t]+"),
-        "macro":(70, ur"^<<\w+\s*$"),
+        "macro": (70, ur"^<<\w+\s*$"),
         "quote": (80, quote_pat),
         "rule": (90, ur"^\s*---+\s*$"),
         "syntax": (100, ur"^\{\{\{\#![\w+#.-]+\s*$"),
@@ -98,7 +101,7 @@ class WikiParser(object):
         "code": (20, ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
                 ur"*[}]*)[}][}][}]"),
         "free_link": (30, ur"""[a-zA-Z]+://\S+[^\s.,:;!?()'"=+<>-]"""),
-        "italic": (40 , ur"//"),
+        "italic": (40, ur"//"),
         "link": (50, ur"\[\[(?P<link_target>([^|\]]|\][^|\]])+)"
                 ur"(\|(?P<link_text>([^\]]|\][^\]])+))?\]\]"),
         "image": (60, image_pat),
@@ -109,12 +112,12 @@ class WikiParser(object):
         "math": (100, ur"\$\$(?P<math_text>[^$]+)\$\$"),
         "mono": (110, ur"##"),
         "newline": (120, ur"\n"),
-        "punct": (130, ur'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+"\'—-])|\b|$)' %
+        "punct": (130,
+                  ur'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+"\'—-])|\b|$)' %
                   ur"|".join(re.escape(k) for k in punct)),
         "table": (140, ur"=?\|=?"),
         "text": (150, ur".+?"),
     }
-
 
     def __init__(self, lines, wiki_link, wiki_image,
                  wiki_syntax=None, wiki_math=None, smilies=None):
@@ -158,7 +161,9 @@ class WikiParser(object):
     @classmethod
     def extract_links(cls, text):
         links = []
-        def link(addr, label=None, class_=None, image=None, alt=None, lineno=0):
+
+        def link(addr, label=None, class_=None, image=None, alt=None,
+                 lineno=0):
             addr = addr.strip()
             if external_link(addr) or addr.startswith(':'):
                 # Don't index external links and aliases
@@ -427,7 +432,7 @@ class WikiParser(object):
     def _block_heading(self, block):
         for self.line_no, line in block:
             level = min(len(self.heading_re.match(line).group(0).strip()), 5)
-            self.headings[level-1] = self.headings.get(level-1, 0)+1
+            self.headings[level - 1] = self.headings.get(level - 1, 0) + 1
             label = u"-".join(str(self.headings.get(i, 0))
                               for i in range(level))
             yield werkzeug.html.a(name="head-%s" % label)
@@ -490,7 +495,7 @@ class WikiParser(object):
             yield u"".join(self.parse_line(content))
         if in_p:
             yield '%s</p>' % self.pop_to("")
-        yield '</blockquote>'*level
+        yield '</blockquote>' * level
 
     def _block_conflict(self, block):
         for self.line_no, part in block:
@@ -512,7 +517,7 @@ class WikiWikiParser(WikiParser):
     markup = dict(WikiParser.markup)
     camel_link = ur"\w+[%s]\w+" % re.escape(
         u''.join(unichr(i) for i in xrange(sys.maxunicode)
-        if unicodedata.category(unichr(i))=='Lu'))
+        if unicodedata.category(unichr(i)) == 'Lu'))
     markup["camel_link"] = (105, camel_link)
     markup["camel_nolink"] = (106, ur"[!~](?P<camel_text>%s)" % camel_link)
 
@@ -522,5 +527,3 @@ class WikiWikiParser(WikiParser):
 
     def _line_camel_nolink(self, groups):
         return werkzeug.escape(groups["camel_text"])
-
-

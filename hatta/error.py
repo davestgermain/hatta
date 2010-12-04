@@ -38,4 +38,3 @@ class NotImplementedErr(WikiError):
 
 class ServiceUnavailableErr(WikiError):
     code = 503
-

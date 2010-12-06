@@ -190,7 +190,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         con = self.con  # sqlite3.connect(self.filename)
         try:
             title_id = self.title_id(title, con)
-            sql = ('SELECT target, label FROM links'
+            sql = ('SELECT target, label FROM links '
                    'WHERE src=? ORDER BY number;')
             for link, label in con.execute(sql, (title_id,)):
                 yield unicode(link), unicode(label)

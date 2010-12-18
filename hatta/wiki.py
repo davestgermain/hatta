@@ -359,7 +359,7 @@ It can only be edited by the site admin directly on the disk."""))
         except error.NotFoundErr:
             url = request.get_url(title, self.edit, external=True)
             return werkzeug.routing.redirect(url, code=303)
-        html = page.template(page.template_name, content=content)
+        html = page.template("page.html", content=content)
         dependencies = page.dependencies()
         etag = '/(%s)' % u','.join(dependencies)
         return self.response(request, title, html, etag=etag)

@@ -246,14 +246,18 @@ class Wiki(object):
         self.alias_page = self.config.get('alias_page', 'Alias')
         self.pygments_style = self.config.get('pygments_style', 'tango')
         self.subdirectories = self.config.get_bool('subdirectories', False)
+        self.extension = self.config.get('extension', None)
         self.unix_eol = self.config.get_bool('unix_eol', False)
         if self.subdirectories:
             self.storage = storage.WikiSubdirectoryStorage(self.path,
                                                            self.page_charset,
-                                                           self.gettext)
+                                                           self.gettext,
+                                                           self.unix_eol,
+                                                           self.extension)
         else:
             self.storage = self.storage_class(self.path, self.page_charset,
-                                              self.gettext, self.unix_eol)
+                                              self.gettext, self.unix_eol, 
+                                              self.extension)
         self.cache = os.path.abspath(config.get('cache_path',
                                      os.path.join(self.storage.repo_path,
                                                   '.hg', 'hatta', 'cache')))

@@ -70,7 +70,7 @@ class WikiStorage(object):
     change history, using Mercurial repository as the storage method.
     """
 
-    def __init__(self, path, charset=None, _=lambda x: x, unix_eol=False):
+    def __init__(self, path, charset=None, _=lambda x: x, unix_eol=False, extension=None):
         """
         Takes the path to the directory where the pages are to be kept.
         If the directory doesn't exist, it will be created. If it's inside
@@ -81,6 +81,7 @@ class WikiStorage(object):
         self._ = _
         self.charset = charset or 'utf-8'
         self.unix_eol = unix_eol
+        self.extension = extension
         self.path = os.path.abspath(path)
         if not os.path.exists(self.path):
             os.makedirs(self.path)
@@ -137,6 +138,8 @@ class WikiStorage(object):
         if (filename.split('.')[0].upper() in _windows_device_files or
             filename.startswith('_') or filename.startswith('.')):
             filename = '_' + filename
+        if self.extension:
+            filename += self.extension
         return os.path.join(self.repo_prefix, filename)
 
     def _file_to_title(self, filepath):
@@ -148,6 +151,8 @@ class WikiStorage(object):
         # Un-escape special windows filenames and dot files
         if name.startswith('_') and len(name) > 1:
             name = name[1:]
+        if self.extension and name.endswith(self.extension):
+            name = name[:len(self.extension)]
         return werkzeug.url_unquote(name)
 
     def __contains__(self, title):
@@ -483,6 +488,8 @@ class WikiSubdirectoryStorage(WikiStorage):
         path = os.path.join(self.repo_prefix, escaped)
         if os.path.isdir(os.path.join(self.repo_path, path)):
             path = os.path.join(path, self.index)
+        if self.extension:
+            path += self.extension
         return path
 
     def _file_to_title(self, filepath):

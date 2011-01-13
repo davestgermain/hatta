@@ -22,7 +22,7 @@ config = dict(
     description=hatta.project_description,
     long_description=hatta.__doc__,
     keywords='wiki wsgi web mercurial repository',
-    py_modules=['hatta'],
+    packages=['hatta'],
     data_files=[
         ('share/locale/ar/LC_MESSAGES', ['locale/ar/LC_MESSAGES/hatta.mo']),
         ('share/locale/da/LC_MESSAGES', ['locale/da/LC_MESSAGES/hatta.mo']),
@@ -43,9 +43,7 @@ config = dict(
         ]),
     ],
     platforms='any',
-    requires=['werkzeug (>=0.3)', 'mercurial (>=1.0)',
-             'pybonjour (>=1.1.1)'],
-    setup_requires=['pybonjour'],
+    requires=['werkzeug (>=0.3)', 'mercurial (>=1.0)'],
     classifiers=[
         'License :: OSI Approved :: GNU General Public License (GPL)',
         'Intended Audience :: Developers',
@@ -294,8 +292,3 @@ else: # Other UNIX-like
 
 if __name__ == '__main__':
     setup(**config)
-    try:
-        import pybonjour
-    except ImportError:
-        print u'*** Warning ***'
-        print u'Please install pybonjour to build a full-featured binary.'

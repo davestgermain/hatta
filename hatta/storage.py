@@ -22,6 +22,7 @@ import mercurial.commands
 import mercurial.merge
 
 import error
+import page
 
 
 def locked_repo(func):
@@ -70,7 +71,8 @@ class WikiStorage(object):
     change history, using Mercurial repository as the storage method.
     """
 
-    def __init__(self, path, charset=None, _=lambda x: x, unix_eol=False, extension=None):
+    def __init__(self, path, charset=None, _=lambda x: x, unix_eol=False, 
+                 extension=None):
         """
         Takes the path to the directory where the pages are to be kept.
         If the directory doesn't exist, it will be created. If it's inside
@@ -138,7 +140,7 @@ class WikiStorage(object):
         if (filename.split('.')[0].upper() in _windows_device_files or
             filename.startswith('_') or filename.startswith('.')):
             filename = '_' + filename
-        if self.extension:
+        if page.page_mime(title) == 'text/x-wiki' and self.extension:
             filename += self.extension
         return os.path.join(self.repo_prefix, filename)
 
@@ -488,7 +490,7 @@ class WikiSubdirectoryStorage(WikiStorage):
         path = os.path.join(self.repo_prefix, escaped)
         if os.path.isdir(os.path.join(self.repo_path, path)):
             path = os.path.join(path, self.index)
-        if self.extension:
+        if page.page_mime(title) == 'text/x-wiki' and self.extension:
             path += self.extension
         return path
 

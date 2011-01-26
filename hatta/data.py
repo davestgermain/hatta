@@ -100,5 +100,13 @@ blockquote { border-left:.25em solid #ccc; padding-left:.5em; margin-left:0}
 abbr.date {border:none}
 dt {font-weight: bold; float: left; }
 dd {font-style: italic; }
+@media print {
+ body {background:white;color:black;font-size:100%;font-family:serif;}
+ #hatta-search, #hatta-menu, #hatta-footer {display:none;}
+ a:link, a:visited {color:#520;font-weight:bold;text-decoration:underline;}
+ #hatta-content {width:auto;}
+ #hatta-content a:link:after,
+ #hatta-content a:visited:after{content:" ["attr(href)"] ";font-size:90%;}
+}
 """
 

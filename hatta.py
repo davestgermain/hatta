@@ -1370,7 +1370,6 @@ without would yet you your yours yourself yourselves""")).split())
             return self._con[thread_id]
         except KeyError:
             connection = sqlite3.connect(self.filename)
-            connection.isolation_level = None
             self._con[thread_id] = connection
             return connection
 
@@ -1567,28 +1566,26 @@ without would yet you your yours yourself yourselves""")).split())
         if text is None and data is not None:
             text = unicode(data, self.storage.charset, 'replace')
         cursor = self.con.cursor()
-        cursor.execute('BEGIN IMMEDIATE TRANSACTION;')
         try:
             self.set_last_revision(self.storage.repo_revision())
             self.reindex_page(page, title, cursor, text)
-            cursor.execute('COMMIT TRANSACTION;')
+            self.con.commit()
         except:
-            cursor.execute('ROLLBACK;')
+            self.con.rollback()
             raise
 
     def reindex(self, wiki, request,  pages):
         """Updates specified pages in bulk."""
 
         cursor = self.con.cursor()
-        cursor.execute('BEGIN IMMEDIATE TRANSACTION;')
         try:
             for title in pages:
                 page = wiki.get_page(request, title)
                 self.reindex_page(page, title, cursor)
-            cursor.execute('COMMIT TRANSACTION;')
+            self.con.commit()
             self.empty = False
         except:
-            cursor.execute('ROLLBACK;')
+            self.con.rollback()
             raise
 
     def set_last_revision(self, rev):

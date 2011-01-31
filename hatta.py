@@ -473,9 +473,24 @@ class WikiStorage(object):
         self.repo.dirstate.setparents(tip_node, node)
         # Mercurial 1.1 and later need updating the merge state
         try:
-            mercurial.merge.mergestate(self.repo).mark(repo_file, "r")
-        except (AttributeError, KeyError):
+            mergestate = mercurial.merge.mergestate
+        except AttributeError:
             pass
+        else:
+            state = mergestate(self.repo)
+            try:
+                state.mark(repo_file, "r")
+            except KeyError:
+                # There were no conflicts to mark
+                pass
+            else:
+                # Mercurial 1.7+ needs a commit
+                try:
+                    commit = state.commit
+                except AttributeError:
+                    pass
+                else:
+                    commit()
         return msg
 
     @locked_repo

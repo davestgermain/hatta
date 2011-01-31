@@ -294,8 +294,3 @@ else: # Other UNIX-like
 
 if __name__ == '__main__':
     setup(**config)
-    try:
-        import pybonjour
-    except ImportError:
-        print u'*** Warning ***'
-        print u'Please install pybonjour to build a full-featured binary.'

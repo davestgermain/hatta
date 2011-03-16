@@ -1,4 +1,8 @@
 <<<<<<< local
+123
+456
+789=======
+<<<<<<< local
 =======
 <<<<<<< local
 >>>>>>> other
@@ -7,4 +11,5 @@ test
 text=======
 text=======
 test text>>>>>>> other
+>>>>>>> other
 >>>>>>> other

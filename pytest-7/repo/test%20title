@@ -1,4 +1,6 @@
 <<<<<<< local
+test text=======
+<<<<<<< local
 =======
 <<<<<<< local
 =======
@@ -23,6 +25,7 @@ test
 text=======
 text=======
 test text>>>>>>> other
+>>>>>>> other
 >>>>>>> other
 >>>>>>> other
 >>>>>>> other

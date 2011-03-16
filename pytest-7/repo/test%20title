@@ -1,5 +1,11 @@
 <<<<<<< local
+=======
+<<<<<<< local
+>>>>>>> other
 123
+<<<<<<< local
+000
+789=======
 456
 789=======
 <<<<<<< local
@@ -11,5 +17,6 @@ test
 text=======
 text=======
 test text>>>>>>> other
+>>>>>>> other
 >>>>>>> other
 >>>>>>> other

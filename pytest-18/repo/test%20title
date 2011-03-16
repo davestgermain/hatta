@@ -1,1 +1,4 @@
-test text
+<<<<<<< local
+test
+text=======
+test text>>>>>>> other

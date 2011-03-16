@@ -85,6 +85,7 @@ class TestSubdirectoryStorage(object):
 
         for title, filename in self.title_encodings.iteritems():
             escaped = subdir_repo._title_to_file(title)
+            escaped = escaped[len(subdir_repo.repo_prefix.rstrip('/')):]
             assert escaped == filename
 
     def test_filename(self, subdir_repo):
@@ -98,6 +99,34 @@ class TestSubdirectoryStorage(object):
                                   parent=-1)
             exists = os.path.exists(filepath)
             assert exists
+
+    def test_root_delete(self, subdir_repo):
+        """
+        Check if deleting non-subdirectory page works.
+        """
+
+        title = u'ziew'
+        filepath = os.path.join(subdir_repo.path, 'ziew')
+        subdir_repo.save_text(title, self.text, self.author, self.comment,
+                              parent=-1)
+        exists = os.path.exists(filepath)
+        assert exists
+        subdir_repo.delete_page(title, self.author, self.comment)
+        exists = os.path.exists(filepath)
+        assert not exists
+
+    def test_nonexistent_root_delete(self, subdir_repo):
+        """
+        Check if deleting non-existing non-subdirectory page works.
+        """
+
+        title = u'ziew2'
+        filepath = os.path.join(subdir_repo.path, 'ziew2')
+        exists = os.path.exists(filepath)
+        assert not exists
+        subdir_repo.delete_page(title, self.author, self.comment)
+        exists = os.path.exists(filepath)
+        assert not exists
 
     def test_subdirectory_delete(self, subdir_repo):
         """
@@ -117,7 +146,7 @@ class TestSubdirectoryStorage(object):
 
     def test_create_parent(self, subdir_repo):
         """
-        Make sure you can't create a parent page of existsing page.
+        Make sure you can't create a parent page of existing page.
         """
 
         subdir_repo.save_text(u'xxx/yyy', self.text, self.author, self.comment,
@@ -128,13 +157,18 @@ class TestSubdirectoryStorage(object):
 
     def test_create_subpage(self, subdir_repo):
         """
-        Make sure you can't create a subpage of existsing page.
+        Make sure you can't create a subpage of existing page.
         """
 
-        subdir_repo.save_text(u'xxx', self.text, self.author, self.comment,
+        filepath = os.path.join(subdir_repo.path, 'zzz')
+        subdir_repo.save_text(u'zzz', self.text, self.author, self.comment,
                               parent=-1)
+        exists = os.path.exists(filepath)
+        assert exists
+        isdir = os.path.isdir(filepath)
+        assert not isdir
         py.test.raises(hatta.ForbiddenErr, subdir_repo.save_text,
-                       u'xxx/yyy', self.text, self.author, self.comment,
+                       u'zzz/yyy', self.text, self.author, self.comment,
                        parent=-1)
 
 class TestMercurialStorage(object):
@@ -308,30 +342,17 @@ class TestStorage(object):
         markers are inserted properly.
         """
 
-        text = u"""\
-123
-456
-789"""
-        text1 = u"""\
-123
-000
-789"""
-        text2 = u"""\
-123
-111
-789"""
-        repo.save_text(self.title, text, self.author, self.comment, parent=-1)
-        repo.save_text(self.title, text1, self.author, self.comment, parent=0)
-        repo.save_text(self.title, text2, self.author, self.comment, parent=0)
-        saved = repo.open_page(self.title).read()
-        assert saved == u"""\
-123
-<<<<<<< local
-111
-=======
-000
->>>>>>> other
-789"""
+        title = 'some title'
+        text = u"123\n456\n789"
+        text1 = u"123\n000\n789"
+        text2 = u"123\n111\n789"
+        repo.save_text(title, text, self.author, self.comment, parent=-1)
+        saved = repo.open_page(title).read()
+        assert saved == text
+        repo.save_text(title, text1, self.author, self.comment, parent=0)
+        repo.save_text(title, text2, self.author, self.comment, parent=0)
+        saved = repo.open_page(title).read()
+        assert saved == u"123\n<<<<<<< local\n111\n=======\n000\n>>>>>>> other\n789"
 
     def test_delete(self, repo):
         """

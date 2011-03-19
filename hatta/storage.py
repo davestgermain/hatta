@@ -525,8 +525,10 @@ class WikiSubdirectoryStorage(WikiStorage):
                 os.rmdir(temp_dir)
             except OSError:
                 pass
-        self._commit([index_path, path], _(u"made subdirectory page"),
-                     "<wiki>")
+        def repo_path(path):
+            return path[len(self.repo_path)+1:]
+        files = [repo_path(index_path), repo_path(path)]
+        self._commit(files, _(u"made subdirectory page"), "<wiki>")
 
     @locked_repo
     def save_file(self, title, file_name, author=u'', comment=u'',

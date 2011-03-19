@@ -116,6 +116,34 @@ class TestSubdirectoryStorage(object):
         exists = os.path.exists(dirpath)
         assert not exists
 
+    def test_root_delete(self, subdir_repo):
+        """
+        Check if deleting non-subdirectory page works.
+        """
+
+        title = u'ziew'
+        filepath = os.path.join(subdir_repo.path, 'ziew')
+        subdir_repo.save_text(title, self.text, self.author, self.comment,
+                              parent=-1)
+        exists = os.path.exists(filepath)
+        assert exists
+        subdir_repo.delete_page(title, self.author, self.comment)
+        exists = os.path.exists(filepath)
+        assert not exists
+
+    def test_nonexistent_root_delete(self, subdir_repo):
+        """
+        Check if deleting non-existing non-subdirectory page works.
+        """
+
+        title = u'ziew2'
+        filepath = os.path.join(subdir_repo.path, 'ziew2')
+        exists = os.path.exists(filepath)
+        assert not exists
+        subdir_repo.delete_page(title, self.author, self.comment)
+        exists = os.path.exists(filepath)
+        assert not exists
+
     def test_create_parent(self, subdir_repo):
         """
         Make sure you can create a parent page of existsing page.

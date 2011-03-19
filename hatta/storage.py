@@ -560,12 +560,13 @@ class WikiSubdirectoryStorage(WikiStorage):
         file_path = self._file_path(title)
         self._check_path(file_path)
         dir_path = os.path.dirname(file_path)
-        try:
-            os.removedirs(dir_path)
-        except OSError, e:
-            if e.errno != errno.ENOTEMPTY:
-                # "Directory not empty"
-                raise
+        if dir_path != self.repo_path:
+            try:
+                os.removedirs(dir_path)
+            except OSError, e:
+                if e.errno != errno.ENOTEMPTY:
+                    # "Directory not empty"
+                    raise
 
     def all_pages(self):
         """

@@ -146,7 +146,7 @@ class TestSubdirectoryStorage(object):
 
     def test_create_parent(self, subdir_repo):
         """
-        Make sure you can create a parent page of existsing page.
+        Make sure you can create a parent page of existing page.
         """
 
         subdir_repo.save_text(u'xxx/yyy', self.text, self.author, self.comment,
@@ -159,7 +159,7 @@ class TestSubdirectoryStorage(object):
 
     def test_create_subpage(self, subdir_repo):
         """
-        Make sure you can create a subpage of existsing page.
+        Make sure you can create a subpage of existing page.
         """
 
         subdir_repo.save_text(u'xxx', self.text, self.author, self.comment,
@@ -169,10 +169,12 @@ class TestSubdirectoryStorage(object):
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx'))
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx/yyy'))
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx/Index'))
+        tracked = subdir_repo._changectx()['xxx/Index']
+        assert tracked
 
     def test_create_subsubpage(self, subdir_repo):
         """
-        Make sure you can create a subpage of existsing page.
+        Make sure you can create a subpage of existing page.
         """
 
         subdir_repo.save_text(u'xxx', self.text, self.author, self.comment,

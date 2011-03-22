@@ -762,7 +762,8 @@ It can only be edited by the site admin directly on the disk."""))
 
         def _wanted_pages_list():
             for refs, title in self.index.wanted_pages():
-                if not (parser.external_link(title) or title.startswith('+')):
+                if not (parser.external_link(title) or title.startswith('+')
+                        or title.startswith(':')):
                     yield refs, title
 
         page = self.get_page(request, '')

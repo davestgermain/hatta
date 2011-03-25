@@ -5,6 +5,6 @@ include resources/hatta.svg
 include resources/hatta.png
 include resources/hatta.ico
 include resources/hatta.desktop
-recursive-include examples
-recursive-include locale/ar/LC_MESSAGES
-include hatta/templates/*.html
+recursive-include examples *
+recursive-include locale/ar/LC_MESSAGES *
+recursive-include hatta/templates *.html

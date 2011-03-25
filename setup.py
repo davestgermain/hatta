@@ -42,6 +42,7 @@ config = dict(
             'examples/extend_parser.py'
         ]),
     ],
+    include_package_data=True,
     platforms='any',
     requires=['werkzeug (>=0.3)', 'mercurial (>=1.0)'],
     classifiers=[

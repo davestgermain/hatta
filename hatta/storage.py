@@ -71,7 +71,7 @@ class WikiStorage(object):
     change history, using Mercurial repository as the storage method.
     """
 
-    def __init__(self, path, charset=None, _=lambda x: x, unix_eol=False, 
+    def __init__(self, path, charset=None, _=lambda x: x, unix_eol=False,
                  extension=None):
         """
         Takes the path to the directory where the pages are to be kept.
@@ -279,7 +279,6 @@ class WikiStorage(object):
         data = text.encode(self.charset)
         if self.unix_eol:
             data = data.replace('\r\n', '\n')
-            print 'replacing newlines...'
         self.save_data(title, data, author, comment, parent)
 
     def page_text(self, title):

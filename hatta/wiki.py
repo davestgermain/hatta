@@ -256,7 +256,7 @@ class Wiki(object):
                                                            self.extension)
         else:
             self.storage = self.storage_class(self.path, self.page_charset,
-                                              self.gettext, self.unix_eol, 
+                                              self.gettext, self.unix_eol,
                                               self.extension)
         self.cache = os.path.abspath(config.get('cache_path',
                                      os.path.join(self.storage.repo_path,

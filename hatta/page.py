@@ -131,7 +131,7 @@ class WikiPage(object):
                 chunk = '#' + werkzeug.url_fix(chunk)
             if addr.startswith(':'):
                 alias = self.link_alias(addr[1:])
-                href = werkzeug.escape(werkzeug.url_fix(alias) + chunk)
+                href = werkzeug.escape(werkzeug.url_fix(alias) + chunk, True)
                 classes.append('external')
                 classes.append('alias')
             elif addr.startswith('+'):
@@ -143,7 +143,7 @@ class WikiPage(object):
                 classes.append('anchor')
             else:
                 classes.append('wiki')
-                href = werkzeug.escape(self.get_url(addr) + chunk)
+                href = werkzeug.escape(self.get_url(addr) + chunk, True)
                 if addr not in self.storage:
                     classes.append('nonexistent')
         class_ = werkzeug.escape(' '.join(classes) or '', True)

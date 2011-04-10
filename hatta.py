@@ -1794,32 +1794,36 @@ class WikiPage(object):
         else:
             classes = []
         if external_link(addr):
+            classes.append('external')
             if addr.startswith('mailto:'):
-                class_ = 'external email'
+                classes.append('email')
                 text = text.replace('@', '&#64;').replace('.', '&#46;')
-                href = addr.replace('@', '%40').replace('.', '%2E')
+                href = werkzeug.escape(addr,
+                                       True).replace('@',
+                                                     '%40').replace('.', '%2E')
             else:
-                classes.append('external')
-                href = werkzeug.escape(addr, quote=True)
+                href = werkzeug.escape(werkzeug.url_fix(addr), quote=True)
         else:
             if '#' in addr:
                 addr, chunk = addr.split('#', 1)
-                chunk = '#'+chunk
+                chunk = '#' + werkzeug.url_fix(chunk)
             if addr.startswith('+'):
                 href = '/'.join([self.request.script_root,
                                  '+'+werkzeug.escape(addr[1:], quote=True)])
                 classes.append('special')
             elif addr == u'':
-                href = chunk
+                href = werkzeug.escape(chunk, True)
                 classes.append('anchor')
             else:
                 classes.append('wiki')
-                href = self.get_url(addr) + chunk
+                href = werkzeug.escape(self.get_url(addr) + chunk, True)
                 if addr not in self.storage:
                     classes.append('nonexistent')
-        class_ = ' '.join(classes) or None
-        return werkzeug.html.a(image or text, href=href, class_=class_,
-                               title=addr+chunk)
+        class_ = werkzeug.escape(' '.join(classes) or '', True)
+        # We need to output HTML on our own to prevent escaping of href
+        return '<a href="%s" class="%s" title="%s">%s</a>' % (
+                href, class_, werkzeug.escape(addr + chunk, True),
+                image or text)
 
     def wiki_image(self, addr, alt, class_='wiki', lineno=0):
         """Create HTML for a wiki image."""

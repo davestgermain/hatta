@@ -124,7 +124,7 @@ class WikiPage(object):
                 href = werkzeug.escape(addr,
                     quote=True).replace('@', '%40').replace('.', '%2E')
             else:
-                href = werkzeug.escape(addr, quote=True)
+                href = werkzeug.escape(werkzeug.url_fix(addr), quote=True)
         else:
             if '#' in addr:
                 addr, chunk = addr.split('#', 1)
@@ -146,9 +146,11 @@ class WikiPage(object):
                 href = self.get_url(addr) + werkzeug.url_quote(chunk)
                 if addr not in self.storage:
                     classes.append('nonexistent')
-        class_ = ' '.join(classes) or None
-        return werkzeug.html.a(image or text, href=href, class_=class_,
-                               title=addr + chunk)
+        class_ = werkzeug.escape(' '.join(classes) or '', True)
+        # We need to output HTML on our own to prevent escaping of href
+        return '<a href="%s" class="%s" title="%s">%s</a>' % (
+                href, class_, werkzeug.escape(addr + chunk, True),
+                image or text)
 
     def wiki_image(self, addr, alt, class_='wiki', lineno=0):
         """Create HTML for a wiki image."""

@@ -240,6 +240,8 @@ class WikiConfig(object):
         add('-D', '--subdirectories', dest='subdirectories',
             action="store_true",
             help='Store subpages as subdirectories in the filesystem')
+        add('-U', '--unix-eol', dest='unix_eol', action="store_true",
+            help='Convert all text pages to UNIX-style CR newlines')
 
         options, args = parser.parse_args()
         for option, value in options.__dict__.iteritems():
@@ -349,7 +351,7 @@ class WikiStorage(object):
     change history, using Mercurial repository as the storage method.
     """
 
-    def __init__(self, path, charset=None):
+    def __init__(self, path, charset=None, unix_eol=False):
         """
         Takes the path to the directory where the pages are to be kept.
         If the directory doen't exist, it will be created. If it's inside
@@ -358,6 +360,7 @@ class WikiStorage(object):
         """
 
         self.charset = charset or 'utf-8'
+        self.unix_eol = unix_eol
         self.path = os.path.abspath(path)
         if not os.path.exists(self.path):
             os.makedirs(self.path)
@@ -558,6 +561,8 @@ class WikiStorage(object):
         """Save text as specified page, encoded to charset."""
 
         data = text.encode(self.charset)
+        if self.unix_eol:
+            data = data.replace('\r\n', '\n')
         self.save_data(title, data, author, comment, parent)
 
     def page_text(self, title):
@@ -2631,10 +2636,13 @@ dd {font-style: italic; }
         self.icon_page = self.config.get('icon_page', None)
         self.pygments_style = self.config.get('pygments_style', 'tango')
         self.subdirectories = self.config.get_bool('subdirectories', False)
+        self.unix_eol = self.config.get_bool('unix_eol', False)
         if self.subdirectories:
-            self.storage = WikiSubdirectoryStorage(self.path, self.page_charset)
+            self.storage = WikiSubdirectoryStorage(self.path, self.page_charset,
+                    unix_eol=self.unix_eol)
         else:
-            self.storage = self.storage_class(self.path, self.page_charset)
+            self.storage = self.storage_class(self.path, self.page_charset,
+                    unix_eol=self.unix_eol)
         self.cache = config.get('cache_path', None)
         if self.cache is None:
             self.cache = os.path.join(self.storage.repo_path, '.hg', 'hatta', 'cache')

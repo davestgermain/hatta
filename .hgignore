@@ -9,3 +9,6 @@ pygments/*
 werkzeug/*
 cache/*
 *.DS_Store
+bin/
+lib/
+include/

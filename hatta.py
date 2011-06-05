@@ -2735,7 +2735,7 @@ It can only be edited by the site admin directly on the disk."""))
 
         if title in self.storage:
             return self.download(request, title)
-        response = werkzeug.Response(content, mimetype=mime)
+        response = WikiResponse(content, mimetype=mime)
         response.set_etag('/%s/-1' % title)
         response.make_conditional(request)
         return response

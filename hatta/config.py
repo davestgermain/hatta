@@ -75,9 +75,9 @@ class WikiConfig(object):
 
     def __init__(self, **kw):
         self.config = dict(kw)
+        self.valid_names = set(VALID_NAMES)
         self.parse_environ()
         self.options = list(OPTIONS)
-        self.valid_names = set(VALID_NAMES)
 
     def sanitize(self):
         """

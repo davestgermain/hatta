@@ -439,10 +439,11 @@ class WikiStorage(object):
 
         for filename in os.listdir(self.path):
             file_path = os.path.join(self.path, filename)
+            file_repopath = os.path.join(self.repo_prefix, filename)
             if (os.path.isfile(file_path)
                 and not os.path.islink(file_path)
                 and not filename.startswith('.')):
-                yield werkzeug.url_unquote(filename)
+                yield self._file_to_title(file_repopath)
 
     def changed_since(self, rev):
         """
@@ -578,11 +579,8 @@ class WikiSubdirectoryStorage(WikiStorage):
         for (dirpath, dirnames, filenames) in os.walk(self.path):
             path = dirpath[len(self.path) + 1:]
             for name in filenames:
-                if os.path.basename(name) == self.index:
-                    filename = os.path.join(path, os.path.dirname(name))
-                    yield werkzeug.url_unquote(filename)
-                else:
-                    filename = os.path.join(path, name)
-                    if (os.path.isfile(os.path.join(self.path, filename))
-                        and not filename.startswith('.')):
-                        yield werkzeug.url_unquote(filename)
+                filepath = os.path.join(dirpath, name)
+                repopath = os.path.join(self.repo_prefix, path, name)
+                if (os.path.isfile(filepath)
+                    and not name.startswith('.')):
+                    yield self._file_to_title(repopath)

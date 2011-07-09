@@ -154,7 +154,7 @@ class WikiStorage(object):
         if name.startswith('_') and len(name) > 1:
             name = name[1:]
         if self.extension and name.endswith(self.extension):
-            name = name[:len(self.extension)]
+            name = name[:-len(self.extension)]
         return werkzeug.url_unquote(name)
 
     def __contains__(self, title):

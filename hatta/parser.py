@@ -100,7 +100,7 @@ class WikiParser(object):
         "bold": (10, ur"[*][*]"),
         "code": (20, ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
                 ur"*[}]*)[}][}][}]"),
-        "free_link": (30, ur"""[a-zA-Z]+://\S+[^\s.,:;!?()'"=+<>-]"""),
+        "free_link": (30, ur"""[a-zA-Z]+://\S+[^\s.,:;!?()'"\*/=+<>-]"""),
         "italic": (40, ur"//"),
         "link": (50, ur"\[\[(?P<link_target>([^|\]]|\][^|\]])+)"
                 ur"(\|(?P<link_text>([^\]]|\][^\]])+))?\]\]"),
@@ -108,7 +108,7 @@ class WikiParser(object):
         "linebreak": (70, ur"\\\\"),
         "macro": (80, ur"[<][<](?P<macro_name>\w+)\s+"
                  ur"(?P<macro_text>([^>]|[^>][>])+)[>][>]"),
-        "mail": (90, ur"""(mailto:)?\S+@\S+(\.[^\s.,:;!?()'"/=+<>-]+)+"""),
+        "mail": (90, ur"""(mailto:)?\S+@\S+(\.[^\s.,:;!?()'"\*/=+<>-]+)+"""),
         "math": (100, ur"\$\$(?P<math_text>[^$]+)\$\$"),
         "mono": (110, ur"##"),
         "newline": (120, ur"\n"),

@@ -137,29 +137,6 @@ class WikiParser(object):
         r"''": "&rdquo;",
         r",,": "&bdquo;",
     }
-    markup = {
-        # "name": (priority, ur"pattern"),
-        "bold": (10, ur"[*][*]"),
-        "code": (20, ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
-                ur"*[}]*)[}][}][}]"),
-        "free_link": (30, ur"""[a-zA-Z]+://\S+[^\s.,:;!?()'"=+<>-]"""),
-        "italic": (40, ur"//"),
-        "link": (50, ur"\[\[(?P<link_target>([^|\]]|\][^|\]])+)"
-                ur"(\|(?P<link_text>([^\]]|\][^\]])+))?\]\]"),
-        "image": (60, image_pat),
-        "linebreak": (70, ur"\\\\"),
-        "macro": (80, ur"[<][<](?P<macro_name>\w+)\s+"
-                 ur"(?P<macro_text>([^>]|[^>][>])+)[>][>]"),
-        "mail": (90, ur"""(mailto:)?\S+@\S+(\.[^\s.,:;!?()'"/=+<>-]+)+"""),
-        "math": (100, ur"\$\$(?P<math_text>[^$]+)\$\$"),
-        "mono": (110, ur"##"),
-        "newline": (120, ur"\n"),
-        "punct": (130,
-                  ur'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+"\'—-])|\b|$)' %
-                  ur"|".join(re.escape(k) for k in punct)),
-        "table": (140, ur"=?\|=?"),
-        "text": (150, ur".+?"),
-    }
 
     def __init__(self, lines, wiki_link, wiki_image,
                  wiki_syntax=None, wiki_math=None, smilies=None):

@@ -81,7 +81,8 @@ class RuleSet(object):
             priority, pattern, function = self.rules[function_name]
             if bind_to is not None:
                 function = getattr(bind_to, function.__name__)
-            del params[function_name]
+            params = dict((k, v) for (k, v) in params.iteritems()
+                          if v is not None and k not in self.rules)
             yield function(**params)
 
 
@@ -186,13 +187,10 @@ class WikiParser(object):
         smileys = ur"|".join(re.escape(k) for k in self.smilies)
         smiley_pat = (ur"(^|\b|(?<=\s))(?P<smiley_face>%s)"
                       ur"((?=[\s.,:;!?)/&=+-])|$)" % smileys)
-        self.markup['smiley'] = (125, smiley_pat)
-        patterns = ((k, p) for (k, (x, p)) in
-                    sorted(self.markup.iteritems(), key=lambda x: x[1][0]))
-        self.markup_re = re.compile(ur"|".join("(?P<%s>%s)" % pat
-                                    for pat in patterns), re.U)
-        self.block_rules.compile()
+        self.markup_rules.add_rule(
+                self._line_smiley, smiley_pat, 125)
         self.markup_rules.compile()
+        self.block_rules.compile()
 
     def __iter__(self):
         return self.parse()
@@ -241,10 +239,12 @@ class WikiParser(object):
         Find all the line-level markup and return HTML for it.
 
         """
+        for part in self.markup_rules.parse(line, self):
+            yield part
 
-        for match in self.markup_re.finditer(line):
-            func = getattr(self, "_line_%s" % match.lastgroup)
-            yield func(match.groupdict())
+        #for match in self.markup_re.finditer(line):
+        #    func = getattr(self, "_line_%s" % match.lastgroup)
+        #    yield func(match.groupdict())
 
     def pop_to(self, stop):
         """
@@ -271,98 +271,113 @@ class WikiParser(object):
 
 # methods for the markup inside lines:
 
-    def _line_table(self, groups):
-        return groups["table"]
+    @markup_rules(ur"(?P<table_cell>=?\|=?)", 140)
+    def _line_table(self, table_cell):
+        return table_cell
 
-    def _line_linebreak(self, groups):
+    @markup_rules(ur"\\\\", 70)
+    def _line_linebreak(self):
         return u'<br>'
 
-    def _line_smiley(self, groups):
-        smiley = groups["smiley_face"]
+    # Added in .compile()
+    def _line_smiley(self, smiley_face):
         try:
-            url = self.smilies[smiley]
+            url = self.smilies[smiley_face]
         except KeyError:
             url = ''
-        return self.wiki_image(url, smiley, class_="smiley")
+        return self.wiki_image(url, smiley_face, class_="smiley")
 
-    def _line_bold(self, groups):
+    @markup_rules(ur"[*][*]", 10)
+    def _line_bold(self):
         if 'b' in self.stack:
             return self.pop_to('b')
         else:
             self.stack.append('b')
             return u"<b>"
 
-    def _line_italic(self, groups):
+    @markup_rules(ur"//", 40)
+    def _line_italic(self):
         if 'i' in self.stack:
             return self.pop_to('i')
         else:
             self.stack.append('i')
             return u"<i>"
 
-    def _line_mono(self, groups):
+    @markup_rules(ur"##", 110)
+    def _line_mono(self):
         if 'tt' in self.stack:
             return self.pop_to('tt')
         else:
             self.stack.append('tt')
             return u"<tt>"
 
-    def _line_punct(self, groups):
-        text = groups["punct"]
-        return self.punct.get(text, text)
+    @markup_rules(ur'(?P<punct>'
+                  ur'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+"\'—-])|\b|$))' %
+                  ur"|".join(re.escape(k) for k in punct), 130)
+    def _line_punct(self, punct):
+        return self.punct.get(punct, punct)
 
-    def _line_newline(self, groups):
+    @markup_rules(ur"\n", 120)
+    def _line_newline(self):
         return "\n"
 
-    def _line_text(self, groups):
-        return werkzeug.escape(groups["text"])
+    @markup_rules(ur"(?P<plain_text>.+?)", 150)
+    def _line_text(self, plain_text):
+        return werkzeug.escape(plain_text)
 
-    def _line_math(self, groups):
+    @markup_rules(ur"\$\$(?P<math_text>[^$]+)\$\$", 100)
+    def _line_math(self, math_text):
         if self.wiki_math:
-            return self.wiki_math(groups["math_text"])
+            return self.wiki_math(math_text)
         else:
-            return "<var>%s</var>" % werkzeug.escape(groups["math_text"])
+            return "<var>%s</var>" % werkzeug.escape(math_text)
 
-    def _line_code(self, groups):
-        return u'<code>%s</code>' % werkzeug.escape(groups["code_text"])
+    @markup_rules(ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
+                  ur"*[}]*)[}][}][}]", 20)
+    def _line_code(self, code_text):
+        return u'<code>%s</code>' % werkzeug.escape(code_text)
 
-    def _line_free_link(self, groups):
-        groups['link_target'] = groups['free_link']
-        return self._line_link(groups)
+    @markup_rules(ur"""(?P<link_url>[a-zA-Z]+://\S+[^\s.,:;!?()'"=+<>-])""", 30)
+    def _line_free_link(self, link_url):
+        return self._line_link(link_target=link_url)
 
-    def _line_mail(self, groups):
-        addr = groups['mail']
-        groups['link_text'] = addr
-        if not addr.startswith(u'mailto:'):
-            addr = u'mailto:%s' % addr
-        groups['link_target'] = addr
-        return self._line_link(groups)
+    @markup_rules(ur"""(?P<mail_address>(mailto:)?"""
+                  ur"""\S+@\S+(\.[^\s.,:;!?()'"/=+<>-]+)+)""", 90)
+    def _line_mail(self, mail_address):
+        text = mail_address
+        if mail_address.startswith(u'mailto:'):
+            text = text[len('mailto:'):]
+        else:
+            mail_address = u'mailto:%s' % mail_address
+        return self._line_link(link_text=text, link_target=mail_address)
 
-    def _line_link(self, groups):
-        target = groups['link_target']
-        text = groups.get('link_text')
-        if not text:
-            text = target
-            if '#' in text:
-                text, chunk = text.split('#', 1)
-        match = self.image_re.match(text)
+    @markup_rules(ur"\[\[(?P<link_target>([^|\]]|\][^|\]])+)"
+                  ur"(\|(?P<link_text>([^\]]|\][^\]])+))?\]\]", 50)
+    def _line_link(self, link_target, link_text=None):
+        if not link_text:
+            link_text = link_target
+            if '#' in link_text:
+                link_text, chunk = link_text.split('#', 1)
+        match = self.image_re.match(link_text)
         if match:
-            image = self._line_image(match.groupdict())
-            return self.wiki_link(target, text, image=image)
-        return self.wiki_link(target, text)
+            params = match.groupdict()
+            image = self._line_image(*params)
+            return self.wiki_link(link_target, link_text, image=image)
+        return self.wiki_link(link_target, link_text)
 
-    def _line_image(self, groups):
-        target = groups['image_target']
-        alt = groups.get('image_text')
-        if alt is None:
-            alt = target
-        return self.wiki_image(target, alt)
+    @markup_rules(image_pat, 60)
+    def _line_image(self, image_target, image_text=None):
+        if image_text is None:
+            image_text = image_target
+        return self.wiki_image(image_target, image_text)
 
-    def _line_macro(self, groups):
-        name = groups['macro_name']
-        text = groups['macro_text'].strip()
+    @markup_rules(ur"[<][<](?P<macro_name>\w+)\s+"
+                  ur"(?P<macro_text>([^>]|[^>][>])+)[>][>]", 80)
+    def _line_macro(self, macro_name, macro_text):
+        macro_text = macro_text.strip()
         return u'<span class="%s">%s</span>' % (
-            werkzeug.escape(name, quote=True),
-            werkzeug.escape(text))
+            werkzeug.escape(macro_name, quote=True),
+            werkzeug.escape(macro_text))
 
 # methods for the block (multiline) markup:
 
@@ -562,16 +577,16 @@ class WikiParser(object):
 class WikiWikiParser(WikiParser):
     """A version of WikiParser that recognizes WikiWord links."""
 
-    markup = dict(WikiParser.markup)
+    markup_rules = RuleSet(WikiParser.markup_rules)
+
     camel_link = ur"\w+[%s]\w+" % re.escape(
         u''.join(unichr(i) for i in xrange(sys.maxunicode)
         if unicodedata.category(unichr(i)) == 'Lu'))
-    markup["camel_link"] = (105, camel_link)
-    markup["camel_nolink"] = (106, ur"[!~](?P<camel_text>%s)" % camel_link)
 
-    def _line_camel_link(self, groups):
-        groups['link_target'] = groups['camel_link']
-        return self._line_link(groups)
+    @markup_rules(ur'(?P<camel_link>%s)' % camel_link, 105)
+    def _line_camel_link(self, camel_link):
+        return self._line_link(link_target=camel_link)
 
-    def _line_camel_nolink(self, groups):
-        return werkzeug.escape(groups["camel_text"])
+    @markup_rules(ur"[!~](?P<camel_text>%s)" % camel_link, 106)
+    def _line_camel_nolink(self, camel_text):
+        return werkzeug.escape(camel_text)

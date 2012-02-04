@@ -34,7 +34,11 @@ def external_link(addr):
 
 
 class RuleSet(object):
+    """Object used for registering functions for parsing rules."""
+
     def __init__(self, inherit_from=None):
+        """New rule sets can be empty, or copied from other rule sets."""
+
         if inherit_from is not None:
             self.rules = dict(inherit_from.rules)
         else:
@@ -42,12 +46,16 @@ class RuleSet(object):
         self.compiled_re = None
 
     def __call__(self, pattern, priority=100, name=None):
+        """A decorator that registers the function as a rule."""
+
         def decorator(function):
             self.add_rule(function, pattern, priority, name)
             return function
         return decorator
 
     def add_rule(self, function, pattern, priority=100, name=None):
+        """Register a function as a rule manually."""
+
         if name is None:
             function_name = function.__name__
         else:
@@ -55,6 +63,8 @@ class RuleSet(object):
         self.rules[function_name] = (priority, pattern, function)
 
     def compile(self):
+        """Prepare the registered rule patterns for parsing."""
+
         rules = sorted(self.rules.iteritems(), key=lambda x: x[1][0])
         self.compiled_re = re.compile(
             ur"|".join(
@@ -63,6 +73,8 @@ class RuleSet(object):
             ), re.U)
 
     def match_one(self, text):
+        """Find the first rule matching provided text."""
+
         match = self.compiled_re.match(text)
         if not match:
             return '', {}
@@ -71,12 +83,19 @@ class RuleSet(object):
         return function_name, params
 
     def match_all(self, text):
+        """Find all rules matching provided text."""
+
         for match in self.compiled_re.finditer(text):
             function_name = match.lastgroup
             params = match.groupdict()
             yield function_name, params
 
     def parse(self, text, bind_to=None):
+        """
+        Find all matching rules and call corresponding functions.
+        If bind_to is provided, it will call the methods of provided object.
+        """
+
         for function_name, params in self.match_all(text):
             priority, pattern, function = self.rules[function_name]
             if bind_to is not None:
@@ -153,6 +172,11 @@ class WikiParser(object):
         self.line_no = 0
 
     def compile_patterns(self):
+        """
+        Prepare all the patterns for parsing. Needs to be called again
+        after monkey-patching the parser.
+        """
+
         self.quote_re = re.compile(self.quote_pat, re.U)
         self.heading_re = re.compile(self.heading_pat, re.U)
         self.list_re = re.compile(self.list_pat, re.U)
@@ -218,10 +242,6 @@ class WikiParser(object):
         """
         for part in self.markup_rules.parse(line, self):
             yield part
-
-        #for match in self.markup_re.finditer(line):
-        #    func = getattr(self, "_line_%s" % match.lastgroup)
-        #    yield func(match.groupdict())
 
     def pop_to(self, stop):
         """

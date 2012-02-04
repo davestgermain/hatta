@@ -33,6 +33,58 @@ def external_link(addr):
     return EXTERNAL_URL_RE.match(addr)
 
 
+class RuleSet(object):
+    def __init__(self, inherit_from=None):
+        if inherit_from is not None:
+            self.rules = dict(inherit_from.rules)
+        else:
+            self.rules = {}
+        self.compiled_re = None
+
+    def __call__(self, pattern, priority=100, name=None):
+        def decorator(function):
+            self.add_rule(function, pattern, priority, name)
+            return function
+        return decorator
+
+    def add_rule(self, function, pattern, priority=100, name=None):
+        if name is None:
+            function_name = function.__name__
+        else:
+            function_name = name
+        self.rules[function_name] = (priority, pattern, function)
+
+    def compile(self):
+        rules = sorted(self.rules.iteritems(), key=lambda x: x[1][0])
+        self.compiled_re = re.compile(
+            ur"|".join(
+                ur"(?P<%s>%s)" % (function_name, pattern) for
+                    (function_name, (priority, pattern, function)) in rules
+            ), re.U)
+
+    def match_one(self, text):
+        match = self.compiled_re.match(text)
+        if not match:
+            return '', {}
+        function_name = match.lastgroup
+        params = match.groupdict()
+        return function_name, params
+
+    def match_all(self, text):
+        for match in self.compiled_re.finditer(text):
+            function_name = match.lastgroup
+            params = match.groupdict()
+            yield function_name, params
+
+    def parse(self, text, bind_to=None):
+        for function_name, params in self.match_all(text):
+            priority, pattern, function = self.rules[function_name]
+            if bind_to is not None:
+                function = getattr(bind_to, function.__name__)
+            del params[function_name]
+            yield function(**params)
+
+
 class WikiParser(object):
     r"""
     Responsible for generating HTML markup from the wiki markup.
@@ -52,23 +104,12 @@ class WikiParser(object):
 
     """
 
+    block_rules = RuleSet()
+    markup_rules = RuleSet()
+
     list_pat = ur"^\s*[*#]+\s+"
     heading_pat = ur"^\s*=+"
     quote_pat = ur"^[>]+\s+"
-    block = {
-        # "name": (priority, ur"pattern"),
-        "list": (10, list_pat),
-        "code": (20, ur"^[{][{][{]+\s*$"),
-        "conflict": (30, ur"^<<<<<<< local\s*$"),
-        "empty": (40, ur"^\s*$"),
-        "heading": (50, heading_pat),
-        "indent": (60, ur"^[ \t]+"),
-        "macro": (70, ur"^<<\w+\s*$"),
-        "quote": (80, quote_pat),
-        "rule": (90, ur"^\s*---+\s*$"),
-        "syntax": (100, ur"^\{\{\{\#![\w+#.-]+\s*$"),
-        "table": (110, ur"^\|"),
-    }
     image_pat = (ur"\{\{(?P<image_target>([^|}]|}[^|}])*)"
                  ur"(\|(?P<image_text>([^}]|}[^}])*))?}}")
     smilies = {
@@ -137,10 +178,6 @@ class WikiParser(object):
         self.quote_re = re.compile(self.quote_pat, re.U)
         self.heading_re = re.compile(self.heading_pat, re.U)
         self.list_re = re.compile(self.list_pat, re.U)
-        patterns = ((k, p) for (k, (x, p)) in
-                    sorted(self.block.iteritems(), key=lambda x: x[1][0]))
-        self.block_re = re.compile(ur"|".join("(?P<%s>%s)" % pat
-                                   for pat in patterns), re.U)
         self.code_close_re = re.compile(ur"^\}\}\}\s*$", re.U)
         self.macro_close_re = re.compile(ur"^>>\s*$", re.U)
         self.conflict_close_re = re.compile(ur"^>>>>>>> other\s*$", re.U)
@@ -154,6 +191,8 @@ class WikiParser(object):
                     sorted(self.markup.iteritems(), key=lambda x: x[1][0]))
         self.markup_re = re.compile(ur"|".join("(?P<%s>%s)" % pat
                                     for pat in patterns), re.U)
+        self.block_rules.compile()
+        self.markup_rules.compile()
 
     def __iter__(self):
         return self.parse()
@@ -189,13 +228,11 @@ class WikiParser(object):
 
         def key(enumerated_line):
             line_no, line = enumerated_line
-            match = self.block_re.match(line)
-            if match:
-                return match.lastgroup
-            return "paragraph"
+            name, params = self.block_rules.match_one(line)
+            return name or "_block_paragraph"
 
         for kind, block in itertools.groupby(self.enumerated_lines, key):
-            func = getattr(self, "_block_%s" % kind)
+            func = getattr(self, kind)
             for part in func(block):
                 yield part
 
@@ -329,12 +366,14 @@ class WikiParser(object):
 
 # methods for the block (multiline) markup:
 
+    @block_rules(ur"^[{][{][{]+\s*$", 20)
     def _block_code(self, block):
         for self.line_no, part in block:
             inside = u"\n".join(self.lines_until(self.code_close_re))
             yield werkzeug.html.pre(werkzeug.html(inside), class_="code",
                                     id="line_%d" % self.line_no)
 
+    @block_rules(ur"^\{\{\{\#![\w+#.-]+\s*$", 100)
     def _block_syntax(self, block):
         for self.line_no, part in block:
             syntax = part.lstrip('{#!').strip()
@@ -347,6 +386,7 @@ class WikiParser(object):
                     werkzeug.html(inside), id="line_%d" % self.line_no),
                     class_="highlight")]
 
+    @block_rules(ur"^<<\w+\s*$", 70)
     def _block_macro(self, block):
         for self.line_no, part in block:
             name = part.lstrip('<').strip()
@@ -365,6 +405,7 @@ class WikiParser(object):
         text = u"".join(self.parse_line(u"".join(parts)))
         yield werkzeug.html.p(text, self.pop_to(""), id="line_%d" % first_line)
 
+    @block_rules(ur"^[ \t]+", 60)
     def _block_indent(self, block):
         parts = []
         first_line = None
@@ -375,6 +416,7 @@ class WikiParser(object):
         text = u"\n".join(parts)
         yield werkzeug.html.pre(werkzeug.html(text), id="line_%d" % first_line)
 
+    @block_rules(ur"^\|", 110)
     def _block_table(self, block):
         first_line = None
         in_head = False
@@ -422,13 +464,16 @@ class WikiParser(object):
             yield '</tr>'
         yield u'</table>'
 
+    @block_rules(ur"^\s*$", 40)
     def _block_empty(self, block):
         yield u''
 
+    @block_rules(ur"^\s*---+\s*$", 90)
     def _block_rule(self, block):
         for self.line_no, line in block:
             yield werkzeug.html.hr()
 
+    @block_rules(heading_pat, 50)
     def _block_heading(self, block):
         for self.line_no, line in block:
             level = min(len(self.heading_re.match(line).group(0).strip()), 5)
@@ -439,6 +484,7 @@ class WikiParser(object):
             yield u'<h%d id="line_%d">%s</h%d>' % (level, self.line_no,
                 werkzeug.escape(line.strip("= \t\n\r\v")), level)
 
+    @block_rules(list_pat, 10)
     def _block_list(self, block):
         level = 0
         in_ul = False
@@ -469,6 +515,7 @@ class WikiParser(object):
             in_ul = False
         yield ('</li></%s>' % kind) * level
 
+    @block_rules(quote_pat, 80)
     def _block_quote(self, block):
         level = 0
         in_p = False
@@ -497,6 +544,7 @@ class WikiParser(object):
             yield '%s</p>' % self.pop_to("")
         yield '</blockquote>' * level
 
+    @block_rules(ur"^<<<<<<< local\s*$", 30)
     def _block_conflict(self, block):
         for self.line_no, part in block:
             yield u'<div class="conflict">'

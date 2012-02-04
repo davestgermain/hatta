@@ -47,7 +47,10 @@ class TestHattaStandalone(object):
         client = werkzeug.Client(wiki.application, hatta.WikiResponse)
         response = client.get('')
         assert response.status_code == 303
-        assert response.headers['Location'] == 'http://localhost/+edit/Home'
+        assert response.headers['Location'] in (
+            'http://localhost/+edit/Home',
+            'http://localhost/%2Bedit/Home',
+        )
         response = client.get('/+edit/Home')
         assert response.status_code == 404
 
@@ -203,8 +206,14 @@ class TestHTML(object):
     def test_wiki_request_get_url(self, req):
         wiki, request = req
         assert request.get_url('title') == u'/title'
-        assert request.get_download_url('title') == u'/+download/title'
-        assert request.get_url('title', wiki.edit) == u'/+edit/title'
+        assert request.get_download_url('title') in (
+            u'/+download/title',
+            u'/%2Bdownload/title',
+        )
+        assert request.get_url('title', wiki.edit) in (
+            u'/+edit/title',
+            u'/%2Bedit/title',
+        )
         assert request.get_url(None, wiki.favicon_ico) == u'/favicon.ico'
 
     @py.test.mark.xfail

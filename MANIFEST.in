@@ -1,10 +1,4 @@
 include hatta/*.py
-include hatta_qticon.py
-include hatta_gtkicon.py
-include resources/hatta.svg
-include resources/hatta.png
-include resources/hatta.ico
-include resources/hatta.desktop
 recursive-include examples *
-recursive-include locale/ar/LC_MESSAGES *
+recursive-include locale *
 recursive-include hatta/templates *.html

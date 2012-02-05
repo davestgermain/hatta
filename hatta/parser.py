@@ -334,12 +334,12 @@ class WikiParser(object):
     def _line_code(self, code_text):
         return u'<code>%s</code>' % werkzeug.escape(code_text)
 
-    @markup_rules(ur"""(?P<link_url>[a-zA-Z]+://\S+[^\s.,:;!?()'"=+<>-])""", 30)
+    @markup_rules(ur"""(?P<link_url>[a-zA-Z]+://\S+[^\s.,:;!?()'"\*/=+<>-])""", 30)
     def _line_free_link(self, link_url):
         return self._line_link(link_target=link_url)
 
     @markup_rules(ur"""(?P<mail_address>(mailto:)?"""
-                  ur"""\S+@\S+(\.[^\s.,:;!?()'"/=+<>-]+)+)""", 90)
+                  ur"""\S+@\S+(\.[^\s.,:;!?()'"\*/=+<>-]+)+)""" , 90)
     def _line_mail(self, mail_address):
         text = mail_address
         if mail_address.startswith(u'mailto:'):

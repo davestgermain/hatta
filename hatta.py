@@ -587,8 +587,12 @@ class WikiStorage(object):
             # Mercurial 1.5 and earlier have .remove() on the repo
             remove = self.repo.remove
         except AttributeError:
-            # Mercurial 1.6
-            remove = self.repo[None].remove
+            # Mercurial 1.6 and later
+            try:
+                remove = self.repo[None].remove
+            except AttributeError:
+                # Mercurial 1.9 and later
+                remove = self.repo[None].forget
         try:
             os.unlink(file_path)
         except OSError:

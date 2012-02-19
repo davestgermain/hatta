@@ -1,3 +1,5 @@
 include hatta.py
 recursive-include examples *
 recursive-include locale *.mo
+include resources/hatta.png
+include resources/hatta.svg

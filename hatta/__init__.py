@@ -27,7 +27,7 @@ from page import WikiPage, WikiPageText, WikiPageWiki
 from page import WikiPageColorText, WikiPageFile, WikiPageImage
 
 # Project's metainformation
-__version__ = '1.4.1dev'
+__version__ = '1.5.0'
 project_name = 'Hatta'
 project_url = 'http://hatta-wiki.org/'
 project_description = 'Wiki engine that lives in Mercurial repository.'

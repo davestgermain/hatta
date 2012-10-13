@@ -302,7 +302,7 @@ class WikiPageText(WikiPage):
             comment = _(u'created')
             rev = -1
         except error.ForbiddenErr, e:
-            return werkzeug.html.p(werkzeug.html(_(unicode(e))))
+            return werkzeug.html.p(werkzeug.html(unicode(e)))
         if preview:
             lines = preview
             comment = self.request.form.get('comment', comment)

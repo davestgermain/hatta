@@ -100,7 +100,7 @@ class RuleSet(object):
             priority, pattern, function = self.rules[function_name]
             if bind_to is not None:
                 function = getattr(bind_to, function.__name__)
-            params = dict((k, v) for (k, v) in params.iteritems()
+            params = dict((str(k), v) for (k, v) in params.iteritems()
                           if v is not None and k not in self.rules)
             yield function(**params)
 

@@ -85,9 +85,10 @@ class WikiStorage(object):
             self.repo_path = self.path
         else:
             self.repo_path = os.path.abspath(repo_path)
-            if not path.startswith(self.repo_path):
+            if not self.path.startswith(self.repo_path):
                 raise StorageError(
-                        "Page path %r is outside of the repository path %r.")
+                    "Page path %r is outside of the repository path %r." % (
+                        self.path, self.repo_path))
         self.repo_prefix = self.path[len(self.repo_path):].strip('/')
         if not os.path.exists(os.path.join(self.repo_path, '.hg')):
             # Create the repository if needed.

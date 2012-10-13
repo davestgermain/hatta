@@ -25,6 +25,10 @@ import error
 import page
 
 
+class StorageError(Exception):
+    """Thrown when there are problems with configuration of storage."""
+
+
 def locked_repo(func):
     """A decorator for locking the repository when calling a method."""
 
@@ -38,18 +42,7 @@ def locked_repo(func):
         finally:
             lock.release()
             wlock.release()
-
     return new_func
-
-
-def _find_repo_path(path):
-    """Go up the directory tree looking for a repository."""
-
-    while not os.path.isdir(os.path.join(path, ".hg")):
-        old_path, path = path, os.path.dirname(path)
-        if path == old_path:
-            return None
-    return path
 
 
 def _get_ui():
@@ -72,7 +65,7 @@ class WikiStorage(object):
     """
 
     def __init__(self, path, charset=None, _=lambda x: x, unix_eol=False,
-                 extension=None):
+                 extension=None, repo_path=None):
         """
         Takes the path to the directory where the pages are to be kept.
         If the directory doesn't exist, it will be created. If it's inside
@@ -88,12 +81,16 @@ class WikiStorage(object):
         if not os.path.exists(self.path):
             os.makedirs(self.path)
         self.ui = _get_ui()
-        self.repo_path = _find_repo_path(self.path)
-        if self.repo_path is None:
-            # Create the repository if needed.
+        if repo_path is None:
             self.repo_path = self.path
-            mercurial.hg.repository(self.ui, self.repo_path, create=True)
+        else:
+            self.repo_path = os.path.abspath(repo_path)
+            if not path.startswith(repo_path):
+                raise StorageError("Page path is outside of the repository.")
         self.repo_prefix = self.path[len(self.repo_path):].strip('/')
+        if not os.path.exists(os.path.join(self.repo_path, '.hg')):
+            # Create the repository if needed.
+            mercurial.hg.repository(self.ui, self.repo_path, create=True)
         self._repos = {}
 
     def reopen(self):

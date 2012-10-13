@@ -235,6 +235,7 @@ class Wiki(object):
         self.template_env.autoescape = True
         self.template_env.install_gettext_translations(translation, True)
         self.path = os.path.abspath(config.get('pages_path', 'docs'))
+        self.repo_path = config.get('repo_path', None)
         self.page_charset = config.get('page_charset', 'utf-8')
         self.menu_page = self.config.get('menu_page', u'Menu')
         self.front_page = self.config.get('front_page', u'Home')
@@ -250,17 +251,15 @@ class Wiki(object):
         self.unix_eol = self.config.get_bool('unix_eol', False)
         if self.subdirectories:
             self.storage = storage.WikiSubdirectoryStorage(self.path,
-                                                           self.page_charset,
-                                                           self.gettext,
-                                                           self.unix_eol,
-                                                           self.extension)
+                self.page_charset, self.gettext, self.unix_eol, self.extension,
+                self.repo_path)
         else:
             self.storage = self.storage_class(self.path, self.page_charset,
-                                              self.gettext, self.unix_eol,
-                                              self.extension)
+                self.gettext, self.unix_eol, self.extension,
+                self.repo_path)
+        self.repo_path = self.storage.repo_path
         self.cache = os.path.abspath(config.get('cache_path',
-                                     os.path.join(self.storage.repo_path,
-                                                  '.hg', 'hatta', 'cache')))
+                os.path.join(self.repo_path, '.hg', 'hatta', 'cache')))
         self.index = self.index_class(self.cache, self.language, self.storage)
         self.index.update(self)
         self.url_rules = URL.rules(self)

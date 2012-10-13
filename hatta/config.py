@@ -19,6 +19,8 @@ _add('-V', '--version', dest='show_version', default=False,
     help='Display version and exit', action="store_true")
 _add('-d', '--pages-dir', dest='pages_path',
     help='Store pages in DIR', metavar='DIR')
+_add('-R', '--repo-dir', dest='repo_path',
+    help='Use the repository at DIR', metavar='DIR')
 _add('-t', '--cache-dir', dest='cache_path',
     help='Store cache in DIR', metavar='DIR')
 _add('-i', '--interface', dest='interface',

@@ -7,7 +7,7 @@ import setuptools
 ################### Common settings ######################
 
 setuptools.setup(
-    name='hatta',
+    name='Hatta',
     version='1.5.0',
     license='GNU General Public License (GPL)',
     author='Radomir Dopieralski',

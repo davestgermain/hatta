@@ -127,7 +127,10 @@ class WikiConfig(object):
             files = [self.get('config_file', self.default_filename)]
         parser = mercurial.config.config()
         for path in files:
-            parser.read(path)
+            try:
+                parser.read(path)
+            except IOError:
+                pass
         section = 'hatta'
         try:
             options = parser.items(section)

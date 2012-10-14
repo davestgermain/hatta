@@ -5,7 +5,7 @@
 
 {% block content %}
     <form action="" method="POST" class="editor"><div>
-    <textarea name="text" cols="80" rows="20" id="edtortext"
+    <textarea name="text" cols="80" rows="20" id="editortext"
     >{% for line in lines %}{{ line }}{% endfor %}</textarea>
     <input type="hidden" name="parent" value="{{ parent }}">
     <label class="comment">{{ _("Comment") }} <input

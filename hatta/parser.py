@@ -357,7 +357,8 @@ class WikiParser(object):
                 link_text, chunk = link_text.split('#', 1)
         match = self.image_re.match(link_text)
         if match:
-            params = match.groupdict()
+            params = dict((str(k), v) for (k, v) in
+                          match.groupdict().iteritems())
             image = self._line_image(**params)
             return self.wiki_link(link_target, link_text, image=image)
         return self.wiki_link(link_target, link_text)

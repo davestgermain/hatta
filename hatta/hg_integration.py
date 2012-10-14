@@ -3,7 +3,7 @@
 
 import os
 
-from config import WikiConfig
+from hatta.config import WikiConfig
 from __main__ import main
 
 

@@ -1,10 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import itertools
 import re
 import sys
 import unicodedata
-import itertools
 import werkzeug
 
 

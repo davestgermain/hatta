@@ -1,28 +1,28 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import os
-import tempfile
-import thread
-import re
-import werkzeug
 import datetime
 import errno
+import os
+import re
+import tempfile
+import thread
+import werkzeug
 
 # Note: we have to set these before importing Mercurial
 os.environ['HGENCODING'] = 'utf-8'
 os.environ['HGMERGE'] = "internal:merge"
 
-import mercurial.hg
-import mercurial.ui
-import mercurial.revlog
-import mercurial.util
-import mercurial.hgweb
 import mercurial.commands
+import mercurial.hg
+import mercurial.hgweb
 import mercurial.merge
+import mercurial.revlog
+import mercurial.ui
+import mercurial.util
 
-import error
-import page
+from hatta import error
+from hatta import page
 
 
 class StorageError(Exception):

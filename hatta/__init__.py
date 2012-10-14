@@ -18,13 +18,25 @@ See hatta.py --help for usage.
 """
 
 # Exposed API
-from wiki import Wiki, WikiResponse, WikiRequest
-from config import WikiConfig, read_config
-from __main__ import main
-from parser import WikiParser, WikiWikiParser
-from storage import WikiStorage, WikiSubdirectoryStorage
-from page import WikiPage, WikiPageText, WikiPageWiki
-from page import WikiPageColorText, WikiPageFile, WikiPageImage
+from hatta.config import WikiConfig, read_config
+from hatta.__main__ import main
+from hatta.page import WikiPageColorText, WikiPageFile, WikiPageImage
+from hatta.page import WikiPage, WikiPageText, WikiPageWiki
+from hatta.parser import WikiParser, WikiWikiParser
+from hatta.storage import WikiStorage, WikiSubdirectoryStorage
+from hatta.wiki import Wiki, WikiResponse, WikiRequest
+
+
+__all__ = [
+    'WikiConfig', 'read_config',
+    'main',
+    'WikiPageColorText', 'WikiPageFile', 'WikiPageImage',
+    'WikiPage', 'WikiPageText', 'WikiPageWiki',
+    'WikiParser', 'WikiWikiParser',
+    'WikiStorage', 'WikiSubdirectoryStorage',
+    'Wiki', 'WikiResponse', 'WikiRequest',
+    '__version__', 'project_name', 'project_url', 'project_description',
+]
 
 # Project's metainformation
 __version__ = '1.5.0'

@@ -3,8 +3,8 @@
 
 import difflib
 import mimetypes
-import re
 import os
+import re
 
 import werkzeug
 import werkzeug.contrib.atom
@@ -12,10 +12,10 @@ import werkzeug.contrib.atom
 pygments = None
 try:
     import pygments
-    import pygments.util
-    import pygments.lexers
     import pygments.formatters
+    import pygments.lexers
     import pygments.styles
+    import pygments.util
 except ImportError:
     pass
 
@@ -25,13 +25,13 @@ try:
 except ImportError:
     pass
 
-import parser
-import error
+from hatta import error
+from hatta import parser
 
 
 def page_mime(title):
     """
-    Guess page's mime type ased on corresponding file name.
+    Guess page's mime type based on corresponding file name.
     Default ot text/x-wiki for files without an extension.
 
     >>> page_mime(u'something.txt')

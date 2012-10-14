@@ -1,12 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import sqlite3
-import re
 import os
+import re
+import sqlite3
 import thread
 
-import error
+from hatta import error
 
 
 class WikiSearch(object):

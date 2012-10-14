@@ -20,11 +20,11 @@ except ImportError:
     pass
 
 import hatta
-import error
-import page
-import parser
-import search
-import storage
+from hatta import error
+from hatta import page
+from hatta import parser
+from hatta import search
+from hatta import storage
 
 import mercurial  # import it after storage!
 

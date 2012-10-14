@@ -58,6 +58,17 @@ def _get_ui():
     return ui
 
 
+def _get_datetime(filectx):
+    """
+    Create a datetime object for the changeset's cretion time, taking into
+    account the timezones.
+    """
+
+    timestamp, offset = filectx.date()
+    date = datetime.datetime.fromtimestamp(timestamp + offset)
+    return date
+
+
 class WikiStorage(object):
     """
     Provides means of storing wiki pages and keeping track of their
@@ -344,7 +355,7 @@ class WikiStorage(object):
             #return -1, None, u'', u''
         rev = filectx_tip.filerev()
         filectx = filectx_tip.filectx(rev)
-        date = datetime.datetime.fromtimestamp(filectx.date()[0])
+        date = _get_datetime(filectx)
         author = unicode(filectx.user(), "utf-8",
                          'replace').split('<')[0].strip()
         comment = unicode(filectx.description(), "utf-8", 'replace')
@@ -391,7 +402,7 @@ class WikiStorage(object):
         minrev = 0
         for rev in range(maxrev, minrev - 1, -1):
             filectx = filectx_tip.filectx(rev)
-            date = datetime.datetime.fromtimestamp(filectx.date()[0])
+            date = _get_datetime(filectx)
             author = unicode(filectx.user(), "utf-8",
                              'replace').split('<')[0].strip()
             comment = unicode(filectx.description(), "utf-8", 'replace')
@@ -424,7 +435,7 @@ class WikiStorage(object):
         minrev = 0
         for wiki_rev in range(maxrev, minrev - 1, -1):
             change = self.repo.changectx(wiki_rev)
-            date = datetime.datetime.fromtimestamp(change.date()[0])
+            date = _get_datetime(change)
             author = unicode(change.user(), "utf-8",
                              'replace').split('<')[0].strip()
             comment = unicode(change.description(), "utf-8", 'replace')

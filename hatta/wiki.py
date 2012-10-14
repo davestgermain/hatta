@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import gettext
-import os
-import sys
-import re
-import tempfile
 import itertools
+import os
+import pkgutil
+import re
+import sys
+import tempfile
 
 import werkzeug
 import werkzeug.routing
@@ -19,12 +20,11 @@ except ImportError:
     pass
 
 import hatta
-import storage
-import search
+import error
 import page
 import parser
-import error
-import data
+import search
+import storage
 
 import mercurial  # import it after storage!
 
@@ -205,9 +205,6 @@ class Wiki(object):
     index_class = search.WikiSearch
     filename_map = page.filename_map
     mime_map = page.mime_map
-    icon = data.icon
-    scripts = data.scripts
-    style = data.style
 
     def __init__(self, config):
         if config.get_bool('show_version', False):
@@ -341,11 +338,14 @@ It can only be edited by the site admin directly on the disk."""))
         if title in self.index.page_links(self.locked_page):
             raise error.ForbiddenErr(_(u"This page is locked."))
 
-    def _serve_default(self, request, title, content, mime):
+    def _serve_default(self, request, title, content=None, mime=None):
         """Some pages have their default content."""
 
         if title in self.storage:
             return self.download(request, title)
+        if content is None:
+            content = pkgutil.get_data('hatta', os.path.join('static', title))
+        mime = mime or 'application/octet-stream'
         response = WikiResponse(content, mimetype=mime)
         response.set_etag('/%s/-1' % title)
         response.make_conditional(request)
@@ -847,15 +847,15 @@ It can only be edited by the site admin directly on the disk."""))
     def scripts_js(self, request):
         """Server the default scripts"""
 
-        return self._serve_default(request, 'scripts.js', self.scripts,
-                                   'text/javascript')
+        return self._serve_default(request, 'scripts.js',
+                                   mime='text/javascript')
 
     @URL('/+download/style.css')
     def style_css(self, request):
         """Serve the default style"""
 
-        return self._serve_default(request, 'style.css', self.style,
-                                   'text/css')
+        return self._serve_default(request, 'style.css',
+                                   mime='text/css')
 
     @URL('/+download/pygments.css')
     def pygments_css(self, request):
@@ -878,23 +878,15 @@ It can only be edited by the site admin directly on the disk."""))
     def favicon_ico(self, request):
         """Serve the default favicon."""
 
-        return self._serve_default(request, 'favicon.ico', self.icon,
-                                   'image/x-icon')
+        return self._serve_default(request, 'favicon.ico',
+                                   mime='image/x-icon')
 
     @URL('/robots.txt')
     def robots_txt(self, request):
         """Serve the robots directives."""
 
-        robots = ('User-agent: *\r\n'
-                  'Disallow: /+*\r\n'
-                  'Disallow: /%2B*\r\n'
-                  'Disallow: /+edit\r\n'
-                  'Disallow: /+feed\r\n'
-                  'Disallow: /+history\r\n'
-                  'Disallow: /+search\r\n'
-                  'Disallow: /+hg\r\n')
-        return self._serve_default(request, 'robots.txt', robots,
-                                   'text/plain')
+        return self._serve_default(request, 'robots.txt',
+                                   mime='text/plain')
 
     @URL('/+hg<all:path>', methods=['GET', 'POST', 'HEAD'])
     def hgweb(self, request, path=None):

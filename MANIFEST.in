@@ -2,3 +2,4 @@ include hatta/*.py
 recursive-include examples *
 recursive-include locale *
 recursive-include hatta/templates *.html
+recursive-include hatta/static *

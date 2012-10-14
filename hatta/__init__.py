@@ -25,6 +25,7 @@ from hatta.page import WikiPage, WikiPageText, WikiPageWiki
 from hatta.parser import WikiParser, WikiWikiParser
 from hatta.storage import WikiStorage, WikiSubdirectoryStorage
 from hatta.wiki import Wiki, WikiResponse, WikiRequest
+from hatta.hg_integration import cmdtable
 
 
 __all__ = [
@@ -36,13 +37,12 @@ __all__ = [
     'WikiStorage', 'WikiSubdirectoryStorage',
     'Wiki', 'WikiResponse', 'WikiRequest',
     '__version__', 'project_name', 'project_url', 'project_description',
+    'cmdtable',
 ]
 
 # Project's metainformation
-__version__ = '1.5.0'
+__version__ = '1.5.1'
 project_name = 'Hatta'
 project_url = 'http://hatta-wiki.org/'
 project_description = 'Wiki engine that lives in Mercurial repository.'
 
-# Make it work as Mercurial extension
-from hg_integration import cmdtable

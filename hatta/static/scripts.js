@@ -44,7 +44,7 @@ var localize_dates = function () {
 var js_editor = function () {
     /* Make double click invoke the editor and scroll it to the right place. */
 
-    var textBox = document.getElementById('editortext');
+    var textBox = document.getElementById('hatta-editortext');
     if (textBox) {
         /* We have an editor, so scroll it to the right place. */
         var jumpLine = 0 + document.location.hash.substring(1);

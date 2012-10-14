@@ -7,14 +7,14 @@
 {% block content %}
     <p>{{ _("This is a binary file, it can't be edited on a wiki. "
             "Please upload a new version instead.") }}</p>
-    <form action="" method="POST" class="editor"
+    <form action="" method="POST" id="hatta-editor"
           enctype="multipart/form-data"><div>
         <div class="upload"><input type="file" name="data"></div>
-        <label class="comment">{{ _("Comment") }} <input
+        <label id="hatta-comment">{{ _("Comment") }} <input
             name="comment" value="{{ comment }}"></label>
-        <label class="comment">{{ _("Author") }} <input
+        <label id="hatta-author">{{ _("Author") }} <input
             name="author" value="{{ author }}"></label>
-        <div class="buttons">
+        <div id="hatta-buttons">
             <input type="submit" name="save" value="{{ _("Save") }}">
             <input type="submit" name="cancel" value="{{ _("Cancel") }}">
         </div>

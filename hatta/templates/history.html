@@ -15,7 +15,8 @@
                 <li><a href="{{ date_url }}"
                     >{{ date_html(date)|safe }}</a>
                 {% if edit_url %}
-                <input type="submit" name="{{ rev }}" value="{{ _('Undo') }}">
+                <input class="button"
+                       type="submit" name="{{ rev }}" value="{{ _('Undo') }}">
                 {% endif %}
                 . . . .
                 <i>{{ page.wiki_link('~%s' % author, author)|safe }}</i>

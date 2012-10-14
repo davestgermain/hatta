@@ -4,12 +4,12 @@
 {% block title %}{{ _("Recent changes") }} - {{ wiki.site_name }}{% endblock %}
 
 {% block content %}
-    <ul class="changes">
+    <ul id="hatta-changes">
     {% for date, date_url, title, author, comment in changes %}
         <li><a href="{{ date_url }}">{{ date_html(date)|safe }}</a>
             <b>{{ page.wiki_link(title)|safe }}</b> . . . .
-            <i>{{ page.wiki_link("~%s" % author, author)|safe }}</i>
-            <div class="comment">{{ comment }}</div>
+            <i>{{ page.wiki_link('~' + author, author)|safe }}</i>
+            <div class="hatta-comment">{{ comment }}</div>
         </li>
     {% endfor %}
     </ul>

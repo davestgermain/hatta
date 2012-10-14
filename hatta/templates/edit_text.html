@@ -4,22 +4,22 @@
 {% block title %}{{ _("Editing \"%(title)s\"", title=title) }}{% endblock %}
 
 {% block content %}
-    <form action="" method="POST" class="editor"><div>
-    <textarea name="text" cols="80" rows="20" id="editortext"
+    <form action="" method="POST" id="hatta-editor"><div>
+    <textarea name="text" cols="80" rows="20" id="hatta-editortext"
     >{% for line in lines %}{{ line }}{% endfor %}</textarea>
     <input type="hidden" name="parent" value="{{ parent }}">
-    <label class="comment">{{ _("Comment") }} <input
+    <label id="hatta-comment">{{ _("Comment") }} <input
         name="comment" value="{{ comment }}"></label>
-    <label class="comment">{{ _("Author") }} <input
+    <label id="hatta-author">{{ _("Author") }} <input
         name="author" value="{{ author }}"></label>
-    <div class="buttons">
+    <div id="hatta-buttons">
         <input type="submit" name="save" value="{{ _("Save") }}">
         <input type="submit" name="preview" value="{{ _("Preview") }}">
         <input type="submit" name="cancel" value="{{ _("Cancel") }}">
     </div>
     </div></form>
     {% if preview %}
-        <h1 class="preview">{{ _("Preview, not saved") }}</h1>
+        <h1 id="hatta-preview-title">{{ _("Preview, not saved") }}</h1>
         <div id="hatta-preview">
         {% for part in page.view_content(preview) %}{{ part|safe }}{% endfor %}
         </div>

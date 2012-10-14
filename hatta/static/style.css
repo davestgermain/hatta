@@ -138,11 +138,11 @@ div#hatta-header div#hatta-menu a.current {
 }
 
 /* Buttons */
-div.buttons {
+div#hatta-buttons {
     text-align: center;
 }
 input.button,
-div.buttons input {
+div#hatta-buttons input {
     font-weight: bold;
     font-size: 100%;
     background: #eee;
@@ -150,31 +150,36 @@ div.buttons input {
     margin: 0.25em;
     color: #888a85;
 }
-.history input.button {
+#hatta-history input.button {
     font-size: 75%;
+}
+input.button:hover,
+div#hatta-buttons input:hover {
+    border: solid 1px #888a85;
+    color: #2e3436;
 }
 
 /* Editor */
-.editor textarea {
+form#hatta-editor textarea {
     width: 100%;
     display: block;
     font-size: 100%;
     border: solid 1px #babdb6;
 }
-.editor label {
+form#hatta-editor label {
     display:block;
     text-align: right;
 }
-.editor .upload {
+form#hatta-editor .upload {
     margin: 2em auto;
     text-align: center;
 }
-.editor label input {
+form#hatta-editor label input {
     font-size: 100%;
     border: solid 1px #babdb6;
     margin: 0.125em 0;
 }
-.editor label.comment input {
+form#hatta-editor label#hatta-comment input {
     width: 32em;
 }
 
@@ -189,7 +194,7 @@ form#hatta-search {
     text-align: right;
     font-size: 80%;
 }
-div.snippet {
+#hatta-search-results div.hatta-snippet {
     font-size: 80%;
     color: #888a85;
 }

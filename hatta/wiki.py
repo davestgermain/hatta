@@ -807,11 +807,11 @@ It can only be edited by the site admin directly on the disk."""))
             result = sorted(self.index.find(words), key=lambda x: -x[0])
             yield werkzeug.html.p(h(_(u'%d page(s) containing all words:')
                                   % len(result)))
-            yield u'<ol class="search">'
+            yield u'<ol id="hatta-search-results">'
             for number, (score, title) in enumerate(result):
                 yield h.li(h.b(page.wiki_link(title)), u' ', h.i(str(score)),
                            h.div(search_snippet(title, words),
-                                 _class="snippet"),
+                                 class_="hatta-snippet"),
                            id_="search-%d" % (number + 1))
             yield u'</ol>'
 

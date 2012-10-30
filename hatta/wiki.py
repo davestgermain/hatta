@@ -432,7 +432,8 @@ It can only be edited by the site admin directly on the disk."""))
                     request.form.get('recaptcha_response_field', ''),
                     self.recaptcha_private_key, request.remote_addr)
                 if not response.is_valid:
-                    return self.edit(request, title,
+                    text = request.form.get("text", '')
+                    return self.edit(request, title, preview=text.split('\n'),
                                      captcha_error=response.error_code)
             comment = request.form.get("comment", "")
             author = request.get_author()

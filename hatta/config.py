@@ -61,6 +61,12 @@ _add('-E', '--extension', dest='extension',
 _add('-U', '--unix-eol', dest='unix_eol',
     action="store_true",
     help='Convert all text pages to UNIX-style CR newlines')
+_add('', '--recaptcha-public-key', dest='recaptcha_public_key',
+    metavar='KEY',
+    help='A public key KEY for ReCAPTCHA service.')
+_add('', '--recaptcha-private-key', dest='recaptcha_private_key',
+    metavar='KEY',
+    help='A private key KEY for ReCAPTCHA service.')
 
 
 class WikiConfig(object):

@@ -19,6 +19,12 @@ try:
 except ImportError:
     pass
 
+captcha = None
+try:
+    from recaptcha.client import captcha
+except ImportError:
+    pass
+
 import hatta
 from hatta import error
 from hatta import page
@@ -246,6 +252,10 @@ class Wiki(object):
         self.subdirectories = self.config.get_bool('subdirectories', False)
         self.extension = self.config.get('extension', None)
         self.unix_eol = self.config.get_bool('unix_eol', False)
+        self.recaptcha_public_key = self.config.get(
+                'recaptcha_public_key', None)
+        self.recaptcha_private_key = self.config.get(
+                'recaptcha_private_key', None)
         if self.subdirectories:
             self.storage = storage.WikiSubdirectoryStorage(self.path,
                 self.page_charset, self.gettext, self.unix_eol, self.extension,
@@ -416,6 +426,14 @@ It can only be edited by the site admin directly on the disk."""))
                     _(u'No preview for binaries.')))]
             return self.edit(request, title, preview=lines)
         elif request.form.get('save'):
+            if captcha and self.recaptcha_private_key:
+                response = captcha.submit(
+                    request.form.get('recaptcha_challenge_field', ''),
+                    request.form.get('recaptcha_response_field', ''),
+                    self.recaptcha_private_key, request.remote_addr)
+                if not response.is_valid:
+                    return self.edit(request, title,
+                                     captcha_error=response.error_code)
             comment = request.form.get("comment", "")
             author = request.get_author()
             text = request.form.get("text")
@@ -462,13 +480,13 @@ It can only be edited by the site admin directly on the disk."""))
         return response
 
     @URL('/+edit/<title:title>', methods=['GET'])
-    def edit(self, request, title, preview=None):
+    def edit(self, request, title, preview=None, captcha_error=None):
         self._check_lock(title)
         exists = title in self.storage
         if exists:
             self.storage.reopen()
         page = self.get_page(request, title)
-        html = page.render_editor(preview)
+        html = page.render_editor(preview, captcha_error)
         if not exists:
             response = WikiResponse(html, mimetype="text/html",
                                      status='404 Not found')

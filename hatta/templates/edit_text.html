@@ -12,6 +12,9 @@
         name="comment" value="{{ comment }}"></label>
     <label id="hatta-author">{{ _("Author") }} <input
         name="author" value="{{ author }}"></label>
+    {% if recaptcha_html %}
+    <div id="hatta-recaptcha">{{ recaptcha_html|safe }}</div>
+    {% endif %}
     <div id="hatta-buttons">
         <input type="submit" name="save" value="{{ _("Save") }}">
         <input type="submit" name="preview" value="{{ _("Preview") }}">

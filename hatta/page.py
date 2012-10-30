@@ -19,6 +19,12 @@ try:
 except ImportError:
     pass
 
+captcha = None
+try:
+    from recaptcha.client import captcha
+except ImportError:
+    pass
+
 Image = None
 try:
     import Image
@@ -237,7 +243,7 @@ class WikiPage(object):
                 dependencies.add(etag)
         return dependencies
 
-    def render_editor(self, preview=None):
+    def render_editor(self, preview=None, captcha_error=None):
         _ = self.wiki.gettext
         author = self.request.get_author()
         if self.title in self.storage:
@@ -249,7 +255,13 @@ class WikiPage(object):
         else:
             comment = _(u'uploaded')
             rev = -1
+        if captcha and self.wiki.recaptcha_public_key:
+            recaptcha_html = captcha.displayhtml(
+                    self.wiki.recaptcha_public_key, error=captcha_error)
+        else:
+            recaptcha_html = None
         return self.template('edit_file.html', comment=comment,
+                             recaptcha_html=recaptcha_html,
                              author=author, parent=rev)
 
 
@@ -284,7 +296,7 @@ class WikiPageText(WikiPage):
             lines = self.storage.page_lines(f)
         return self.content_iter(lines)
 
-    def render_editor(self, preview=None):
+    def render_editor(self, preview=None, captcha_error=None):
         """Generate the HTML for the editor."""
 
         _ = self.wiki.gettext
@@ -306,8 +318,14 @@ class WikiPageText(WikiPage):
         if preview:
             lines = preview
             comment = self.request.form.get('comment', comment)
+        if captcha and self.wiki.recaptcha_public_key:
+            recaptcha_html = captcha.displayhtml(
+                    self.wiki.recaptcha_public_key, error=captcha_error)
+        else:
+            recaptcha_html = None
         return self.template('edit_text.html', comment=comment,
                              preview=preview,
+                             recaptcha_html=recaptcha_html,
                              author=author, parent=rev, lines=lines)
 
     def diff_content(self, from_text, to_text, message=u''):

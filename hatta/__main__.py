@@ -48,9 +48,8 @@ def main(config=None, wiki=None):
             except KeyboardInterrupt:
                 pass
             return
-    apps = [('', app)]
     name = wiki.site_name
-    server = wsgiserver.CherryPyWSGIServer((host, port), apps,
+    server = wsgiserver.CherryPyWSGIServer((host, port), app,
                                            server_name=name)
     try:
         server.start()

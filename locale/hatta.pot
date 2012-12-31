@@ -36,7 +36,7 @@ msgid "created"
 msgstr ""
 
 #: hatta/page.py:543
-msgid "Error parsing CSV file %{file}s online %{line}d: %{error}s"
+msgid "Error parsing CSV file %{file}s on line %{line}d: %{error}s"
 msgstr ""
 
 #: hatta/storage.py:124

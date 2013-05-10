@@ -1,155 +1,252 @@
-# Hatta Wiki translation
-# Copyright (C) 2010
-# Radomir Dopieralski <hatta@sheep.art.pl>, 2012.
+# Translations template for PROJECT.
+# Copyright (C) 2013 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2013.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: Hatta Wiki 1.5.0\n"
-"POT-Creation-Date: 2012-10-13 15:37+CEST\n"
+"POT-Creation-Date: 2013-05-10 15:13+0200\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: pygettext.py 1.5\n"
+"Generated-By: Babel 0.9.6\n"
 
-
-#: hatta/page.py:192
+#: hatta/page.py:198 hatta/templates/changes.html:3
+#: hatta/templates/changes.html:4
 msgid "Recent changes"
 msgstr ""
 
-#: hatta/page.py:244
+#: hatta/page.py:250
 msgid "changed"
 msgstr ""
 
-#: hatta/page.py:250
+#: hatta/page.py:256
 msgid "uploaded"
 msgstr ""
 
-#: hatta/page.py:298
+#: hatta/page.py:310
 msgid "modified"
 msgstr ""
 
-#: hatta/page.py:302
+#: hatta/page.py:314
 msgid "created"
 msgstr ""
 
-#: hatta/page.py:543
+#: hatta/page.py:561
 msgid "Error parsing CSV file %{file}s on line %{line}d: %{error}s"
 msgstr ""
 
-#: hatta/storage.py:124
+#: hatta/storage.py:135
 msgid "Can't use symbolic links or directories as pages"
 msgstr ""
 
-#: hatta/storage.py:127 hatta/storage.py:150
+#: hatta/storage.py:138 hatta/storage.py:161
 msgid "Can't read or write outside of the pages repository"
 msgstr ""
 
-#: hatta/storage.py:181
+#: hatta/storage.py:192
 msgid "merge of edit conflict"
 msgstr ""
 
-#: hatta/storage.py:183
+#: hatta/storage.py:194
 msgid "failed merge of edit conflict"
 msgstr ""
 
-#: hatta/storage.py:213
+#: hatta/storage.py:224
 msgid "anon"
 msgstr ""
 
-#: hatta/storage.py:214
+#: hatta/storage.py:225
 msgid "comment"
 msgstr ""
 
-#: hatta/storage.py:534
+#: hatta/storage.py:545
 msgid "made subdirectory page"
 msgstr ""
 
-#: hatta/wiki.py:337
+#: hatta/wiki.py:344
 msgid "This site is read-only."
 msgstr ""
 
-#: hatta/wiki.py:339
+#: hatta/wiki.py:346
 msgid ""
 "Can't edit this page.\n"
 "It can only be edited by the site admin directly on the disk."
 msgstr ""
 
-#: hatta/wiki.py:342 hatta/wiki.py:434
+#: hatta/wiki.py:349 hatta/wiki.py:453
 msgid "This page is locked."
 msgstr ""
 
-#: hatta/wiki.py:379
+#: hatta/wiki.py:389
+#, python-format
 msgid "Content of revision %(rev)d of page %(title)s:"
 msgstr ""
 
-#: hatta/wiki.py:383
+#: hatta/wiki.py:393
+#, python-format
 msgid "Revision of \"%(title)s\""
 msgstr ""
 
-#: hatta/wiki.py:416
+#: hatta/wiki.py:426
 msgid "No preview for binaries."
 msgstr ""
 
-#: hatta/wiki.py:490
+#: hatta/wiki.py:509
 msgid "Track the most recent changes to the wiki in this feed."
 msgstr ""
 
-#: hatta/wiki.py:619
+#: hatta/wiki.py:638
+#, python-format
 msgid "Delete page %(title)s"
 msgstr ""
 
-#: hatta/wiki.py:623
+#: hatta/wiki.py:642
+#, python-format
 msgid "Undo of change %(rev)d of page %(title)s"
 msgstr ""
 
-#: hatta/wiki.py:709
+#: hatta/wiki.py:728
+#, python-format
 msgid "Differences between revisions %(link1)s and %(link2)s of page %(link)s."
 msgstr ""
 
-#: hatta/wiki.py:719
+#: hatta/wiki.py:738
 msgid "Diff not available for this kind of pages."
 msgstr ""
 
-#: hatta/wiki.py:720
+#: hatta/wiki.py:739
+#, python-format
 msgid "Diff for \"%(title)s\""
 msgstr ""
 
-#: hatta/wiki.py:735
+#: hatta/wiki.py:754
 msgid "Index of all pages"
 msgstr ""
 
-#: hatta/wiki.py:736
+#: hatta/wiki.py:755
 msgid "Page Index"
 msgstr ""
 
-#: hatta/wiki.py:751
+#: hatta/wiki.py:770
 msgid "List of pages with no links to them"
 msgstr ""
 
-#: hatta/wiki.py:752
+#: hatta/wiki.py:771
 msgid "Orphaned pages"
 msgstr ""
 
-#: hatta/wiki.py:808
+#: hatta/wiki.py:827
+#, python-format
 msgid "%d page(s) containing all words:"
 msgstr ""
 
-#: hatta/wiki.py:826
+#: hatta/wiki.py:845
+#, python-format
 msgid "Searching for \"%s\""
 msgstr ""
 
-#: hatta/wiki.py:867
+#: hatta/wiki.py:886
 msgid "Code highlighting is not available."
 msgstr ""
 
-#: hatta/wiki.py:907
+#: hatta/wiki.py:918
 msgid "Repository access disabled."
 msgstr ""
 
-#: hatta/wiki.py:927
+#: hatta/wiki.py:938
 msgid "This URL can only be called locally."
 msgstr ""
+
+#: hatta/templates/backlinks.html:6 hatta/templates/backlinks.html:8
+#, python-format
+msgid "Links to %(title)s"
+msgstr ""
+
+#: hatta/templates/backlinks.html:11
+#, python-format
+msgid "Pages that contain a link to %(link)s."
+msgstr ""
+
+#: hatta/templates/edit_file.html:3 hatta/templates/edit_file.html:5
+#: hatta/templates/edit_text.html:3 hatta/templates/edit_text.html:4
+#, python-format
+msgid "Editing \"%(title)s\""
+msgstr ""
+
+#: hatta/templates/edit_file.html:8
+msgid ""
+"This is a binary file, it can't be edited on a wiki. Please upload a new "
+"version instead."
+msgstr ""
+
+#: hatta/templates/edit_file.html:13 hatta/templates/edit_text.html:11
+msgid "Comment"
+msgstr ""
+
+#: hatta/templates/edit_file.html:15 hatta/templates/edit_text.html:13
+msgid "Author"
+msgstr ""
+
+#: hatta/templates/edit_file.html:21 hatta/templates/edit_text.html:19
+msgid "Save"
+msgstr ""
+
+#: hatta/templates/edit_file.html:22 hatta/templates/edit_text.html:21
+msgid "Cancel"
+msgstr ""
+
+#: hatta/templates/edit_text.html:20
+msgid "Preview"
+msgstr ""
+
+#: hatta/templates/edit_text.html:25
+msgid "Preview, not saved"
+msgstr ""
+
+#: hatta/templates/history.html:6 hatta/templates/history.html:8
+#, python-format
+msgid "History of %(title)s"
+msgstr ""
+
+#: hatta/templates/history.html:11
+#, python-format
+msgid "History of changes for %(link)s."
+msgstr ""
+
+#: hatta/templates/history.html:19
+msgid "Undo"
+msgstr ""
+
+#: hatta/templates/page.html:9
+msgid "Edit"
+msgstr ""
+
+#: hatta/templates/page.html:12
+msgid "History"
+msgstr ""
+
+#: hatta/templates/page.html:14
+msgid "Backlinks"
+msgstr ""
+
+#: hatta/templates/wanted.html:3 hatta/templates/wanted.html:4
+msgid "Wanted pages"
+msgstr ""
+
+#: hatta/templates/wanted.html:7
+msgid "List of pages that are linked to, but don't exist yet."
+msgstr ""
+
+#: hatta/templates/wanted.html:13
+#, python-format
+msgid "%(num)d reference"
+msgid_plural "%(num)d references"
+msgstr[0] ""
+msgstr[1] ""
 

@@ -1,13 +1,11 @@
-# Translations template for PROJECT.
-# Copyright (C) 2013 ORGANIZATION
-# This file is distributed under the same license as the PROJECT project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2013.
+# Translations template for Hatta Wiki.
+# This file is distributed under the same license as the Hatta Wiki project.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Hatta Wiki 1.5.0\n"
-"POT-Creation-Date: 2013-05-10 15:13+0200\n"
+"Project-Id-Version: Hatta Wiki 1.5.3\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2013-05-10 17:10+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -233,6 +231,22 @@ msgstr ""
 
 #: hatta/templates/page.html:14
 msgid "Backlinks"
+msgstr ""
+
+#: hatta/templates/page_special.html:9
+msgid "Changes"
+msgstr ""
+
+#: hatta/templates/page_special.html:10
+msgid "Index"
+msgstr ""
+
+#: hatta/templates/page_special.html:11
+msgid "Orphaned"
+msgstr ""
+
+#: hatta/templates/page_special.html:12
+msgid "Wanted"
 msgstr ""
 
 #: hatta/templates/wanted.html:3 hatta/templates/wanted.html:4

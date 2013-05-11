@@ -592,6 +592,8 @@ class WikiSubdirectoryStorage(WikiStorage):
 
         for (dirpath, dirnames, filenames) in os.walk(self.path):
             path = dirpath[len(self.path) + 1:]
+            if path.startswith('.'):
+                continue
             for name in filenames:
                 filepath = os.path.join(dirpath, name)
                 repopath = os.path.join(self.repo_prefix, path, name)

@@ -1,184 +1,270 @@
-# Hatta wiki engine
-# Azda <azda@koldfront.dk>, 2008.
-#
+# Translations template for Hatta Wiki.
+# This file is distributed under the same license as the Hatta Wiki project.
+# 
+# Translators:
+# Azda <azda@koldfront.dk>, 2008
 msgid ""
 msgstr ""
-"Project-Id-Version: hatta 1.2.0\n"
-"POT-Creation-Date: 2008-12-05 10:29+CET\n"
-"PO-Revision-Date: 2008-12-13 22:21+0100\n"
-"Last-Translator: Azda <azda@koldfront.dk>\n"
+"Project-Id-Version: Hatta\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2013-05-10 17:10+0200\n"
+"PO-Revision-Date: 2013-05-10 15:13+0000\n"
+"Last-Translator: Radomir Dopieralski <transifex@sheep.art.pl>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: pygettext.py 1.5\n"
+"Generated-By: Babel 0.9.6\n"
+"Language: sv\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-
-#: hatta.py:219
-msgid "anon"
-msgstr "anonym"
-
-#: hatta.py:220
-msgid "comment"
-msgstr "kommentar"
-
-#: hatta.py:675
-msgid ""
-"am ii iii per po re a about above\n"
-"across after afterwards again against all almost alone along already also\n"
-"although always am among ain amongst amoungst amount an and another any aren\n"
-"anyhow anyone anything anyway anywhere are around as at back be became because\n"
-"become becomes becoming been before beforehand behind being below beside\n"
-"besides between beyond bill both but by can cannot cant con could couldnt\n"
-"describe detail do done down due during each eg eight either eleven else etc\n"
-"elsewhere empty enough even ever every everyone everything everywhere except\n"
-"few fifteen fifty fill find fire first five for former formerly forty found\n"
-"four from front full further get give go had has hasnt have he hence her here\n"
-"hereafter hereby herein hereupon hers herself him himself his how however\n"
-"hundred i ie if in inc indeed interest into is it its itself keep last latter\n"
-"latterly least isn less made many may me meanwhile might mill mine more\n"
-"moreover most mostly move much must my myself name namely neither never\n"
-"nevertheless next nine no nobody none noone nor not nothing now nowhere of off\n"
-"often on once one only onto or other others otherwise our ours ourselves out\n"
-"over own per perhaps please pre put rather re same see seem seemed seeming\n"
-"seems serious several she should show side since sincere six sixty so some\n"
-"somehow someone something sometime sometimes somewhere still such take ten than\n"
-"that the their theirs them themselves then thence there thereafter thereby\n"
-"therefore therein thereupon these they thick thin third this those though three\n"
-"through throughout thru thus to together too toward towards twelve twenty two\n"
-"un under ve until up upon us very via was wasn we well were what whatever when\n"
-"whence whenever where whereafter whereas whereby wherein whereupon wherever\n"
-"whether which while whither who whoever whole whom whose why will with within\n"
-"without would yet you your yours yourself yourselves"
-msgstr ""
-
-#: hatta.py:1087
-msgid "Search"
-msgstr "Sök"
-
-#: hatta.py:1115
-msgid "Edit"
-msgstr "Redigera"
-
-#: hatta.py:1117
-msgid "History"
-msgstr "Historik"
-
-#: hatta.py:1119
-msgid "Backlinks"
-msgstr "Hänvisningar hit"
-
-#: hatta.py:1175
-msgid "Content of revision %(rev)d of page %(title)s:"
-msgstr "Innehåll av version %(rev)d av sida %(title)s:"
-
-#: hatta.py:1181
-msgid "Revision of \"%(title)s\""
-msgstr "Version av \"%(title)s\""
-
-#: hatta.py:1250
-msgid "No preview for binaries."
-msgstr "Ingen förhandsvisning av binära filer"
-
-#: hatta.py:1292
-msgid "Editing \"%(title)s\""
-msgstr "Redigerar \"%(title)s\""
-
-#: hatta.py:1335
-msgid "modified"
-msgstr "ändrat"
-
-#: hatta.py:1342
-msgid "created"
-msgstr "skapat"
-
-#: hatta.py:1353 hatta.py:1383
-msgid "Comment"
-msgstr "Kommentar"
-
-#: hatta.py:1355 hatta.py:1385
-msgid "Author"
-msgstr "Författare"
-
-#: hatta.py:1357 hatta.py:1387
-msgid "Save"
-msgstr "Spara"
-
-#: hatta.py:1358
-msgid "Preview"
-msgstr "Förhandsvisning"
-
-#: hatta.py:1359 hatta.py:1388
-msgid "Cancel"
-msgstr "Avbryt"
-
-#: hatta.py:1363
-msgid "Preview, not saved"
-msgstr "Förhandsvisning, ej sparad"
-
-#: hatta.py:1371
-msgid "changed"
-msgstr "ändrat"
-
-#: hatta.py:1377
-msgid "uploaded"
-msgstr "uppladdat"
-
-#: hatta.py:1379
-msgid "This is a binary file, it can't be edited on a wiki. Please upload a new version instead."
-msgstr "Detta är en binär fil; den kan inte redigeras på en wiki. Ladda upp en ny version i stället."
-
-#: hatta.py:1507
-msgid "Track the most recent changes to the wiki in this feed."
-msgstr "Följ de senaste ändringarna i wikin i denna feed."
-
-#: hatta.py:1554
-msgid "Delete page %(title)s"
-msgstr "Radera sida %(title)s"
-
-#: hatta.py:1558
-msgid "Undo of change %(rev)d of page %(title)s"
-msgstr "Ta bort ändring %(rev)d av sida %(title)s"
-
-#: hatta.py:1571
-msgid "History of \"%(title)s\""
-msgstr "Historik för \"%(title)s\""
-
-#: hatta.py:1578
-msgid "History of changes for %(link)s."
-msgstr "Versionshistorik för %(link)s."
-
-#: hatta.py:1601
+#: hatta/page.py:198 hatta/templates/changes.html:3
+#: hatta/templates/changes.html:4
 msgid "Recent changes"
 msgstr "De senaste ändringarna"
 
-#: hatta.py:1651
-msgid "Differences between revisions %(link1)s and %(link2)s of page %(link)s."
+#: hatta/page.py:250
+msgid "changed"
+msgstr "ändrat"
+
+#: hatta/page.py:256
+msgid "uploaded"
+msgstr "uppladdat"
+
+#: hatta/page.py:310
+msgid "modified"
+msgstr "ändrat"
+
+#: hatta/page.py:314
+msgid "created"
+msgstr "skapat"
+
+#: hatta/page.py:561
+msgid "Error parsing CSV file %{file}s on line %{line}d: %{error}s"
+msgstr ""
+
+#: hatta/storage.py:135
+msgid "Can't use symbolic links or directories as pages"
+msgstr ""
+
+#: hatta/storage.py:138 hatta/storage.py:161
+msgid "Can't read or write outside of the pages repository"
+msgstr ""
+
+#: hatta/storage.py:192
+msgid "merge of edit conflict"
+msgstr ""
+
+#: hatta/storage.py:194
+msgid "failed merge of edit conflict"
+msgstr ""
+
+#: hatta/storage.py:224
+msgid "anon"
+msgstr "anonym"
+
+#: hatta/storage.py:225
+msgid "comment"
+msgstr "kommentar"
+
+#: hatta/storage.py:545
+msgid "made subdirectory page"
+msgstr ""
+
+#: hatta/wiki.py:344
+msgid "This site is read-only."
+msgstr ""
+
+#: hatta/wiki.py:346
+msgid ""
+"Can't edit this page.\n"
+"It can only be edited by the site admin directly on the disk."
+msgstr ""
+
+#: hatta/wiki.py:349 hatta/wiki.py:453
+msgid "This page is locked."
+msgstr ""
+
+#: hatta/wiki.py:389
+#, python-format
+msgid "Content of revision %(rev)d of page %(title)s:"
+msgstr "Innehåll av version %(rev)d av sida %(title)s:"
+
+#: hatta/wiki.py:393
+#, python-format
+msgid "Revision of \"%(title)s\""
+msgstr "Version av \"%(title)s\""
+
+#: hatta/wiki.py:426
+msgid "No preview for binaries."
+msgstr "Ingen förhandsvisning av binära filer"
+
+#: hatta/wiki.py:509
+msgid "Track the most recent changes to the wiki in this feed."
+msgstr "Följ de senaste ändringarna i wikin i denna feed."
+
+#: hatta/wiki.py:638
+#, python-format
+msgid "Delete page %(title)s"
+msgstr "Radera sida %(title)s"
+
+#: hatta/wiki.py:642
+#, python-format
+msgid "Undo of change %(rev)d of page %(title)s"
+msgstr "Ta bort ändring %(rev)d av sida %(title)s"
+
+#: hatta/wiki.py:728
+#, python-format
+msgid ""
+"Differences between revisions %(link1)s and %(link2)s of page %(link)s."
 msgstr "Skillnader mellan version %(link1)s och %(link2)s av sidan %(link)s."
 
-#: hatta.py:1657
+#: hatta/wiki.py:738
+msgid "Diff not available for this kind of pages."
+msgstr ""
+
+#: hatta/wiki.py:739
+#, python-format
 msgid "Diff for \"%(title)s\""
 msgstr "Skillnader för \"%(title)s\""
 
-#: hatta.py:1710
-msgid "Page index"
-msgstr "Alla sidor"
+#: hatta/wiki.py:754
+msgid "Index of all pages"
+msgstr ""
 
-#: hatta.py:1712
-msgid "Searching for \"%s\""
-msgstr "Sökning efter \"%s\""
+#: hatta/wiki.py:755
+msgid "Page Index"
+msgstr ""
 
-#: hatta.py:1718
-msgid "Index of all pages."
-msgstr "Alla sidor."
+#: hatta/wiki.py:770
+msgid "List of pages with no links to them"
+msgstr ""
 
-#: hatta.py:1726
+#: hatta/wiki.py:771
+msgid "Orphaned pages"
+msgstr ""
+
+#: hatta/wiki.py:827
+#, python-format
 msgid "%d page(s) containing all words:"
 msgstr "%d sido(r) som innehåller alla orden:"
 
-#: hatta.py:1752
-msgid "Links to \"%s\""
-msgstr "Hänvisningar till \"%s\""
+#: hatta/wiki.py:845
+#, python-format
+msgid "Searching for \"%s\""
+msgstr "Sökning efter \"%s\""
 
-#: hatta.py:1759
-msgid "Pages that contain a link to %s."
-msgstr "Sidor som innehåller en hänvisning till %s."
+#: hatta/wiki.py:886
+msgid "Code highlighting is not available."
+msgstr ""
+
+#: hatta/wiki.py:918
+msgid "Repository access disabled."
+msgstr ""
+
+#: hatta/wiki.py:938
+msgid "This URL can only be called locally."
+msgstr ""
+
+#: hatta/templates/backlinks.html:6 hatta/templates/backlinks.html:8
+#, python-format
+msgid "Links to %(title)s"
+msgstr ""
+
+#: hatta/templates/backlinks.html:11
+#, python-format
+msgid "Pages that contain a link to %(link)s."
+msgstr ""
+
+#: hatta/templates/edit_file.html:3 hatta/templates/edit_file.html:5
+#: hatta/templates/edit_text.html:3 hatta/templates/edit_text.html:4
+#, python-format
+msgid "Editing \"%(title)s\""
+msgstr ""
+
+#: hatta/templates/edit_file.html:8
+msgid ""
+"This is a binary file, it can't be edited on a wiki. Please upload a new "
+"version instead."
+msgstr ""
+
+#: hatta/templates/edit_file.html:13 hatta/templates/edit_text.html:11
+msgid "Comment"
+msgstr ""
+
+#: hatta/templates/edit_file.html:15 hatta/templates/edit_text.html:13
+msgid "Author"
+msgstr ""
+
+#: hatta/templates/edit_file.html:21 hatta/templates/edit_text.html:19
+msgid "Save"
+msgstr ""
+
+#: hatta/templates/edit_file.html:22 hatta/templates/edit_text.html:21
+msgid "Cancel"
+msgstr ""
+
+#: hatta/templates/edit_text.html:20
+msgid "Preview"
+msgstr ""
+
+#: hatta/templates/edit_text.html:25
+msgid "Preview, not saved"
+msgstr ""
+
+#: hatta/templates/history.html:6 hatta/templates/history.html:8
+#, python-format
+msgid "History of %(title)s"
+msgstr ""
+
+#: hatta/templates/history.html:11
+#, python-format
+msgid "History of changes for %(link)s."
+msgstr ""
+
+#: hatta/templates/history.html:19
+msgid "Undo"
+msgstr ""
+
+#: hatta/templates/page.html:9
+msgid "Edit"
+msgstr ""
+
+#: hatta/templates/page.html:12
+msgid "History"
+msgstr ""
+
+#: hatta/templates/page.html:14
+msgid "Backlinks"
+msgstr ""
+
+#: hatta/templates/page_special.html:9
+msgid "Changes"
+msgstr ""
+
+#: hatta/templates/page_special.html:10
+msgid "Index"
+msgstr ""
+
+#: hatta/templates/page_special.html:11
+msgid "Orphaned"
+msgstr ""
+
+#: hatta/templates/page_special.html:12
+msgid "Wanted"
+msgstr ""
+
+#: hatta/templates/wanted.html:3 hatta/templates/wanted.html:4
+msgid "Wanted pages"
+msgstr ""
+
+#: hatta/templates/wanted.html:7
+msgid "List of pages that are linked to, but don't exist yet."
+msgstr ""
+
+#: hatta/templates/wanted.html:13
+#, python-format
+msgid "%(num)d reference"
+msgid_plural "%(num)d references"
+msgstr[0] ""
+msgstr[1] ""

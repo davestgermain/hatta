@@ -1,6 +1,5 @@
-# Translations template for PROJECT.
-# Copyright (C) 2013 ORGANIZATION
-# This file is distributed under the same license as the PROJECT project.
+# Translations template for Hatta Wiki.
+# This file is distributed under the same license as the Hatta Wiki project.
 # 
 # Translators:
 # Radomir Dopieralski <hatta@sheep.art.pl>, 2008
@@ -9,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Hatta\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-05-10 15:13+0200\n"
-"PO-Revision-Date: 2013-05-10 13:35+0000\n"
+"POT-Creation-Date: 2013-05-10 17:10+0200\n"
+"PO-Revision-Date: 2013-05-10 15:14+0000\n"
 "Last-Translator: Radomir Dopieralski <transifex@sheep.art.pl>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -239,6 +238,22 @@ msgstr "Historia"
 #: hatta/templates/page.html:14
 msgid "Backlinks"
 msgstr "Odnośniki"
+
+#: hatta/templates/page_special.html:9
+msgid "Changes"
+msgstr "Zmiany"
+
+#: hatta/templates/page_special.html:10
+msgid "Index"
+msgstr "Indeks"
+
+#: hatta/templates/page_special.html:11
+msgid "Orphaned"
+msgstr "Osierocone"
+
+#: hatta/templates/page_special.html:12
+msgid "Wanted"
+msgstr "Brakujące"
 
 #: hatta/templates/wanted.html:3 hatta/templates/wanted.html:4
 msgid "Wanted pages"

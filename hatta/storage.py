@@ -8,10 +8,10 @@ import re
 import tempfile
 import thread
 import werkzeug
+import StringIO
 
 # Note: we have to set these before importing Mercurial
 os.environ['HGENCODING'] = 'utf-8'
-os.environ['HGMERGE'] = "internal:merge"
 
 import mercurial.commands
 import mercurial.hg
@@ -20,6 +20,7 @@ import mercurial.merge
 import mercurial.revlog
 import mercurial.ui
 import mercurial.util
+import mercurial.simplemerge
 
 from hatta import error
 from hatta import page
@@ -56,6 +57,19 @@ def _get_ui():
         ui._report_untrusted = False
         ui.setconfig('ui', 'interactive', False)
     return ui
+
+
+def merge_func(base, other, this):
+    """Used for merging edit conflicts."""
+
+    if (mercurial.util.binary(this) or mercurial.util.binary(base) or
+        mercurial.util.binary(other)):
+        raise ValueError("can't merge binary data")
+    m3 = mercurial.simplemerge.Merge3Text(base, this, other)
+    return ''.join(m3.merge_lines(start_marker='<<<<<<< local',
+                                  mid_marker='=======',
+                                  end_marker='>>>>>>> other',
+                                  base_marker=None))
 
 
 def _get_datetime(filectx):
@@ -176,115 +190,62 @@ class WikiStorage(object):
     def __iter__(self):
         return self.all_pages()
 
-    def merge_changes(self, changectx, repo_file, text, user, parent):
-        """Commits and merges conflicting changes in the repository."""
-
-        _ = self._
-        tip_node = changectx.node()
-        filectx = changectx[repo_file].filectx(parent)
-        parent_node = filectx.changectx().node()
-
-        self.repo.dirstate.setparents(parent_node)
-        node = self._commit([repo_file], text, user)
-
-        partial = lambda filename: repo_file == filename
+    def _get_parents(self, filename, parent_rev):
+        if parent_rev is None:
+            return 'tip', None
         try:
-            mercurial.merge.update(self.repo, tip_node, True, True, partial)
-            msg = _(u'merge of edit conflict')
-        except mercurial.util.Abort:
-            msg = _(u'failed merge of edit conflict')
-        self.repo.dirstate.setparents(tip_node, node)
-        # Mercurial 1.1 and later need updating the merge state
-        try:
-            mergestate = mercurial.merge.mergestate
-        except AttributeError:
-            pass
-        else:
-            state = mergestate(self.repo)
-            try:
-                state.mark(repo_file, "r")
-            except KeyError:
-                # There were no conflicts to mark
-                pass
-            else:
-                # Mercurial 1.7+ needs a commit
-                try:
-                    commit = state.commit
-                except AttributeError:
-                    pass
-                else:
-                    commit()
-        return msg
-
-    @locked_repo
-    def save_file(self, title, file_name, author=u'', comment=u'',
-                  parent=None):
-        """Save an existing file as specified page."""
-
-        _ = self._
-        user = author.encode('utf-8') or _(u'anon').encode('utf-8')
-        text = comment.encode('utf-8') or _(u'comment').encode('utf-8')
-        repo_file = self._title_to_file(title)
-        file_path = self._file_path(title)
-        self._check_path(file_path)
-        try:
-            mercurial.util.rename(file_name, file_path)
-        except OSError, e:
-            if e.errno == errno.ENAMETOOLONG:
-                # "File name too long"
-                raise error.RequestURITooLarge()
-            else:
-                raise
-        changectx = self._changectx()
-        try:
-            # Mercurial 1.5 and earlier have .add() on the repo
-            add = self.repo.add
-        except AttributeError:
-            # Mercurial 1.6
-            add = self.repo[None].add
-        try:
-            filectx_tip = changectx[repo_file]
-            current_page_rev = filectx_tip.filerev()
+            filetip = self._changectx()[filename]
         except mercurial.revlog.LookupError:
-            add([repo_file])
-            current_page_rev = -1
-        if parent is not None and current_page_rev != parent:
-            msg = self.merge_changes(changectx, repo_file, text, user, parent)
-            user = '<wiki>'
-            text = msg.encode('utf-8')
-        self._commit([repo_file], text, user)
+            if parent_rev != -1:
+                raise IndexError("no such parent revision %r" % parent_rev)
+            return ('tip', None)
+        last_rev = filetip.filerev()
+        if parent_rev > last_rev:
+            raise IndexError("no such parent revision %r" % parent_rev)
+        if parent_rev == last_rev:
+            return ('tip', None)
+        return parent_rev, last_rev
 
-    def _commit(self, files, text, user):
-        try:
-            return self.repo.commit(files=files, text=text, user=user,
-                                    force=True, empty_ok=True)
-        except TypeError:
-            # Mercurial 1.3 doesn't accept empty_ok or files parameter
-            match = mercurial.match.exact(self.repo_path, '', list(files))
-            return self.repo.commit(match=match, text=text, user=user,
-                                    force=True)
-        finally:
-            self._tips = {}
+    def _merge(self, repo_file, parent, other, data):
+        filetip = self._changectx()[repo_file]
+        parent_data = filetip.filectx(parent).data()
+        other_data = filetip.filectx(other).data()
+        return merge_func(parent_data, other_data, data)
 
-    def save_data(self, title, data, author=u'', comment=u'', parent=None):
-        """Save data as specified page."""
+    def save_data(self, title, data, author=None, comment=None, parent=None):
+        """Save a new revision of the page. If the data is None, deletes it."""
 
-        try:
-            temp_path = tempfile.mkdtemp(dir=self.path)
-            file_path = os.path.join(temp_path, 'saved')
-            f = open(file_path, "wb")
-            f.write(data)
-            f.close()
-            self.save_file(title, file_path, author, comment, parent)
-        finally:
-            try:
-                os.unlink(file_path)
-            except OSError:
-                pass
-            try:
-                os.rmdir(temp_path)
-            except OSError:
-                pass
+        _ = self._
+        user = (author or _(u'anon')).encode('utf-8')
+        text = (comment or _(u'comment')).encode('utf-8')
+        repo_file = self._title_to_file(title)
+        parent, other = self._get_parents(repo_file, parent)
+        if data is None:
+            if title not in self:
+                raise error.ForbiddenErr()
+        else:
+            if other is not None:
+                try:
+                    data = self._merge(repo_file, parent, other, data)
+                except ValueError:
+                    text = _(u'failed merge of edit conflict').encode('utf-8')
+        def del_filectxfn(repo, memctx, path):
+            raise IOError()
+        def filectxfn(repo, memctx, path):
+            return mercurial.context.memfilectx(path, data, False, False, None)
+        ctx = mercurial.context.memctx(
+            repo=self.repo,
+            parents=(parent, other),
+            text=text,
+            files=[repo_file],
+            filectxfn=del_filectxfn if data is None else filectxfn,
+            user=user,
+        )
+        self.repo.commitctx(ctx)
+        self._tips = {}
+
+    def delete_page(self, title, author, comment):
+        self.save_data(title, None, author, comment)
 
     def save_text(self, title, text, author=u'', comment=u'', parent=None):
         """Save text as specified page, encoded to charset."""
@@ -302,42 +263,19 @@ class WikiStorage(object):
         return text
 
     def page_lines(self, page):
-        for data in page.xreadlines():
-            yield unicode(data, self.charset, 'replace')
-
-    @locked_repo
-    def delete_page(self, title, author=u'', comment=u''):
-        user = author.encode('utf-8') or 'anon'
-        text = comment.encode('utf-8') or 'deleted'
-        repo_file = self._title_to_file(title)
-        file_path = self._file_path(title)
-        self._check_path(file_path)
-        try:
-            # Mercurial 1.5 and earlier have .remove() on the repo
-            remove = self.repo.remove
-        except AttributeError:
-            # Mercurial 1.6 and later
-            try:
-                remove = self.repo[None].remove
-            except AttributeError:
-                # Mercurial 1.9 and later
-                remove = self.repo[None].forget
-        try:
-            os.unlink(file_path)
-        except OSError:
-            pass
-        remove([repo_file])
-        self._commit([repo_file], text, user)
+        for line in page.read().splitlines():
+            yield line
 
     def open_page(self, title):
         """Open the page and return a file-like object with its contents."""
 
-        file_path = self._file_path(title)
-        self._check_path(file_path)
+        repo_file = self._title_to_file(title)
         try:
-            return open(file_path, "rb")
-        except IOError:
+            filetip = self._changectx()[repo_file]
+        except mercurial.revlog.LookupError:
             raise error.NotFoundErr()
+        data = filetip.data()
+        return StringIO.StringIO(data)
 
     def page_file_meta(self, title):
         """Get page's inode number, size and last modification time."""
@@ -425,7 +363,7 @@ class WikiStorage(object):
             raise error.NotFoundErr()
         try:
             data = filectx_tip.filectx(rev).data()
-        except IndexError:
+        except LookupError:
             raise error.NotFoundErr()
         return data
 
@@ -569,27 +507,6 @@ class WikiSubdirectoryStorage(WikiStorage):
         super(WikiSubdirectoryStorage, self).save_file(title, file_name,
                                                        author, comment, parent)
 
-    @locked_repo
-    def delete_page(self, title, author=u'', comment=u''):
-        """
-        Remove empty directories after deleting a page.
-
-        Note that Mercurial doesn't track directories, so we don't have to
-        commit after removing empty directories.
-        """
-
-        super(WikiSubdirectoryStorage, self).delete_page(title, author,
-                                                         comment)
-        file_path = self._file_path(title)
-        self._check_path(file_path)
-        dir_path = os.path.dirname(file_path)
-        if dir_path != self.repo_path:
-            try:
-                os.removedirs(dir_path)
-            except OSError, e:
-                if e.errno != errno.ENOTEMPTY:
-                    # "Directory not empty"
-                    raise
 
     def all_pages(self):
         """Iterate over the titles of all pages in the wiki."""

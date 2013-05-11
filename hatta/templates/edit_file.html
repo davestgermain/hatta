@@ -23,6 +23,9 @@
         </div>
         <input type="hidden" name="parent" value="{{ parent }}">
     </div></form>
+    {% if help %}
+    <div id="hatta-help">{{ help|safe }}</div>
+    {% endif %}
 {% endblock %}
 
 {% block footer %}{% endblock %}

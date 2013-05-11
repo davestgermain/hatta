@@ -26,6 +26,10 @@
         <div id="hatta-preview">
         {% for part in page.view_content(preview) %}{{ part|safe }}{% endfor %}
         </div>
+    {% else %}
+        {% if help %}
+        <div id="hatta-help">{{ help|safe }}</div>
+        {% endif %}
     {% endif %}
 {% endblock %}
 

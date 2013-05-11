@@ -243,6 +243,13 @@ class WikiPage(object):
                 dependencies.add(etag)
         return dependencies
 
+    def get_edit_help(self):
+        page = self.wiki.get_page(self.request, self.wiki.help_page)
+        try:
+            return ''.join(page.view_content())
+        except error.NotFoundErr:
+            return ''
+
     def render_editor(self, preview=None, captcha_error=None):
         _ = self.wiki.gettext
         author = self.request.get_author()
@@ -265,6 +272,7 @@ class WikiPage(object):
             'author': author,
             'parent': rev,
             'recaptcha_html': recaptcha_html,
+            'help': self.get_edit_help(),
         }
         return self.template('edit_file.html', **context)
 
@@ -327,10 +335,16 @@ class WikiPageText(WikiPage):
                     self.wiki.recaptcha_public_key, error=captcha_error)
         else:
             recaptcha_html = None
-        return self.template('edit_text.html', comment=comment,
-                             preview=preview,
-                             recaptcha_html=recaptcha_html,
-                             author=author, parent=rev, lines=lines)
+        context = {
+            'comment': comment,
+            'preview': preview,
+            'recaptcha_html': recaptcha_html,
+            'help': self.get_edit_help(),
+            'author': author,
+            'parent': rev,
+            'lines': lines,
+        }
+        return self.template('edit_text.html', **context)
 
     def diff_content(self, from_text, to_text, message=u''):
         """Generate the HTML markup for a diff."""

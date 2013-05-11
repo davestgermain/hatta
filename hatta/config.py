@@ -34,6 +34,10 @@ _add('-n', '--site-name', dest='site_name',
     help='Set the name of the site to NAME', metavar='NAME')
 _add('-m', '--front-page', dest='front_page',
     help='Use PAGE as the front page', metavar='PAGE')
+_add('-a', '--alias-page', dest='alias_page',
+    help='Use PAGE as the alias page', metavar='PAGE')
+_add('-H', '--help-page', dest='help_page',
+    help='Use PAGE as the editor help text', metavar='PAGE')
 _add('-e', '--encoding', dest='page_charset',
     help='Use encoding ENC to read and write pages', metavar='ENC')
 _add('-c', '--config-file', dest='config_file',

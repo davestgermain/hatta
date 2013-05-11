@@ -248,6 +248,7 @@ class Wiki(object):
         self.read_only = self.config.get_bool('read_only', False)
         self.icon_page = self.config.get('icon_page', None)
         self.alias_page = self.config.get('alias_page', 'Alias')
+        self.help_page = self.config.get('help_page', 'Help')
         self.pygments_style = self.config.get('pygments_style', 'tango')
         self.subdirectories = self.config.get_bool('subdirectories', False)
         self.extension = self.config.get('extension', None)

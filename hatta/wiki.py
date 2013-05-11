@@ -364,12 +364,16 @@ It can only be edited by the site admin directly on the disk."""))
     @URL('/<title:title>')
     @URL('/')
     def view(self, request, title=None):
+        _ = self.gettext
         if title is None:
             title = self.front_page
         page = self.get_page(request, title)
         try:
             content = page.view_content()
         except error.NotFoundErr:
+            if self.read_only:
+                raise error.NotFoundErr(_(u"Page not found."))
+
             url = request.get_url(title, self.edit, external=True)
             return werkzeug.routing.redirect(url, code=303)
         html = page.template("page.html", content=content)
@@ -952,7 +956,10 @@ It can only be edited by the site admin directly on the disk."""))
             try:
                 endpoint, values = adapter.match()
                 return endpoint(request, **values)
-            except werkzeug.exceptions.HTTPException, err:
+            except error.WikiError as err:
+                err.wiki = self
+                return err
+            except werkzeug.exceptions.HTTPException as err:
                 return err
         finally:
             request.cleanup()

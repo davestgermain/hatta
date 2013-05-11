@@ -26,7 +26,7 @@
 {% endblock %}
 
 {% block logo %}
-    {% if wiki.logo_page in page.storage %}
+    {% if wiki.logo_page in wiki.storage %}
         <a id="hatta-logo"
            href="{{ url(wiki.front_page) }}"><img
              src="{{ download_url(wiki.logo_page) }}"

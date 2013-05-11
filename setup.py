@@ -8,7 +8,7 @@ import setuptools
 
 setuptools.setup(
     name='Hatta',
-    version='1.5.3',
+    version='1.5.4',
     license='GNU General Public License (GPL)',
     author='Radomir Dopieralski',
     author_email='hatta@sheep.art.pl',
@@ -21,15 +21,19 @@ setuptools.setup(
         'jinja2',
 #        'pygments',
     ],
-    tests_require=['py.test'],
+    tests_require=['py.test', 'lxml', 'pygments'],
     data_files=[
         ('share/locale/ar/LC_MESSAGES', ['locale/ar/LC_MESSAGES/hatta.mo']),
+        ('share/locale/da/LC_MESSAGES', ['locale/cs/LC_MESSAGES/hatta.mo']),
         ('share/locale/da/LC_MESSAGES', ['locale/da/LC_MESSAGES/hatta.mo']),
         ('share/locale/de/LC_MESSAGES', ['locale/de/LC_MESSAGES/hatta.mo']),
         ('share/locale/es/LC_MESSAGES', ['locale/es/LC_MESSAGES/hatta.mo']),
+        ('share/locale/es/LC_MESSAGES', ['locale/et/LC_MESSAGES/hatta.mo']),
         ('share/locale/fr/LC_MESSAGES', ['locale/fr/LC_MESSAGES/hatta.mo']),
+        ('share/locale/ja/LC_MESSAGES', ['locale/hu/LC_MESSAGES/hatta.mo']),
         ('share/locale/ja/LC_MESSAGES', ['locale/ja/LC_MESSAGES/hatta.mo']),
         ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
+        ('share/locale/pl/LC_MESSAGES', ['locale/ru/LC_MESSAGES/hatta.mo']),
         ('share/locale/sv/LC_MESSAGES', ['locale/sv/LC_MESSAGES/hatta.mo']),
         ('share/doc/hatta/examples', [
             'examples/hatta.fcg',

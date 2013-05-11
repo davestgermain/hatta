@@ -105,11 +105,13 @@ class WikiStorage(object):
             # Create the repository if needed.
             mercurial.hg.repository(self.ui, self.repo_path, create=True)
         self._repos = {}
+        self._tips = {}
 
     def reopen(self):
         """Close and reopen the repo, to make sure we are up to date."""
 
         self._repos = {}
+        self._tips = {}
 
     @property
     def repo(self):
@@ -168,9 +170,8 @@ class WikiStorage(object):
         return werkzeug.url_unquote(name)
 
     def __contains__(self, title):
-        if title:
-            file_path = self._file_path(title)
-            return os.path.isfile(file_path) and not os.path.islink(file_path)
+        repo_file = self._title_to_file(title)
+        return repo_file in self._changectx()
 
     def __iter__(self):
         return self.all_pages()
@@ -262,6 +263,8 @@ class WikiStorage(object):
             match = mercurial.match.exact(self.repo_path, '', list(files))
             return self.repo.commit(match=match, text=text, user=user,
                                     force=True)
+        finally:
+            self._tips = {}
 
     def save_data(self, title, data, author=u'', comment=u'', parent=None):
         """Save data as specified page."""
@@ -369,12 +372,18 @@ class WikiStorage(object):
     def _changectx(self):
         """Get the changectx of the tip."""
 
+        thread_id = thread.get_ident()
         try:
-            # This is for Mercurial 1.0
-            return self.repo.changectx()
-        except TypeError:
-            # Mercurial 1.3 (and possibly earlier) needs an argument
-            return self.repo.changectx('tip')
+            return self._tips[thread_id]
+        except KeyError:
+            try:
+                # This is for Mercurial 1.0
+                tip = self.repo.changectx()
+            except TypeError:
+                # Mercurial 1.3 (and possibly earlier) needs an argument
+                tip = self.repo.changectx('tip')
+            self._tips[thread_id] = tip
+            return tip
 
     def _find_filectx(self, title):
         """Find the last revision in which the file existed."""
@@ -451,13 +460,11 @@ class WikiStorage(object):
     def all_pages(self):
         """Iterate over the titles of all pages in the wiki."""
 
-        for filename in os.listdir(self.path):
-            file_path = os.path.join(self.path, filename)
-            file_repopath = os.path.join(self.repo_prefix, filename)
-            if (os.path.isfile(file_path)
-                and not os.path.islink(file_path)
-                and not filename.startswith('.')):
-                yield self._file_to_title(file_repopath)
+        for repo_file in self._changectx():
+            if (repo_file.startswith(self.repo_prefix) and
+                '/' not in repo_file[len(self.repo_prefix):]):
+                title = self._file_to_title(repo_file)
+                yield title
 
     def changed_since(self, rev):
         """
@@ -585,18 +592,10 @@ class WikiSubdirectoryStorage(WikiStorage):
                     raise
 
     def all_pages(self):
-        """
-        Iterate over the titles of all pages in the wiki.
-        Include subdirectories but skip over index.
-        """
+        """Iterate over the titles of all pages in the wiki."""
 
-        for (dirpath, dirnames, filenames) in os.walk(self.path):
-            path = dirpath[len(self.path) + 1:]
-            if path.startswith('.'):
-                continue
-            for name in filenames:
-                filepath = os.path.join(dirpath, name)
-                repopath = os.path.join(self.repo_prefix, path, name)
-                if (os.path.isfile(filepath)
-                    and not name.startswith('.')):
-                    yield self._file_to_title(repopath)
+        for repo_file in self._changectx():
+            if repo_file.startswith(self.repo_prefix):
+                title = self._file_to_title(repo_file)
+                yield title
+

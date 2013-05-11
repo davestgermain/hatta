@@ -258,24 +258,21 @@ class WikiStorage(object):
     def page_text(self, title):
         """Read unicode text of a page."""
 
-        data = self.open_page(title).read()
+        data = self.page_data(title)
         text = unicode(data, self.charset, 'replace')
         return text
 
-    def page_lines(self, page):
-        for line in page.read().splitlines():
-            yield line
-
     def open_page(self, title):
         """Open the page and return a file-like object with its contents."""
+        return StringIO.StringIO(self.page_data(title))
 
+    def page_data(self, title):
         repo_file = self._title_to_file(title)
         try:
             filetip = self._changectx()[repo_file]
         except mercurial.revlog.LookupError:
             raise error.NotFoundErr()
-        data = filetip.data()
-        return StringIO.StringIO(data)
+        return filetip.data()
 
     def page_file_meta(self, title):
         """Get page's inode number, size and last modification time."""

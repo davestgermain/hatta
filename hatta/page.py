@@ -238,8 +238,8 @@ class WikiPage(object):
                 dependencies.add(werkzeug.url_quote(title))
         for title in [self.wiki.menu_page]:
             if title in self.storage:
-                inode, size, mtime = self.storage.page_file_meta(title)
-                etag = '%s/%d-%d' % (werkzeug.url_quote(title), inode, mtime)
+                rev, date, author, comment = self.storage.page_meta(title)
+                etag = '%s/%d-%s' % (werkzeug.url_quote(title), rev, date.isoformat())
                 dependencies.add(etag)
         return dependencies
 
@@ -495,8 +495,8 @@ class WikiPageWiki(WikiPageColorText):
         dependencies = WikiPage.dependencies(self)
         for title in [self.wiki.icon_page, self.wiki.alias_page]:
             if title in self.storage:
-                inode, size, mtime = self.storage.page_file_meta(title)
-                etag = '%s/%d-%d' % (werkzeug.url_quote(title), inode, mtime)
+                rev, date, author, comment = self.storage.page_meta(title)
+                etag = '%s/%d-%s' % (werkzeug.url_quote(title), rev, date.isoformat())
                 dependencies.add(etag)
         for link in self.index.page_links(self.title):
             if link not in self.storage:

@@ -8,6 +8,7 @@ import pkgutil
 import re
 import sys
 import tempfile
+import datetime
 
 import werkzeug
 import werkzeug.routing
@@ -321,12 +322,10 @@ class Wiki(object):
 
         response = WikiResponse(content, mimetype=mime)
         if rev is None:
-            inode, _size, mtime = self.storage.page_file_meta(title)
-            response.set_etag(u'%s/%s/%d-%d' % (etag,
+            rev, date, author, comment = self.storage.page_meta(title)
+            response.set_etag(u'%s/%s/%d-%s' % (etag,
                                                 werkzeug.url_quote(title),
-                                                inode, mtime))
-            if size == -1:
-                size = _size
+                                                rev, date.isoformat()))
         else:
             response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title),
                                              rev))
@@ -595,9 +594,9 @@ It can only be edited by the site admin directly on the disk."""))
         cache_dir = os.path.join(self.cache, 'render',
                                   werkzeug.url_quote(title, safe=''))
         cache_file = os.path.join(cache_dir, cache_filename)
-        page_inode, page_size, page_mtime = self.storage.page_file_meta(title)
+        rev, date, author, comment = self.storage.page_meta(title)
         cache_mtime, cache_size = file_time_and_size(cache_file)
-        if page_mtime > cache_mtime:
+        if date > datetime.datetime.fromtimestamp(cache_mtime):
             if not os.path.exists(cache_dir):
                 os.makedirs(cache_dir)
             try:

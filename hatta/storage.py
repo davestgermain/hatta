@@ -274,16 +274,6 @@ class WikiStorage(object):
             raise error.NotFoundErr()
         return filetip.data()
 
-    def page_file_meta(self, title):
-        """Get page's inode number, size and last modification time."""
-
-        try:
-            (st_mode, st_ino, st_dev, st_nlink, st_uid, st_gid, st_size,
-             st_atime, st_mtime, st_ctime) = os.stat(self._file_path(title))
-        except OSError:
-            return 0, 0, 0
-        return st_ino, st_size, st_mtime
-
     def page_meta(self, title):
         """Get page's revision, date, last editor and his edit comment."""
 

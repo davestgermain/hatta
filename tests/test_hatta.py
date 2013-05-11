@@ -20,7 +20,7 @@ def clear_directory(top):
         pass
 
 def pytest_funcarg__wiki(request):
-    basedir = str(request.config.ensuretemp('repo'))
+    basedir = str(py.test.ensuretemp('repo'))
     config = hatta.WikiConfig(
         pages_path=os.path.join(basedir, 'pages'),
         cache_path=os.path.join(basedir, 'cache'),
@@ -183,7 +183,7 @@ u"""* sample list
 
 
 def pytest_funcarg__req(request):
-    basedir = str(request.config.ensuretemp('repo'))
+    basedir = str(py.test.ensuretemp('repo'))
     request.addfinalizer(lambda: clear_directory(basedir))
     config = hatta.WikiConfig(
         pages_path=os.path.join(basedir, 'pages'),

@@ -44,7 +44,7 @@ def pytest_funcarg__repo(request):
     temporary directory.
     """
 
-    repo_path = str(request.config.ensuretemp('repo'))
+    repo_path = str(py.test.ensuretemp('repo'))
     request.addfinalizer(lambda: clear_directory(repo_path))
     return hatta.storage.WikiStorage(repo_path)
 
@@ -55,7 +55,7 @@ def pytest_funcarg__subdir_repo(request):
     temporary directory.
     """
 
-    repo_path = str(request.config.ensuretemp('repo'))
+    repo_path = str(py.test.ensuretemp('repo'))
     request.addfinalizer(lambda: clear_directory(repo_path))
     return hatta.storage.WikiSubdirectoryStorage(repo_path)
 

@@ -260,9 +260,13 @@ class WikiPage(object):
                     self.wiki.recaptcha_public_key, error=captcha_error)
         else:
             recaptcha_html = None
-        return self.template('edit_file.html', comment=comment,
-                             recaptcha_html=recaptcha_html,
-                             author=author, parent=rev)
+        context = {
+            'comment': comment,
+            'author': author,
+            'parent': rev,
+            'recaptcha_html': recaptcha_html,
+        }
+        return self.template('edit_file.html', **context)
 
 
 class WikiPageSpecial(WikiPage):

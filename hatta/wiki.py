@@ -956,9 +956,6 @@ It can only be edited by the site admin directly on the disk."""))
             try:
                 endpoint, values = adapter.match()
                 return endpoint(request, **values)
-            except error.WikiError as err:
-                err.wiki = self
-                return err
             except werkzeug.exceptions.HTTPException as err:
                 return err
         finally:

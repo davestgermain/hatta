@@ -2,23 +2,16 @@
 # -*- coding: utf-8 -*-
 
 import werkzeug.exceptions
-import pprint
 
 
 class WikiError(werkzeug.exceptions.HTTPException):
     """Base class for all error pages."""
 
-    def __init__(self, description=None, wiki=None):
-        super(WikiError, self).__init__(description)
-        self.wiki = wiki
-
     def get_body(self, environ):
-        if self.wiki is None:
-            return super(WikiError, self).get_body(environ)
-        template = self.wiki.template_env.get_template('error.html')
         request = environ.get('werkzeug.request')
+        wiki = request.wiki
         context = {
-            'wiki': self.wiki,
+            'wiki': wiki,
             'code': self.code,
             'name': self.name,
             'description': self.get_description(environ),
@@ -26,9 +19,9 @@ class WikiError(werkzeug.exceptions.HTTPException):
             'request': request,
             'url': request.get_url,
             'download_url': request.get_download_url,
-            'config': self.wiki.config,
-            'environ': pprint.pformat(environ),
+            'config': wiki.config,
         }
+        template = wiki.template_env.get_template('error.html')
         return template.stream(**context)
 
 

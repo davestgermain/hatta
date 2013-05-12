@@ -775,8 +775,13 @@ It can only be edited by the site admin directly on the disk."""))
 
         _ = self.gettext
         page = self.get_page(request, '')
+        orphaned = [
+            title
+            for title in self.index.orphaned_pages()
+            if title in self.storage
+        ]
         html = page.template('list.html',
-                             pages=self.index.orphaned_pages(),
+                             pages=orphaned,
                              class_='orphaned',
                              message=_(u'List of pages with no links to them'),
                              special_title=_(u'Orphaned pages'))

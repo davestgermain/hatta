@@ -140,6 +140,7 @@ div#hatta-header div#hatta-menu a.current {
 /* Buttons */
 div#hatta-buttons {
     text-align: center;
+    vertical-align: middle;
 }
 input.button,
 div#hatta-buttons input {
@@ -149,6 +150,7 @@ div#hatta-buttons input {
     border: solid 1px #babdb6;
     margin: 0.25em;
     color: #888a85;
+    vertical-align: middle;
 }
 #hatta-history input.button {
     font-size: 75%;
@@ -184,10 +186,11 @@ form#hatta-editor label#hatta-comment input {
 }
 
 /* Search */
-form#hatta-search input#hatta-search {
+form#hatta-search input#hatta-search-q {
     font-size: 100%;
     border: solid 1px #babdb6;
     margin: 0.125em 0;
+    vertical-align: middle;
 }
 form#hatta-search {
     margin:0;

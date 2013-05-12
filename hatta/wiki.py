@@ -757,7 +757,7 @@ It can only be edited by the site admin directly on the disk."""))
 
     @URL('/+sister-index')
     def sister_pages(self, request):
-        """Show index of all pages in a fromat suitable for SisterPages."""
+        """Show index of all pages in a format suitable for SisterPages."""
 
         text = [
             '%s%s %s\n' % (request.base_url, request.get_url(title), title)

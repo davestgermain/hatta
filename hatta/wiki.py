@@ -468,12 +468,8 @@ It can only be edited by the site admin directly on the disk."""))
                 upload = request.files['data']
                 f = upload.stream
                 if f is not None and upload.filename is not None:
-                    try:
-                        self.storage.save_file(title, f.tmpname, author,
-                                               comment, parent)
-                    except AttributeError:
-                        self.storage.save_data(title, f.read(), author,
-                                               comment, parent)
+                    self.storage.save_data(title, f.read(), author,
+                                           comment, parent)
                 else:
                     self.storage.delete_page(title, author, comment)
                     url = request.get_url(self.front_page)

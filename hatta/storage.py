@@ -139,23 +139,6 @@ class WikiStorage(object):
             self._repos[thread_id] = repo
             return repo
 
-    def _check_path(self, path):
-        """
-        Ensure that the path is within allowed bounds.
-        """
-
-        _ = self._
-        abspath = os.path.abspath(path)
-        if os.path.islink(path) or os.path.isdir(path):
-            raise error.ForbiddenErr(
-                _(u"Can't use symbolic links or directories as pages"))
-        if not abspath.startswith(self.path):
-            raise error.ForbiddenErr(
-                _(u"Can't read or write outside of the pages repository"))
-
-    def _file_path(self, title):
-        return os.path.join(self.repo_path, self._title_to_file(title))
-
     def _title_to_file(self, title):
         title = unicode(title).strip()
         filename = werkzeug.url_quote(title, safe='')

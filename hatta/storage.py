@@ -2,10 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import datetime
-import errno
 import os
 import re
-import tempfile
 import thread
 import werkzeug
 import StringIO
@@ -372,7 +370,8 @@ class WikiStorage(object):
             if (repo_file.startswith(self.repo_prefix) and
                 '/' not in repo_file[len(self.repo_prefix):]):
                 title = self._file_to_title(repo_file)
-                yield title
+                if title in self:
+                    yield title
 
     def changed_since(self, rev):
         """
@@ -491,5 +490,6 @@ class WikiSubdirectoryStorage(WikiStorage):
         for repo_file in self._changectx():
             if repo_file.startswith(self.repo_prefix):
                 title = self._file_to_title(repo_file)
-                yield title
+                if title in self:
+                    yield title
 

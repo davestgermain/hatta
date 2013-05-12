@@ -466,7 +466,7 @@ class WikiSubdirectoryStorage(WikiStorage):
         parent, other = self._get_parents(repo_file, parent_rev)
         if data is None:
             if title not in self:
-                raise error.ForbiddenErr()
+                raise error.NotFoundErr()
         else:
             if other is not None:
                 try:

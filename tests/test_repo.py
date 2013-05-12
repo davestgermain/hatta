@@ -8,12 +8,10 @@ directory.
 """
 
 import os
-import sys
 
 import hatta
-import py
 import py.test
-import werkzeug
+import mercurial.commands
 
 # Patch for no gettext
 hatta._ = lambda x:x
@@ -59,7 +57,11 @@ def pytest_funcarg__subdir_repo(request):
     request.addfinalizer(lambda: clear_directory(repo_path))
     return hatta.storage.WikiSubdirectoryStorage(repo_path)
 
-@py.test.mark.skipif('True')
+
+def update(storage):
+    mercurial.commands.update(storage.repo.ui, storage.repo)
+
+
 class TestSubdirectoryStorage(object):
     """
     Tests for the WikiSubdirectoryStorage.
@@ -100,6 +102,7 @@ class TestSubdirectoryStorage(object):
             filepath = os.path.join(subdir_repo.path, filename)
             subdir_repo.save_text(title, self.text, self.author, self.comment,
                                   parent=-1)
+            update(subdir_repo)
             exists = os.path.exists(filepath)
             assert exists
 
@@ -114,6 +117,7 @@ class TestSubdirectoryStorage(object):
         subdir_repo.save_text(title, self.text, self.author, self.comment,
                               parent=-1)
         subdir_repo.delete_page(title, self.author, self.comment)
+        update(subdir_repo)
         exists = os.path.exists(filepath)
         assert not exists
         exists = os.path.exists(dirpath)
@@ -128,9 +132,11 @@ class TestSubdirectoryStorage(object):
         filepath = os.path.join(subdir_repo.path, 'ziew')
         subdir_repo.save_text(title, self.text, self.author, self.comment,
                               parent=-1)
+        update(subdir_repo)
         exists = os.path.exists(filepath)
         assert exists
         subdir_repo.delete_page(title, self.author, self.comment)
+        update(subdir_repo)
         exists = os.path.exists(filepath)
         assert not exists
 
@@ -141,11 +147,11 @@ class TestSubdirectoryStorage(object):
 
         title = u'ziew2'
         filepath = os.path.join(subdir_repo.path, 'ziew2')
-        exists = os.path.exists(filepath)
-        assert not exists
-        subdir_repo.delete_page(title, self.author, self.comment)
-        exists = os.path.exists(filepath)
-        assert not exists
+        assert not os.path.exists(filepath)
+        with py.test.raises(hatta.error.NotFoundErr):
+            subdir_repo.delete_page(title, self.author, self.comment)
+        update(subdir_repo)
+        assert not os.path.exists(filepath)
 
     def test_create_parent(self, subdir_repo):
         """
@@ -156,6 +162,7 @@ class TestSubdirectoryStorage(object):
                               parent=-1)
         subdir_repo.save_text(u'xxx', self.text, self.author, self.comment,
                               parent=-1)
+        update(subdir_repo)
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx'))
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx/yyy'))
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx/Index'))
@@ -169,6 +176,7 @@ class TestSubdirectoryStorage(object):
                               parent=-1)
         subdir_repo.save_text(u'xxx/yyy', self.text, self.author, self.comment,
                               parent=-1)
+        update(subdir_repo)
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx'))
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx/yyy'))
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx/Index'))
@@ -184,6 +192,7 @@ class TestSubdirectoryStorage(object):
                               parent=-1)
         subdir_repo.save_text(u'xxx/yyy/zzz', self.text, self.author, self.comment,
                               parent=-1)
+        update(subdir_repo)
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx'))
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx/yyy'))
         assert not os.path.exists(os.path.join(subdir_repo.path, 'xxx/yyy/Index'))
@@ -201,7 +210,6 @@ class TestMercurialStorage(object):
     text = u'test text'
     comment = u'test comment'
 
-    @py.test.mark.skipif('True')
     def test_filename(self, repo):
         """
         Check if the page's file is named properly.
@@ -221,46 +229,11 @@ class TestMercurialStorage(object):
             filepath = os.path.join(repo.path, filename)
             repo.save_text(title, self.text, self.author, self.comment,
                            parent=-1)
+            update(repo)
             exists = os.path.exists(filepath)
             print '%s -> %s' % (repr(title), filename)
             assert exists
 
-    def test_check_path(self, repo):
-        py.test.raises(hatta.error.ForbiddenErr, repo._check_path, "/")
-        py.test.raises(hatta.error.ForbiddenErr, repo._check_path, "..")
-        py.test.raises(hatta.error.ForbiddenErr, repo._check_path,
-                       repo.path+"/..")
-        path = os.path.join(repo.path, 'aaa')
-        os.symlink('/', path)
-        py.test.raises(hatta.error.ForbiddenErr, repo._check_path, path)
-        path = os.path.join(repo.path, 'bbb')
-        os.mkdir(path)
-        py.test.raises(hatta.error.ForbiddenErr, repo._check_path, path)
-
-    @py.test.mark.skipif('True')
-    @py.test.mark.skipif("sys.platform == 'win32'")
-    def test_symlinks(self, repo):
-        """
-        Make sure access to symlinks is blocked.
-        """
-
-        path = os.path.join(repo.path, self.filename)
-        os.symlink('/', path)
-        py.test.raises(hatta.error.ForbiddenErr, repo.save_text,
-                       self.title, self.text, self.author, self.comment,
-                       parent=-1)
-        py.test.raises(hatta.error.ForbiddenErr, repo.open_page,
-                       self.title)
-
-    @py.test.mark.skipif("sys.platform == 'win32'")
-    def test_symlinks_not_exist(self, repo):
-        """
-        Make sure symlinks are not reported as existing pages.
-        """
-
-        path = os.path.join(repo.path, self.filename)
-        os.symlink('/', path)
-        assert self.title not in repo
 
     def test_directories_not_exist(self, repo):
         """
@@ -280,40 +253,6 @@ class TestMercurialStorage(object):
         os.mkdir(path)
         py.test.raises(hatta.error.NotFoundErr, repo.open_page,
                        self.title)
-
-    @py.test.mark.skipif('True')
-    def test_directory_write(self, repo):
-        """
-        What happens when you try to write a directory as page.
-        """
-
-        path = os.path.join(repo.path, self.filename)
-        os.mkdir(path)
-        py.test.raises(hatta.error.ForbiddenErr, repo.save_text,
-                       self.title, self.text, self.author, self.comment,
-                       parent=-1)
-
-    @py.test.mark.skipif('True')
-    def test_directory_delete(self, repo):
-        """
-        What happens when you try to delete a directory as page.
-        """
-
-        path = os.path.join(repo.path, self.filename)
-        os.mkdir(path)
-        py.test.raises(hatta.error.ForbiddenErr, repo.delete_page,
-                       self.title, self.author, self.comment)
-
-    @py.test.mark.skipif("sys.platform == 'win32'")
-    def test_symlink_delete(self, repo):
-        """
-        What happens when you try to delete a symlink as page.
-        """
-
-        path = os.path.join(repo.path, self.filename)
-        os.symlink('/', path)
-        py.test.raises(hatta.error.ForbiddenErr, repo.delete_page,
-                       self.title, self.author, self.comment)
 
 
 class TestStorage(object):

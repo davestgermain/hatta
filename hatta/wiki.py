@@ -755,6 +755,20 @@ It can only be edited by the site admin directly on the disk."""))
         response.make_conditional(request)
         return response
 
+    @URL('/+sister-index')
+    def sister_pages(self, request):
+        """Show index of all pages in a fromat suitable for SisterPages."""
+
+        text = [
+            '%s%s %s\n' % (request.base_url, request.get_url(title), title)
+            for title in self.storage.all_pages()
+        ]
+        text.sort()
+        response = WikiResponse(text, mimetype='text/plain')
+        response.set_etag('/+sister-index/%d' % self.storage.repo_revision())
+        response.make_conditional(request)
+        return response
+
     @URL('/+orphaned')
     def orphaned(self, request):
         """Show all pages that don't have backlinks."""

@@ -436,14 +436,10 @@ class WikiSubdirectoryStorage(WikiStorage):
                 return True
         return False
 
-    def _title_to_file(self, title, force_directory=False, force_file=False):
+    def _title_to_file(self, title):
         """
         Modified escaping allowing (some) slashes and spaces.
         If the entry is a directory, use an index file.
-
-        If ``force_directory`` is ``True``, always use an index file.
-        If ``force_file`` is ``True``, never use an index file.
-        If both are true, undefined.
         """
 
         title = unicode(title).strip()
@@ -451,7 +447,7 @@ class WikiSubdirectoryStorage(WikiStorage):
         escaped = self.periods_re.sub('%2E', escaped)
         escaped = self.slashes_re.sub('%2F', escaped)
         path = os.path.join(self.repo_prefix, escaped)
-        if not force_file and (self._is_directory(path) or force_directory):
+        if self._is_directory(path):
             path = os.path.join(path, self.index)
         if page.page_mime(title) == 'text/x-wiki' and self.extension:
             path += self.extension
@@ -477,10 +473,13 @@ class WikiSubdirectoryStorage(WikiStorage):
         if os.path.basename(repo_file) != self.index:
             # Move a colliding file out of the way.
             dir_path = os.path.dirname(repo_file)
-            if dir_path in self._changectx():
-                new_dir_path = os.path.join(dir_path, self.index)
-                files.extend([dir_path, new_dir_path])
-                dir_data = self._changectx()[dir_path].data()
+            while dir_path:
+                if dir_path in self._changectx():
+                    new_dir_path = os.path.join(dir_path, self.index)
+                    files.extend([dir_path, new_dir_path])
+                    dir_data = self._changectx()[dir_path].data()
+                    break
+                dir_path = os.path.dirname(dir_path)
         parent, other = self._get_parents(repo_file, parent_rev)
         if data is None:
             if title not in self:

@@ -212,14 +212,14 @@ class WikiStorage(object):
         other_data = filetip.filectx(other).data()
         return merge_func(parent_data, other_data, data)
 
-    def save_data(self, title, data, author=None, comment=None, parent=None):
+    def save_data(self, title, data, author=None, comment=None, parent_rev=None):
         """Save a new revision of the page. If the data is None, deletes it."""
 
         _ = self._
         user = (author or _(u'anon')).encode('utf-8')
         text = (comment or _(u'comment')).encode('utf-8')
         repo_file = self._title_to_file(title)
-        parent, other = self._get_parents(repo_file, parent)
+        parent, other = self._get_parents(repo_file, parent_rev)
         if data is None:
             if title not in self:
                 raise error.ForbiddenErr()
@@ -229,16 +229,16 @@ class WikiStorage(object):
                     data = self._merge(repo_file, parent, other, data)
                 except ValueError:
                     text = _(u'failed merge of edit conflict').encode('utf-8')
-        def del_filectxfn(repo, memctx, path):
-            raise IOError()
         def filectxfn(repo, memctx, path):
+            if data is None:
+                raise IOError()
             return mercurial.context.memfilectx(path, data, False, False, None)
         ctx = mercurial.context.memctx(
             repo=self.repo,
             parents=(parent, other),
             text=text,
             files=[repo_file],
-            filectxfn=del_filectxfn if data is None else filectxfn,
+            filectxfn=filectxfn,
             user=user,
         )
         self.repo.commitctx(ctx)
@@ -423,10 +423,27 @@ class WikiSubdirectoryStorage(WikiStorage):
     # TODO: make them configurable
     index = "Index"
 
-    def _title_to_file(self, title):
+    def _is_directory(self, repo_path):
+        """Checks whether the path is a directory in the repository."""
+
+        # XXX This is not a very fast way of checking it.
+        # Maybe there is a better way.
+        if not repo_path:
+            return True
+        dir_path = repo_path + '/'
+        for repo_file in self._changectx():
+            if repo_file.startswith(dir_path):
+                return True
+        return False
+
+    def _title_to_file(self, title, force_directory=False, force_file=False):
         """
         Modified escaping allowing (some) slashes and spaces.
         If the entry is a directory, use an index file.
+
+        If ``force_directory`` is ``True``, always use an index file.
+        If ``force_file`` is ``True``, never use an index file.
+        If both are true, undefined.
         """
 
         title = unicode(title).strip()
@@ -434,7 +451,7 @@ class WikiSubdirectoryStorage(WikiStorage):
         escaped = self.periods_re.sub('%2E', escaped)
         escaped = self.slashes_re.sub('%2F', escaped)
         path = os.path.join(self.repo_prefix, escaped)
-        if os.path.isdir(os.path.join(self.repo_path, path)):
+        if not force_file and (self._is_directory(path) or force_directory):
             path = os.path.join(path, self.index)
         if page.page_mime(title) == 'text/x-wiki' and self.extension:
             path += self.extension
@@ -447,53 +464,50 @@ class WikiSubdirectoryStorage(WikiStorage):
             filepath = os.path.dirname(filepath)
         return super(WikiSubdirectoryStorage, self)._file_to_title(filepath)
 
-    def turn_into_subdirectory(self, path):
-        """Turn a single-file page into an index page inside a subdirectory."""
-
-        _ = self._
-        self._check_path(path)
-        dir_path = os.path.dirname(path)
-        if not os.path.isdir(dir_path):
-            self.turn_into_subdirectory(dir_path)
-        if not os.path.exists(path):
-            os.mkdir(path)
-            return
-        try:
-            temp_dir = tempfile.mkdtemp(dir=self.path)
-            temp_path = os.path.join(temp_dir, 'saved')
-            mercurial.commands.rename(self.ui, self.repo, path, temp_path)
-            os.makedirs(path)
-            index_path = os.path.join(path, self.index)
-            mercurial.commands.rename(self.ui, self.repo, temp_path,
-                                      index_path)
-        finally:
-            try:
-                os.rmdir(temp_dir)
-            except OSError:
-                pass
-        def repo_path(path):
-            return path[len(self.repo_path)+1:]
-        files = [repo_path(index_path), repo_path(path)]
-        self._commit(files, _(u"made subdirectory page"), "<wiki>")
-
-    @locked_repo
-    def save_file(self, title, file_name, author=u'', comment=u'',
-                  parent=None):
+    def save_data(self, title, data, author=u'', comment=u'', parent_rev=None):
         """Save the file and make the subdirectories if needed."""
 
-        path = self._file_path(title)
-        dir_path = os.path.dirname(path)
-        if not os.path.isdir(dir_path):
-            self.turn_into_subdirectory(dir_path)
-        try:
-            os.makedirs(os.path.join(self.repo_path, dir_path))
-        except OSError, e:
-            if e.errno != errno.EEXIST:
-                # "File exists"
-                raise
-        super(WikiSubdirectoryStorage, self).save_file(title, file_name,
-                                                       author, comment, parent)
-
+        _ = self._
+        user = (author or _(u'anon')).encode('utf-8')
+        text = (comment or _(u'comment')).encode('utf-8')
+        repo_file = self._title_to_file(title)
+        files = [repo_file]
+        dir_path = None
+        new_dir_path = None
+        if os.path.basename(repo_file) != self.index:
+            # Move a colliding file out of the way.
+            dir_path = os.path.dirname(repo_file)
+            if dir_path in self._changectx():
+                new_dir_path = os.path.join(dir_path, self.index)
+                files.extend([dir_path, new_dir_path])
+                dir_data = self._changectx()[dir_path].data()
+        parent, other = self._get_parents(repo_file, parent_rev)
+        if data is None:
+            if title not in self:
+                raise error.ForbiddenErr()
+        else:
+            if other is not None:
+                try:
+                    data = self._merge(repo_file, parent, other, data)
+                except ValueError:
+                    text = _(u'failed merge of edit conflict').encode('utf-8')
+        def filectxfn(repo, memctx, path):
+            if data is None or path == dir_path:
+                raise IOError()
+            if path == new_dir_path:
+                return mercurial.context.memfilectx(path, dir_data,
+                        False, False, dir_path)
+            return mercurial.context.memfilectx(path, data, False, False, None)
+        ctx = mercurial.context.memctx(
+            repo=self.repo,
+            parents=(parent, other),
+            text=text,
+            files=files,
+            filectxfn=filectxfn,
+            user=user,
+        )
+        self.repo.commitctx(ctx)
+        self._tips = {}
 
     def all_pages(self):
         """Iterate over the titles of all pages in the wiki."""

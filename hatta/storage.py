@@ -409,15 +409,9 @@ class WikiSubdirectoryStorage(WikiStorage):
     def _is_directory(self, repo_path):
         """Checks whether the path is a directory in the repository."""
 
-        # XXX This is not a very fast way of checking it.
-        # Maybe there is a better way.
         if not repo_path:
             return True
-        dir_path = repo_path + '/'
-        for repo_file in self._changectx():
-            if repo_file.startswith(dir_path):
-                return True
-        return False
+        return repo_path in self._changectx().dirs()
 
     def _title_to_file(self, title):
         """

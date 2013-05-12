@@ -304,7 +304,7 @@ class WikiPageText(WikiPage):
         """
 
         if lines is None:
-            lines = self.storage.page_text(self.title).splitlines()
+            lines = self.storage.page_text(self.title).splitlines(True)
         return self.content_iter(lines)
 
     def render_editor(self, preview=None, captcha_error=None):
@@ -314,7 +314,7 @@ class WikiPageText(WikiPage):
         author = self.request.get_author()
         lines = []
         try:
-            lines = self.storage.page_text(self.title).splitlines()
+            lines = self.storage.page_text(self.title).splitlines(True)
             (rev, old_date, old_author,
                 old_comment) = self.storage.page_meta(self.title)
             comment = _(u'modified')
@@ -471,7 +471,7 @@ class WikiPageWiki(WikiPageColorText):
 
     def view_content(self, lines=None):
         if lines is None:
-            lines = self.storage.page_text(self.title).splitlines()
+            lines = self.storage.page_text(self.title).splitlines(True)
         if self.wiki.icon_page and self.wiki.icon_page in self.storage:
             icons = self.index.page_links_and_labels(self.wiki.icon_page)
             smilies = dict((emo, link) for (link, emo) in icons)

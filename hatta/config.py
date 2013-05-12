@@ -54,6 +54,9 @@ _add('-W', '--wiki-words', dest='wiki_words',
     help='Enable WikiWord links', action="store_true")
 _add('-I', '--ignore-indent', dest='ignore_indent',
     help='Treat indented lines as normal text', action="store_true")
+_add('-M', '--math-url', dest='math_url',
+    help='Use the URL for rendering the equations. Empty to disable math.',
+    metavar='URL')
 _add('-P', '--pygments-style', dest='pygments_style',
     help='Use the STYLE pygments style for highlighting',
     metavar='STYLE')

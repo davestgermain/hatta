@@ -184,6 +184,7 @@ class WikiParser(object):
         self.macro_close_re = re.compile(ur"^>>\s*$", re.U)
         self.conflict_close_re = re.compile(ur"^>>>>>>> other\s*$", re.U)
         self.conflict_sep_re = re.compile(ur"^=======\s*$", re.U)
+        self.display_math_close_re = re.compile(ur"^[$][$]\s*$", re.U)
         self.image_re = re.compile(self.image_pat, re.U)
         smileys = ur"|".join(re.escape(k) for k in self.smilies)
         smiley_pat = (ur"(^|\b|(?<=\s))(?P<smiley_face>%s)"
@@ -325,9 +326,10 @@ class WikiParser(object):
     @markup_rules(ur"\$\$(?P<math_text>[^$]+)\$\$", 100)
     def _line_math(self, math_text):
         if self.wiki_math:
-            return self.wiki_math(math_text)
+            math_text = self.wiki_math(math_text, False)
         else:
-            return "<var>%s</var>" % werkzeug.escape(math_text)
+            math_text = werkzeug.escape(math_text)
+        return werkzeug.html.var(math_text, class_="inline-math")
 
     @markup_rules(ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
                   ur"*[}]*)[}][}][}]", 20)
@@ -378,6 +380,20 @@ class WikiParser(object):
             werkzeug.escape(macro_text))
 
 # methods for the block (multiline) markup:
+
+    @block_rules(r"^[$][$]\s*$", 25)
+    def _block_display_math(self, block):
+        for self.line_no, part in block:
+            math_text = u"\n".join(self.lines_until(self.display_math_close_re))
+            if self.wiki_math:
+                math_text = self.wiki_math(math_text, True)
+            else:
+                math_text = werkzeug.escape(math_text)
+            yield werkzeug.html.pre(
+                math_text,
+                class_="display-math",
+                id="line_%d" % self.line_no,
+            )
 
     @block_rules(ur"^[{][{][{]+\s*$", 20)
     def _block_code(self, block):

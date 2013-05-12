@@ -481,14 +481,21 @@ class WikiPageWiki(WikiPageColorText):
                              self.highlight, self.wiki_math, smilies)
         return content
 
-    def wiki_math(self, math):
+    def wiki_math(self, math_text, display=False):
         math_url = self.config.get('math_url',
                             'http://www.mathtran.org/cgi-bin/mathtran?tex=')
+        if math_url == '':
+            return werkzeug.escape(math_text)
+        elif math_url == '$':
+            if display:
+                return werkzeug.escape(u"$$\n%s\n$$" % math_text)
+            else:
+                return werkzeug.escape(u"$%s$" % math_text)
         if '%s' in math_url:
-            url = math_url % werkzeug.url_quote(math)
+            url = math_url % werkzeug.url_quote(math_text)
         else:
-            url = '%s%s' % (math_url, werkzeug.url_quote(math))
-        label = werkzeug.escape(math, quote=True)
+            url = '%s%s' % (math_url, werkzeug.url_quote(math_text))
+        label = werkzeug.escape(math_text, quote=True)
         return werkzeug.html.img(src=url, alt=label, class_="math")
 
     def dependencies(self):

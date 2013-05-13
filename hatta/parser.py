@@ -389,7 +389,7 @@ class WikiParser(object):
                 math_text = self.wiki_math(math_text, True)
             else:
                 math_text = werkzeug.escape(math_text)
-            yield werkzeug.html.pre(
+            yield werkzeug.html.div(
                 math_text,
                 class_="display-math",
                 id="line_%d" % self.line_no,

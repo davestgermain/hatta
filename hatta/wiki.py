@@ -250,6 +250,8 @@ class Wiki(object):
         self.icon_page = self.config.get('icon_page', None)
         self.alias_page = self.config.get('alias_page', 'Alias')
         self.help_page = self.config.get('help_page', 'Help')
+        self.math_url = self.config.get('math_url',
+            'http://www.mathtran.org/cgi-bin/mathtran?tex=')
         self.pygments_style = self.config.get('pygments_style', 'tango')
         self.subdirectories = self.config.get_bool('subdirectories', False)
         self.extension = self.config.get('extension', None)

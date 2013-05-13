@@ -482,11 +482,10 @@ class WikiPageWiki(WikiPageColorText):
         return content
 
     def wiki_math(self, math_text, display=False):
-        math_url = self.config.get('math_url',
-                            'http://www.mathtran.org/cgi-bin/mathtran?tex=')
+        math_url = self.wiki.math_url
         if math_url == '':
             return werkzeug.escape(math_text)
-        elif math_url == '$':
+        elif math_url == 'mathjax':
             if display:
                 return werkzeug.escape(u"$$\n%s\n$$" % math_text)
             else:

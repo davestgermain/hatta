@@ -23,6 +23,24 @@
 {% block scripts %}
     <script type="text/javascript"
             src="{{ url(None, wiki.scripts_js) }}"></script>
+    {% if wiki.math_url == 'mathjax' %}
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            tex2jax: {
+                inlineMath: [['$','$']],
+                displayMath: [['$$','$$']],
+                ignoreClass: ".*",
+                processClass: "^(display|inline)-math$",
+                processEscapes: true
+            },
+            showMathMenu: false,
+            showMathMenuMSIE: false
+        });
+    </script>
+    <script type="text/javascript"
+        src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+    ></script>
+    {% endif %}
 {% endblock %}
 
 {% block logo %}

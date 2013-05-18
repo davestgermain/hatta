@@ -9,7 +9,7 @@
 
 {% block content %}
     <p>{{ _("History of changes for %(link)s.", link=page.wiki_link(title)|safe) }}</p>
-    <form action="{{ url(title, wiki.undo, method='POST') }}" method="POST">
+    <form action="{{ url(title, 'undo', method='POST') }}" method="POST">
         <ul id="hatta-history">
             {% for date, date_url, rev, author, comment in history %}
                 <li><a href="{{ date_url }}"

@@ -257,7 +257,7 @@ class WikiPage(object):
         if self.title:
             try:
                 check_lock(self.wiki, self.title)
-                edit_url = self.get_url(self.title, self.wiki.edit)
+                edit_url = self.get_url(self.title, 'edit')
             except hatta.error.ForbiddenErr:
                 pass
         context = {

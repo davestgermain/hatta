@@ -8,8 +8,8 @@
         <a href="{{ edit_url }}"
            class="edit">{{ _('Edit') }}</a>
     {% endif %}
-    <a href="{{ url(title, wiki.history) }}"
+    <a href="{{ url(title, 'history') }}"
        class="hatta-history">{{ _('History') }}</a>
-    <a href="{{ url(title, wiki.backlinks) }}"
+    <a href="{{ url(title, 'backlinks') }}"
        class="hatta-backlinks">{{ _('Backlinks') }}</a>
 {% endblock %}

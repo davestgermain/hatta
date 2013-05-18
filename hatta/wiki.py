@@ -124,7 +124,8 @@ class Wiki(object):
         )
         self.index = self.index_class(self.cache, self.language, self.storage)
         self.index.update(self)
-        self.url_rules = hatta.views.URL.rules(self)
+        self.url_rules = hatta.views.URL.get_rules()
+        self.views = hatta.views.URL.get_views()
         self.url_converters = {
             'title': WikiTitleConverter,
             'all': WikiAllConverter,
@@ -134,10 +135,11 @@ class Wiki(object):
             converters=self.url_converters,
         )
 
-    def add_url_rule(self, rule):
+    def add_url_rule(self, rule, name, func):
         """Let plugins add additional url rules."""
 
         self.url_rules.append(rule)
+        self.views[name] = func
         self.url_map = werkzeug.routing.Map(
             self.url_rules,
             converters=self.url_converters,
@@ -151,7 +153,8 @@ class Wiki(object):
         request = hatta.request.WikiRequest(self, adapter, environ)
         try:
             endpoint, values = adapter.match()
-            return endpoint(request, **values)
+            view = self.views[endpoint]
+            return view(request, **values)
         except werkzeug.exceptions.HTTPException as err:
             return err
 

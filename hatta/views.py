@@ -41,18 +41,23 @@ class URL(object):
     def __call__(self, func):
         """The actual decorator only records the data."""
 
-        self.urls.append((func, self.url, self.methods))
+        self.urls.append((func.__name__, func, self.url, self.methods))
         return func
 
     @classmethod
-    def rules(cls, app):
-        """Returns the routing rules and sets them on the app."""
+    def get_rules(cls):
+        """Returns the routing rules."""
 
-        for func, url, methods in cls.urls:
-            setattr(app, func.__name__, func)
-            if not callable(func):
-                continue
-            yield werkzeug.routing.Rule(url, endpoint=func, methods=methods)
+        return [
+            werkzeug.routing.Rule(url, endpoint=name, methods=methods)
+            for name, func, url, methods in cls.urls
+        ]
+
+    @classmethod
+    def get_views(cls):
+        """Returns a dict of views."""
+
+        return {name: func for name, func, url, methods in cls.urls}
 
 
 def _serve_default(request, title, content=None, mime=None):
@@ -86,7 +91,7 @@ def view(request, title=None):
         if request.wiki.read_only:
             raise hatta.error.NotFoundErr(_(u"Page not found."))
 
-        url = request.get_url(title, request.wiki.edit, external=True)
+        url = request.get_url(title, 'edit', external=True)
         return werkzeug.routing.redirect(url, code=303)
     html = page.template("page.html", content=content)
     dependencies = page.dependencies()
@@ -217,7 +222,7 @@ def atom(request):
     _ = request.wiki.gettext
     feed = werkzeug.contrib.atom.AtomFeed(request.wiki.site_name,
         feed_url=request.url,
-        url=request.adapter.build(request.wiki.view, force_external=True),
+        url=request.adapter.build('view', force_external=True),
         subtitle=_(u'Track the most recent changes to the wiki '
                    u'in this feed.'))
     history = itertools.islice(request.wiki.storage.history(), None, 10, None)
@@ -227,13 +232,13 @@ def atom(request):
             continue
         unique_titles.add(title)
         if rev > 0:
-            url = request.adapter.build(request.wiki.diff, {
+            url = request.adapter.build('diff', {
                 'title': title,
                 'from_rev': rev - 1,
                 'to_rev': rev,
             }, force_external=True)
         else:
-            url = request.adapter.build(request.wiki.revision, {
+            url = request.adapter.build('revision', {
                 'title': title,
                 'rev': rev,
             }, force_external=True)
@@ -354,7 +359,7 @@ def undo(request, title):
             request.wiki.storage.save_data(title, data, author, comment, parent)
         page = hatta.page.get_page(request, title)
         request.wiki.index.update_page(page, title, data=data)
-    url = request.adapter.build(request.wiki.history, {'title': title},
+    url = request.adapter.build('history', {'title': title},
                                 method='GET', force_external=True)
     return werkzeug.redirect(url, 303)
 
@@ -369,11 +374,16 @@ def history(request, title):
         if max_rev < rev:
             max_rev = rev
         if rev > 0:
-            date_url = request.adapter.build(request.wiki.diff, {
-                'title': title, 'from_rev': rev - 1, 'to_rev': rev})
+            date_url = request.adapter.build('diff', {
+                'title': title,
+                'from_rev': rev - 1,
+                'to_rev': rev,
+            })
         else:
-            date_url = request.adapter.build(request.wiki.revision, {
-                'title': title, 'rev': rev})
+            date_url = request.adapter.build('revision', {
+                'title': title,
+                'rev': rev,
+            })
         history.append((date, date_url, rev, author, comment))
     html = page.template('history.html', history=history,
                          date_html=hatta.page.date_html, parent=max_rev)
@@ -395,17 +405,18 @@ def recent_changes(request):
             if count > 100:
                 break
             if rev > 0:
-                date_url = request.adapter.build(request.wiki.diff, {
+                date_url = request.adapter.build('diff', {
                     'title': title,
                     'from_rev': rev - 1,
                     'to_rev': lastrev.get(title, rev),
                 })
             elif rev == 0:
-                date_url = request.adapter.build(request.wiki.revision, {
-                    'title': title, 'rev': rev})
+                date_url = request.adapter.build('revision', {
+                    'title': title,
+                    'rev': rev,
+                })
             else:
-                date_url = request.adapter.build(request.wiki.history, {
-                    'title': title})
+                date_url = request.adapter.build('history', {'title': title})
             last[title] = author, comment
             lastrev[title] = rev
 
@@ -426,8 +437,8 @@ def diff(request, title, from_rev, to_rev):
     _ = request.wiki.gettext
     page = hatta.page.get_page(request, title)
     build = request.adapter.build
-    from_url = build(request.wiki.revision, {'title': title, 'rev': from_rev})
-    to_url = build(request.wiki.revision, {'title': title, 'rev': to_rev})
+    from_url = build('revision', {'title': title, 'rev': from_rev})
+    to_url = build('revision', {'title': title, 'rev': to_rev})
     a = werkzeug.html.a
     links = {
         'link1': a(str(from_rev), href=from_url),

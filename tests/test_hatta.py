@@ -8,7 +8,6 @@ import lxml.doctestcompare
 from test_parser import HTML
 
 import hatta
-import hatta.views
 
 
 def clear_directory(top):
@@ -213,11 +212,11 @@ class TestHTML(object):
             u'/+download/title',
             u'/%2Bdownload/title',
         )
-        assert request.get_url('title', hatta.views.edit) in (
+        assert request.get_url('title', 'edit') in (
             u'/+edit/title',
             u'/%2Bedit/title',
         )
-        assert request.get_url(None, hatta.views.favicon_ico) == u'/favicon.ico'
+        assert request.get_url(None, 'favicon_ico') == u'/favicon.ico'
 
     @py.test.mark.xfail
     def test_html_page(self, req):

@@ -22,14 +22,14 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
     def get_url(self, title=None, view=None, method='GET',
                 external=False, **kw):
         if view is None:
-            view = hatta.views.view
+            view = 'view'
         if title is not None:
             kw['title'] = title.strip()
         return self.adapter.build(view, kw, method=method,
                                   force_external=external)
 
     def get_download_url(self, title):
-        return self.get_url(title, view=hatta.views.download)
+        return self.get_url(title, 'download')
 
     def get_author(self):
         """Try to guess the author name. Use IP address as last resort."""

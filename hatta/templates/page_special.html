@@ -6,8 +6,8 @@
 {% block title %}{{ special_title }} - {{ wiki.site_name }}{% endblock %}
 
 {% block footer %}
-<a href="{{ url(None, wiki.recent_changes) }}" class="changes">{{ _('Changes') }}</a>
-<a href="{{ url(None, wiki.all_pages) }}" class="index">{{ _('Index') }}</a>
-<a href="{{ url(None, wiki.orphaned) }}" class="orphaned">{{ _('Orphaned') }}</a>
-<a href="{{ url(None, wiki.wanted) }}" class="wanted">{{ _('Wanted') }}</a>
+<a href="{{ url(None, 'recent_changes') }}" class="changes">{{ _('Changes') }}</a>
+<a href="{{ url(None, 'all_pages') }}" class="index">{{ _('Index') }}</a>
+<a href="{{ url(None, 'orphaned') }}" class="orphaned">{{ _('Orphaned') }}</a>
+<a href="{{ url(None, 'wanted') }}" class="wanted">{{ _('Wanted') }}</a>
 {% endblock %}

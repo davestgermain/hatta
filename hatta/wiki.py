@@ -3,7 +3,6 @@
 
 import gettext
 import os
-import pkgutil
 import sys
 
 import werkzeug
@@ -119,85 +118,6 @@ class Wiki(object):
             'title': WikiTitleConverter,
             'all': WikiAllConverter,
         })
-
-    def get_page(self, request, title):
-        """Creates a page object based on page's mime type"""
-
-        if title:
-            try:
-                page_class, mime = self.filename_map[title]
-            except KeyError:
-                mime = hatta.page.page_mime(title)
-                major, minor = mime.split('/', 1)
-                try:
-                    page_class = self.mime_map[mime]
-                except KeyError:
-                    try:
-                        plus_pos = minor.find('+')
-                        if plus_pos > 0:
-                            minor_base = minor[plus_pos:]
-                        else:
-                            minor_base = ''
-                        base_mime = '/'.join([major, minor_base])
-                        page_class = self.mime_map[base_mime]
-                    except KeyError:
-                        try:
-                            page_class = self.mime_map[major]
-                        except KeyError:
-                            page_class = self.mime_map['']
-        else:
-            page_class = hatta.page.WikiPageSpecial
-            mime = ''
-        return page_class(self, request, title, mime)
-
-    def response(self, request, title, content, etag='', mime='text/html',
-                 rev=None, size=None):
-        """Create a hatta.request.WikiResponse for a page."""
-
-        response = hatta.response.WikiResponse(content, mimetype=mime)
-        if rev is None:
-            rev, date, author, comment = self.storage.page_meta(title)
-            response.set_etag(u'%s/%s/%d-%s' % (etag,
-                                                werkzeug.url_quote(title),
-                                                rev, date.isoformat()))
-        else:
-            response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title),
-                                             rev))
-        if size:
-            response.content_length = size
-        response.make_conditional(request)
-        return response
-
-    def _check_lock(self, title):
-        _ = self.gettext
-        restricted_pages = [
-            'scripts.js',
-            'robots.txt',
-        ]
-        if self.read_only:
-            raise hatta.error.ForbiddenErr(_(u"This site is read-only."))
-        if title in restricted_pages:
-            raise hatta.error.ForbiddenErr(_(u"""Can't edit this page.
-It can only be edited by the site admin directly on the disk."""))
-        if title in self.index.page_links(self.locked_page):
-            raise hatta.error.ForbiddenErr(_(u"This page is locked."))
-
-    def _serve_default(self, request, title, content=None, mime=None):
-        """Some pages have their default content."""
-
-        if title in self.storage:
-            return self.download(request, title)
-        if content is None:
-            content = pkgutil.get_data('hatta', os.path.join('static', title))
-        mime = mime or 'application/octet-stream'
-        response = hatta.response.WikiResponse(
-            content,
-            mimetype=mime,
-        )
-        response.set_etag('/%s/-1' % title)
-        response.make_conditional(request)
-        return response
-
 
     @werkzeug.responder
     def application(self, environ, start):

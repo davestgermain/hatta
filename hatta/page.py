@@ -31,8 +31,55 @@ try:
 except ImportError:
     pass
 
-from hatta import error
-from hatta import parser
+import hatta.error
+import hatta.parser
+
+
+def check_lock(wiki, title):
+    _ = wiki.gettext
+    restricted_pages = [
+        'scripts.js',
+        'robots.txt',
+    ]
+    if wiki.read_only:
+        raise hatta.error.ForbiddenErr(_(u"This site is read-only."))
+    if title in restricted_pages:
+        raise hatta.error.ForbiddenErr(_(u"""Can't edit this page.
+It can only be edited by the site admin directly on the disk."""))
+    if title in wiki.index.page_links(wiki.locked_page):
+        raise hatta.error.ForbiddenErr(_(u"This page is locked."))
+
+
+
+def get_page(request, title):
+    """Creates a page object based on page's mime type"""
+
+    if title:
+        try:
+            page_class, mime = request.wiki.filename_map[title]
+        except KeyError:
+            mime = page_mime(title)
+            major, minor = mime.split('/', 1)
+            try:
+                page_class = request.wiki.mime_map[mime]
+            except KeyError:
+                try:
+                    plus_pos = minor.find('+')
+                    if plus_pos > 0:
+                        minor_base = minor[plus_pos:]
+                    else:
+                        minor_base = ''
+                    base_mime = '/'.join([major, minor_base])
+                    page_class = request.wiki.mime_map[base_mime]
+                except KeyError:
+                    try:
+                        page_class = request.wiki.mime_map[major]
+                    except KeyError:
+                        page_class = request.wiki.mime_map['']
+    else:
+        page_class = WikiPageSpecial
+        mime = ''
+    return page_class(request.wiki, request, title, mime)
 
 
 def page_mime(title):
@@ -121,7 +168,7 @@ class WikiPage(object):
             classes = [class_]
         else:
             classes = []
-        if parser.external_link(addr):
+        if hatta.parser.external_link(addr):
             classes.append('external')
             if addr.startswith('mailto:'):
                 # Obfuscate e-mails a little bit.
@@ -164,7 +211,7 @@ class WikiPage(object):
         addr = addr.strip()
         html = werkzeug.html
         chunk = ''
-        if parser.external_link(addr):
+        if hatta.parser.external_link(addr):
             return html.img(src=werkzeug.url_fix(addr), class_="external",
                             alt=alt)
         if '#' in addr:
@@ -209,9 +256,9 @@ class WikiPage(object):
         edit_url = None
         if self.title:
             try:
-                self.wiki._check_lock(self.title)
+                check_lock(self.wiki, self.title)
                 edit_url = self.get_url(self.title, self.wiki.edit)
-            except error.ForbiddenErr:
+            except hatta.error.ForbiddenErr:
                 pass
         context = {
             'request': self.request,
@@ -244,10 +291,10 @@ class WikiPage(object):
         return dependencies
 
     def get_edit_help(self):
-        page = self.wiki.get_page(self.request, self.wiki.help_page)
+        page = get_page(self.request, self.wiki.help_page)
         try:
             return ''.join(page.view_content())
-        except error.NotFoundErr:
+        except hatta.error.NotFoundErr:
             return ''
 
     def render_editor(self, preview=None, captcha_error=None):
@@ -320,10 +367,10 @@ class WikiPageText(WikiPage):
             comment = _(u'modified')
             if old_author == author:
                 comment = old_comment
-        except error.NotFoundErr:
+        except hatta.error.NotFoundErr:
             comment = _(u'created')
             rev = -1
-        except error.ForbiddenErr, e:
+        except hatta.error.ForbiddenErr, e:
             return werkzeug.html.p(werkzeug.html(unicode(e)))
         if preview:
             lines = preview
@@ -450,9 +497,9 @@ class WikiPageWiki(WikiPageColorText):
     def __init__(self, *args, **kw):
         super(WikiPageWiki, self).__init__(*args, **kw)
         if self.config.get_bool('wiki_words', False):
-            self.parser = parser.WikiWikiParser
+            self.parser = hatta.parser.WikiWikiParser
         else:
-            self.parser = parser.WikiParser
+            self.parser = hatta.parser.WikiParser
         if self.config.get_bool('ignore_indent', False):
             try:
                 del self.parser.block['indent']
@@ -465,7 +512,7 @@ class WikiPageWiki(WikiPageColorText):
         if text is None:
             try:
                 text = self.storage.page_text(self.title)
-            except error.NotFoundErr:
+            except hatta.error.NotFoundErr:
                 text = u''
         return self.parser.extract_links(text)
 
@@ -515,7 +562,7 @@ class WikiPageFile(WikiPage):
 
     def view_content(self, lines=None):
         if self.title not in self.storage:
-            raise error.NotFoundErr()
+            raise hatta.error.NotFoundErr()
         content = ['<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>' %
                    (self.request.get_download_url(self.title),
                     werkzeug.escape(self.title), self.mime)]
@@ -529,7 +576,7 @@ class WikiPageImage(WikiPageFile):
 
     def view_content(self, lines=None):
         if self.title not in self.storage:
-            raise error.NotFoundErr()
+            raise hatta.error.NotFoundErr()
         content = ['<img src="%s" alt="%s">'
                    % (self.request.get_url(self.title, self.wiki.render),
                       werkzeug.escape(self.title))]
@@ -556,7 +603,7 @@ class WikiPageImage(WikiPageFile):
             im.thumbnail((128, 128), Image.ANTIALIAS)
             im.save(cache_file, 'PNG')
         except IOError:
-            raise error.UnsupportedMediaTypeErr('Image corrupted')
+            raise hatta.error.UnsupportedMediaTypeErr('Image corrupted')
         cache_file.close()
         return cache_path
 
@@ -588,7 +635,7 @@ class WikiPageCSV(WikiPageFile):
 
     def view_content(self, lines=None):
         if self.title not in self.storage:
-            raise error.NotFoundErr()
+            raise hatta.error.NotFoundErr()
         return self.content_iter(lines)
 
 

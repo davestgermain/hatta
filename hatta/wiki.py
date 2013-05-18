@@ -33,7 +33,6 @@ class WikiAllConverter(werkzeug.routing.BaseConverter):
     regex = '.*'
 
 
-
 class Wiki(object):
     """
     The main class of the wiki, handling initialization of the whole
@@ -126,12 +125,7 @@ class Wiki(object):
         adapter = self.url_map.bind_to_environ(environ)
         request = hatta.request.WikiRequest(self, adapter, environ)
         try:
-            try:
-                endpoint, values = adapter.match()
-                return endpoint(request, **values)
-            except werkzeug.exceptions.HTTPException as err:
-                return err
-        finally:
-            request.cleanup()
-            del request
-            del adapter
+            endpoint, values = adapter.match()
+            return endpoint(request, **values)
+        except werkzeug.exceptions.HTTPException as err:
+            return err

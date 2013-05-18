@@ -8,7 +8,7 @@ import setuptools
 
 setuptools.setup(
     name='Hatta',
-    version='1.5.4',
+    version='1.6.0',
     license='GNU General Public License (GPL)',
     author='Radomir Dopieralski',
     author_email='hatta@sheep.art.pl',

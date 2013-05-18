@@ -33,6 +33,35 @@ class WikiAllConverter(werkzeug.routing.BaseConverter):
     regex = '.*'
 
 
+def init_gettext(language):
+    if language is not None:
+        try:
+            translation = gettext.translation(
+                'hatta',
+                'locale',
+                languages=[language],
+            )
+        except IOError:
+            translation = gettext.translation(
+                'hatta',
+                fallback=True,
+                languages=[language],
+            )
+    else:
+        translation = gettext.translation('hatta', fallback=True)
+    return translation
+
+
+def init_template(translation):
+    template_env = jinja2.Environment(
+        extensions=['jinja2.ext.i18n'],
+        loader=jinja2.PackageLoader('hatta', 'templates'),
+    )
+    template_env.autoescape = True
+    template_env.install_gettext_translations(translation, True)
+    return template_env
+
+
 class Wiki(object):
     """
     The main class of the wiki, handling initialization of the whole
@@ -50,26 +79,12 @@ class Wiki(object):
         self.dead = False
         self.config = config
 
-        self.language = config.get('language', None)
-        if self.language is not None:
-            try:
-                translation = gettext.translation('hatta', 'locale',
-                                        languages=[self.language])
-
-            except IOError:
-                translation = gettext.translation('hatta', fallback=True,
-                                        languages=[self.language])
-        else:
-            translation = gettext.translation('hatta', fallback=True)
+        self.language = config.get('language')
+        translation = init_gettext(self.language)
         self.gettext = translation.ugettext
-        self.template_env = jinja2.Environment(
-                            extensions=['jinja2.ext.i18n'],
-                            loader=jinja2.PackageLoader('hatta', 'templates'),
-                            )
-        self.template_env.autoescape = True
-        self.template_env.install_gettext_translations(translation, True)
+        self.template_env = init_template(translation)
         self.path = os.path.abspath(config.get('pages_path', 'docs'))
-        self.repo_path = config.get('repo_path', None)
+        self.repo_path = config.get('repo_path')
         self.page_charset = config.get('page_charset', 'utf-8')
         self.menu_page = self.config.get('menu_page', u'Menu')
         self.front_page = self.config.get('front_page', u'Home')
@@ -77,46 +92,56 @@ class Wiki(object):
         self.locked_page = self.config.get('locked_page', u'Locked')
         self.site_name = self.config.get('site_name', u'Hatta Wiki')
         self.read_only = self.config.get_bool('read_only', False)
-        self.icon_page = self.config.get('icon_page', None)
+        self.icon_page = self.config.get('icon_page')
         self.alias_page = self.config.get('alias_page', 'Alias')
         self.help_page = self.config.get('help_page', 'Help')
-        self.math_url = self.config.get('math_url',
-            'http://www.mathtran.org/cgi-bin/mathtran?tex=')
+        self.math_url = self.config.get(
+            'math_url',
+            'http://www.mathtran.org/cgi-bin/mathtran?tex=',
+        )
         self.pygments_style = self.config.get('pygments_style', 'tango')
-        self.subdirectories = self.config.get_bool('subdirectories', False)
-        self.extension = self.config.get('extension', None)
+        self.extension = self.config.get('extension')
         self.unix_eol = self.config.get_bool('unix_eol', False)
-        self.recaptcha_public_key = self.config.get(
-                'recaptcha_public_key', None)
-        self.recaptcha_private_key = self.config.get(
-                'recaptcha_private_key', None)
+        self.recaptcha_public_key = self.config.get('recaptcha_public_key')
+        self.recaptcha_private_key = self.config.get('recaptcha_private_key')
+        self.subdirectories = self.config.get_bool('subdirectories', False)
         if self.subdirectories:
-            self.storage = hatta.storage.WikiSubdirectoryStorage(self.path,
-                self.page_charset, self.gettext, self.unix_eol, self.extension,
-                self.repo_path)
-        else:
-            self.storage = self.storage_class(self.path, self.page_charset,
-                self.gettext, self.unix_eol, self.extension,
-                self.repo_path)
+            self.storage_class = hatta.storage.WikiSubdirectoryStorage
+        self.storage = self.storage_class(
+            self.path,
+            self.page_charset,
+            self.gettext,
+            self.unix_eol,
+            self.extension,
+            self.repo_path,
+        )
         self.repo_path = self.storage.repo_path
-        self.cache = os.path.abspath(config.get('cache_path',
-                os.path.join(self.repo_path, '.hg', 'hatta', 'cache')))
+        self.cache = os.path.abspath(
+            config.get(
+                'cache_path',
+                os.path.join(self.repo_path, '.hg', 'hatta', 'cache'),
+            )
+        )
         self.index = self.index_class(self.cache, self.language, self.storage)
         self.index.update(self)
         self.url_rules = hatta.views.URL.rules(self)
-        self.url_map = werkzeug.routing.Map(self.url_rules, converters={
+        self.url_converters = {
             'title': WikiTitleConverter,
             'all': WikiAllConverter,
-        })
+        }
+        self.url_map = werkzeug.routing.Map(
+            self.url_rules,
+            converters=self.url_converters,
+        )
 
     def add_url_rule(self, rule):
         """Let plugins add additional url rules."""
 
         self.url_rules.append(rule)
-        self.url_map = werkzeug.routing.Map(self.url_rules, converters={
-            'title': WikiTitleConverter,
-            'all': WikiAllConverter,
-        })
+        self.url_map = werkzeug.routing.Map(
+            self.url_rules,
+            converters=self.url_converters,
+        )
 
     @werkzeug.responder
     def application(self, environ, start):
@@ -129,3 +154,4 @@ class Wiki(object):
             return endpoint(request, **values)
         except werkzeug.exceptions.HTTPException as err:
             return err
+

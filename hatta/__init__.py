@@ -24,7 +24,9 @@ from hatta.page import WikiPageColorText, WikiPageFile, WikiPageImage
 from hatta.page import WikiPage, WikiPageText, WikiPageWiki
 from hatta.parser import WikiParser, WikiWikiParser
 from hatta.storage import WikiStorage, WikiSubdirectoryStorage
-from hatta.wiki import Wiki, WikiResponse, WikiRequest
+from hatta.request import WikiRequest
+from hatta.response import WikiResponse
+from hatta.wiki import Wiki
 from hatta.hg_integration import cmdtable
 
 
@@ -41,7 +43,7 @@ __all__ = [
 ]
 
 # Project's metainformation
-__version__ = '1.5.3'
+__version__ = '1.6.0'
 project_name = 'Hatta'
 project_url = 'http://hatta-wiki.org/'
 project_description = 'Wiki engine that lives in Mercurial repository.'

@@ -3,260 +3,261 @@
 # This file is distributed under the same license as the Hatta Wiki project.
 # 
 # Translators:
+# Wasilis Mandratzis <m.wasilis@yahoo.de>, 2013
 msgid ""
 msgstr ""
 "Project-Id-Version: Hatta\n"
 "Report-Msgid-Bugs-To: hatta@sheep.art.pl\n"
 "POT-Creation-Date: 2013-05-18 12:19+0200\n"
-"PO-Revision-Date: 2013-05-18 10:23+0000\n"
-"Last-Translator: Radomir Dopieralski <transifex@sheep.art.pl>\n"
-"Language-Team: Finnish (http://www.transifex.com/projects/p/hatta/language/fi/)\n"
+"PO-Revision-Date: 2013-06-05 13:39+0000\n"
+"Last-Translator: Wasilis Mandratzis <m.wasilis@yahoo.de>\n"
+"Language-Team: Greek (http://www.transifex.com/projects/p/hatta/language/el/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.6\n"
-"Language: fi\n"
+"Language: el\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: hatta/page.py:198 hatta/templates/changes.html:3
 #: hatta/templates/changes.html:4
 msgid "Recent changes"
-msgstr "Viimeisimmät muutokset"
+msgstr "Πρόσφατες αλλαγές"
 
 #: hatta/page.py:257
 msgid "changed"
-msgstr "muutettu"
+msgstr "άλλαξε"
 
 #: hatta/page.py:263
 msgid "uploaded"
-msgstr "lisätty"
+msgstr "μεταφόρτωση"
 
 #: hatta/page.py:320
 msgid "modified"
-msgstr "muokattu"
+msgstr "τροποποιήθηκε"
 
 #: hatta/page.py:324
 msgid "created"
-msgstr "luotu"
+msgstr "δημιουργήθηκε"
 
 #: hatta/page.py:582
 msgid "Error parsing CSV file %{file}s on line %{line}d: %{error}s"
-msgstr "Virhe jäsennettäessä CSV-tiedostoa %{file}s rivillä %{line}d: %{error}s"
+msgstr "Σφάλμα ανάλυσης του CSV αρχείου %{file}s στη γραμμή %{line}d: %{error}s"
 
 #: hatta/storage.py:158
 msgid "Can't read or write outside of the pages repository"
-msgstr "Ei voida lukea sivuhakemiston ulkopuolelta"
+msgstr "Δεν μπορεί να ανάγνωση ή εγγραφή έξω από το αποθετήριο σελίδων"
 
 #: hatta/storage.py:200 hatta/storage.py:443
 msgid "anon"
-msgstr "anonyymi"
+msgstr "εντός ολίγου"
 
 #: hatta/storage.py:201 hatta/storage.py:444
 msgid "comment"
-msgstr "kommentti"
+msgstr "σχόλιο"
 
 #: hatta/storage.py:212 hatta/storage.py:468
 msgid "failed merge of edit conflict"
-msgstr "muokkausristiriidan epäonnistunut ratkonta"
+msgstr "Απέτυχε η συγχώνευση της επεξεργασίας των συγκρούσεων"
 
 #: hatta/wiki.py:346
 msgid "This site is read-only."
-msgstr "Tämä sivusto on vain luku -tilassa."
+msgstr "Αυτή η ιστοσελίδα είναι μόνο για ανάγνωση."
 
 #: hatta/wiki.py:348
 msgid ""
 "Can't edit this page.\n"
 "It can only be edited by the site admin directly on the disk."
-msgstr "Et voi muokata tätä sivua.\nTätä sivua voi muokata vain sivuston ylläpitäjä suoraan levyllä."
+msgstr "Δεν μπορείτε να επεξεργαστείτε αυτή τη σελίδα. ⏎\nΤο μόνο που μπορείτε να επεξεργαστείτε από την ιστοσελίδα διαχειριστή απευθείας στο δίσκο."
 
 #: hatta/wiki.py:351 hatta/wiki.py:459
 msgid "This page is locked."
-msgstr "Tämä sivu on lukittu."
+msgstr "Αυτή η σελίδα είναι κλειδωμένη."
 
 #: hatta/wiki.py:377
 msgid "Page not found."
-msgstr ""
+msgstr "Η σελίδα δεν βρέθηκε."
 
 #: hatta/wiki.py:395
 #, python-format
 msgid "Content of revision %(rev)d of page %(title)s:"
-msgstr "Sivun %(title)s version %(rev)d sisältö:"
+msgstr "Content of revision %(rev)d of page %(title)s:"
 
 #: hatta/wiki.py:399
 #, python-format
 msgid "Revision of \"%(title)s\""
-msgstr "Versio sivulle \"%(title)s\""
+msgstr " Αναθεώρηση του \"%(title)s\""
 
 #: hatta/wiki.py:432
 msgid "No preview for binaries."
-msgstr "Ei esikatselua binaaritiedostoille."
+msgstr "Καμία προεπισκόπηση για δυαδικά αρχεία."
 
 #: hatta/wiki.py:511
 msgid "Track the most recent changes to the wiki in this feed."
-msgstr "Seuraa viimeisimpiä muutoksia wikiin tällä syötteellä."
+msgstr "Παρακολουθήστε τις πιο πρόσφατες αλλαγές του wiki σε αυτό το feed."
 
 #: hatta/wiki.py:637
 #, python-format
 msgid "Delete page %(title)s"
-msgstr "Poista sivu %(title)s"
+msgstr "Διαγραφη της σελιδας %(title)s"
 
 #: hatta/wiki.py:641
 #, python-format
 msgid "Undo of change %(rev)d of page %(title)s"
-msgstr "Kumoa sivun %(title)s muutos %(rev)d"
+msgstr "Αναίρεση των αλλαγών %(rev)d της σελίδας %(title)s"
 
 #: hatta/wiki.py:727
 #, python-format
 msgid ""
 "Differences between revisions %(link1)s and %(link2)s of page %(link)s."
-msgstr "Eroavaisuudet sivun %(link)s versioissa %(link1)s ja %(link2)s."
+msgstr "Διαφορές μεταξύ αναθεωρήσεων %(link1)s και %(link2)s της σελίδας %(link)s."
 
 #: hatta/wiki.py:737
 msgid "Diff not available for this kind of pages."
-msgstr "Eroavaisuuksien vertailu ei ole mahdollista tämän kaltaisille sivuille."
+msgstr "Diff δεν είναι διαθέσιμα για αυτό το είδος των σελίδων."
 
 #: hatta/wiki.py:738
 #, python-format
 msgid "Diff for \"%(title)s\""
-msgstr "Sivun \"%(title)s\" eroavaisuudet"
+msgstr "Diff για \"%(title)s\""
 
 #: hatta/wiki.py:753
 msgid "Index of all pages"
-msgstr "Luettelo kaikista sivuista"
+msgstr "Ευρετήριο όλων των σελίδων"
 
 #: hatta/wiki.py:754
 msgid "Page Index"
-msgstr "Sivuluettelo"
+msgstr "Ευρετήριο σελίδας"
 
 #: hatta/wiki.py:788
 msgid "List of pages with no links to them"
-msgstr "Lista sivuista joihin ei ole viitattu"
+msgstr "Λίστα των σελίδων χωρίς συνδέσεις με τα"
 
 #: hatta/wiki.py:789
 msgid "Orphaned pages"
-msgstr "Orposivut"
+msgstr "Ορφανες σελίδες"
 
 #: hatta/wiki.py:845
 #, python-format
 msgid "%d page(s) containing all words:"
-msgstr "%d sivu(a) jotka sisältävät kaikki sanat:"
+msgstr "%d σελίδα(ες) που περιέχει όλες τις λέξεις:"
 
 #: hatta/wiki.py:863
 #, python-format
 msgid "Searching for \"%s\""
-msgstr "Etsitään \"%s\""
+msgstr "Αναζήτηση για \"%s\""
 
 #: hatta/wiki.py:904
 msgid "Code highlighting is not available."
-msgstr "Syntaksin värikoodaus ei ole saatavilla."
+msgstr "Η επισήμανση κώδικα δεν είναι διαθέσιμη."
 
 #: hatta/wiki.py:936
 msgid "Repository access disabled."
-msgstr "Sivuhakemistoon pääsy estetty."
+msgstr "Η πρόσβαση στο καταθετήριο ειναι απενεργοποιημένη."
 
 #: hatta/wiki.py:956
 msgid "This URL can only be called locally."
-msgstr "Tätä URL-osoitetta voi kutsua vain paikallisesti."
+msgstr "Αυτή η διεύθυνση URL μπορεί μόνο να κληθεί σε τοπικό επίπεδο."
 
 #: hatta/templates/backlinks.html:6 hatta/templates/backlinks.html:8
 #, python-format
 msgid "Links to %(title)s"
-msgstr "Sivuun %(title)s viittaavat sivut"
+msgstr "Σύνδεση με %(title)s"
 
 #: hatta/templates/backlinks.html:11
 #, python-format
 msgid "Pages that contain a link to %(link)s."
-msgstr "Sivut jotka viittaavat sivulle %(link)s."
+msgstr "Σελίδες που περιέχουν ένα σύνδεσμο προς %(link)s."
 
 #: hatta/templates/edit_file.html:3 hatta/templates/edit_file.html:5
 #: hatta/templates/edit_text.html:3 hatta/templates/edit_text.html:4
 #, python-format
 msgid "Editing \"%(title)s\""
-msgstr "Muokataan sivua \"%(title)s\""
+msgstr "Επεξεργασια του \"%(title)s\""
 
 #: hatta/templates/edit_file.html:8
 msgid ""
 "This is a binary file, it can't be edited on a wiki. Please upload a new "
 "version instead."
-msgstr "Tämä on binaaritiedosto eikä sitä voi muokata wikissä. Lähetä uusi versio tiedostosta."
+msgstr "Αυτό είναι ένα δυαδικό αρχείο, δεν μπορεί να επεξεργαστεί σε ένα wiki. Παρακαλούμε να αποστείλετε μια νέα έκδοση αντ 'αυτού."
 
 #: hatta/templates/edit_file.html:13 hatta/templates/edit_text.html:11
 msgid "Comment"
-msgstr "Kommentti"
+msgstr "Σχόλιο"
 
 #: hatta/templates/edit_file.html:15 hatta/templates/edit_text.html:13
 msgid "Author"
-msgstr "Tekijä"
+msgstr "Δημιουργος"
 
 #: hatta/templates/edit_file.html:21 hatta/templates/edit_text.html:19
 msgid "Save"
-msgstr "Tallenna"
+msgstr "Αποθηκευση"
 
 #: hatta/templates/edit_file.html:22 hatta/templates/edit_text.html:21
 msgid "Cancel"
-msgstr "Peruuta"
+msgstr "Ακύρωση"
 
 #: hatta/templates/edit_text.html:20
 msgid "Preview"
-msgstr "Esikatselu"
+msgstr "Προεπισκόπηση"
 
 #: hatta/templates/edit_text.html:25
 msgid "Preview, not saved"
-msgstr "Esikatselu, ei tallennettu"
+msgstr " Η προεπισκόπηση δεν αποθηκευθηκε"
 
 #: hatta/templates/history.html:6 hatta/templates/history.html:8
 #, python-format
 msgid "History of %(title)s"
-msgstr "Sivun %(title)s historia"
+msgstr "Ιστορικο του %(title)s"
 
 #: hatta/templates/history.html:11
 #, python-format
 msgid "History of changes for %(link)s."
-msgstr "Sivun %(link)s muutoshistoria."
+msgstr "Ιστορικο των αλλαγων του %(link)s."
 
 #: hatta/templates/history.html:19
 msgid "Undo"
-msgstr "Kumoa"
+msgstr "Αναιρεση"
 
 #: hatta/templates/page.html:9
 msgid "Edit"
-msgstr "Muokkaa"
+msgstr "Επεξεργασια"
 
 #: hatta/templates/page.html:12
 msgid "History"
-msgstr "Historia"
+msgstr "Ιστορικο"
 
 #: hatta/templates/page.html:14
 msgid "Backlinks"
-msgstr "Viitteet"
+msgstr "Σύνδεσμοι επιστροφής"
 
 #: hatta/templates/page_special.html:9
 msgid "Changes"
-msgstr "Muutokset"
+msgstr "Αλλαγες"
 
 #: hatta/templates/page_special.html:10
 msgid "Index"
-msgstr "Sivuluettelo"
+msgstr "Ευρετήριο"
 
 #: hatta/templates/page_special.html:11
 msgid "Orphaned"
-msgstr "Orposivut"
+msgstr "Ορφανά"
 
 #: hatta/templates/page_special.html:12
 msgid "Wanted"
-msgstr "Toivotut"
+msgstr "Περιζήτητα"
 
 #: hatta/templates/wanted.html:3 hatta/templates/wanted.html:4
 msgid "Wanted pages"
-msgstr "Toivotut sivut"
+msgstr "Περιζήτητες σελίδες"
 
 #: hatta/templates/wanted.html:7
 msgid "List of pages that are linked to, but don't exist yet."
-msgstr "Lista sivuista joihin viitataan, mutta joita ei ole vielä olemassa."
+msgstr "Λίστα των σελίδων που συνδέονται με, αλλά δεν υπάρχουν ακόμα."
 
 #: hatta/templates/wanted.html:13
 #, python-format
 msgid "%(num)d reference"
 msgid_plural "%(num)d references"
-msgstr[0] "%(num)d viittaus"
-msgstr[1] "%(num)d viittausta"
+msgstr[0] "%(num)d αναφοράς"
+msgstr[1] "%(num)d αναφορά"

@@ -57,14 +57,14 @@ class URL(object):
     def get_views(cls):
         """Returns a dict of views."""
 
-        return {name: func for name, func, url, methods in cls.urls}
+        return dict((name, func) for name, func, url, methods in cls.urls)
 
 
 def _serve_default(request, title, content=None, mime=None):
     """Some pages have their default content."""
 
     if title in request.wiki.storage:
-        return request.wiki.download(request, title)
+        return download(request, title)
     if content is None:
         content = pkgutil.get_data('hatta', os.path.join('static', title))
     mime = mime or 'application/octet-stream'
@@ -145,7 +145,7 @@ def save(request, title):
         else:
             lines = [werkzeug.html.p(werkzeug.html(
                 _(u'No preview for binaries.')))]
-        return request.wiki.edit(request, title, preview=lines)
+        return edit(request, title, preview=lines)
     elif request.form.get('save'):
         if captcha and request.wiki.recaptcha_private_key:
             response = captcha.submit(
@@ -154,7 +154,7 @@ def save(request, title):
                 request.wiki.recaptcha_private_key, request.remote_addr)
             if not response.is_valid:
                 text = request.form.get("text", '')
-                return request.wiki.edit(request, title, preview=text.split('\n'),
+                return edit(request, title, preview=text.split('\n'),
                                  captcha_error=response.error_code)
         comment = request.form.get("comment", "")
         author = request.get_author()
@@ -302,7 +302,7 @@ def render(request, title):
         cache_filename, cache_mime = page.render_mime()
         render = page.render_cache
     except (AttributeError, NotImplementedError):
-        return request.wiki.download(request, title)
+        return download(request, title)
 
     cache_dir = os.path.join(request.wiki.cache, 'render',
                               werkzeug.url_quote(title, safe=''))

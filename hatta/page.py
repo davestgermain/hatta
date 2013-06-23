@@ -578,7 +578,7 @@ class WikiPageImage(WikiPageFile):
         if self.title not in self.storage:
             raise hatta.error.NotFoundErr()
         content = ['<img src="%s" alt="%s">'
-                   % (self.request.get_url(self.title, self.wiki.render),
+                   % (self.request.get_url(self.title, 'render'),
                       werkzeug.escape(self.title))]
         return content
 

@@ -196,6 +196,7 @@ class WikiStorage(object):
     def save_data(self, title, data, author=None, comment=None, parent_rev=None):
         """Save a new revision of the page. If the data is None, deletes it."""
 
+        self.reopen() # Make sure we are at the tip.
         _ = self._
         user = (author or _(u'anon')).encode('utf-8')
         text = (comment or _(u'comment')).encode('utf-8')

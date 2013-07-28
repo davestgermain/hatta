@@ -6,8 +6,8 @@ import re
 import sqlite3
 import thread
 
-from hatta import error
-
+import hatta.error
+import hatta.page
 
 class WikiSearch(object):
     """
@@ -246,7 +246,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
             get_text = getattr(page, 'plain_text', lambda: u'')
             try:
                 text = get_text()
-            except error.NotFoundErr:
+            except hatta.error.NotFoundErr:
                 text = None
                 title_id = self.title_id(title, cursor)
                 if not list(self.page_backlinks(title)):
@@ -280,7 +280,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         cursor = self.con.cursor()
         try:
             for title in pages:
-                page = wiki.get_page(None, title)
+                page = hatta.page.get_page(None, title)
                 self.reindex_page(page, title, cursor)
             self.con.commit()
             self.empty = False

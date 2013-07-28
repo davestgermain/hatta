@@ -51,17 +51,19 @@ It can only be edited by the site admin directly on the disk."""))
 
 
 
-def get_page(request, title):
+def get_page(request, title, wiki=None):
     """Creates a page object based on page's mime type"""
 
+    if wiki is None:
+        wiki = request.wiki
     if title:
         try:
-            page_class, mime = request.wiki.filename_map[title]
+            page_class, mime = wiki.filename_map[title]
         except KeyError:
             mime = page_mime(title)
             major, minor = mime.split('/', 1)
             try:
-                page_class = request.wiki.mime_map[mime]
+                page_class = wiki.mime_map[mime]
             except KeyError:
                 try:
                     plus_pos = minor.find('+')
@@ -70,16 +72,16 @@ def get_page(request, title):
                     else:
                         minor_base = ''
                     base_mime = '/'.join([major, minor_base])
-                    page_class = request.wiki.mime_map[base_mime]
+                    page_class = wiki.mime_map[base_mime]
                 except KeyError:
                     try:
-                        page_class = request.wiki.mime_map[major]
+                        page_class = wiki.mime_map[major]
                     except KeyError:
-                        page_class = request.wiki.mime_map['']
+                        page_class = wiki.mime_map['']
     else:
         page_class = WikiPageSpecial
         mime = ''
-    return page_class(request.wiki, request, title, mime)
+    return page_class(wiki, request, title, mime)
 
 
 def page_mime(title):

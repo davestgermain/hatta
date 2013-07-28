@@ -280,7 +280,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         cursor = self.con.cursor()
         try:
             for title in pages:
-                page = hatta.page.get_page(None, title)
+                page = hatta.page.get_page(None, title, wiki)
                 self.reindex_page(page, title, cursor)
             self.con.commit()
             self.empty = False

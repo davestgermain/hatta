@@ -200,6 +200,7 @@ def save(request, title):
 @URL('/+edit/<title:title>', methods=['GET'])
 def edit(request, title, preview=None, captcha_error=None):
     hatta.page.check_lock(request.wiki, title)
+    request.wiki.storage.reopen()
     exists = title in request.wiki.storage
     if exists:
         request.wiki.storage.reopen()

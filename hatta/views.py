@@ -260,7 +260,7 @@ def download(request, title):
         mime = 'text/plain'
     data = request.wiki.storage.page_data(title)
     response = hatta.response.response(request, title, data,
-                             '/download', mime, size=-1)
+                             '/download', mime, size=len(data))
     response.direct_passthrough = True
     return response
 

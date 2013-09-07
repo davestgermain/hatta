@@ -577,7 +577,7 @@ def search(request):
     query = request.values.get('q', u'').strip()
     page = hatta.page.get_page(request, '')
     if not query:
-        url = request.get_url(view=request.wiki.all_pages, external=True)
+        url = request.get_url(view='all_pages', external=True)
         return werkzeug.routing.redirect(url, code=303)
     words = tuple(request.wiki.index.split_text(query))
     if not words:

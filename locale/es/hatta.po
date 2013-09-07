@@ -87,12 +87,12 @@ msgstr ""
 #: hatta/wiki.py:389
 #, python-format
 msgid "Content of revision %(rev)d of page %(title)s:"
-msgstr "Revision del contenido %(rev) de la pagina %(title):"
+msgstr "Revision del contenido %(rev) de la pagina %(title)s:"
 
 #: hatta/wiki.py:393
 #, python-format
 msgid "Revision of \"%(title)s\""
-msgstr "Revision de \"%(title)\""
+msgstr "Revision de \"%(title)s\""
 
 #: hatta/wiki.py:426
 msgid "No preview for binaries."
@@ -105,18 +105,18 @@ msgstr "Sigue los cambios mas recientes en el wiki en este feed."
 #: hatta/wiki.py:638
 #, python-format
 msgid "Delete page %(title)s"
-msgstr "Borrar pagina %(title)"
+msgstr "Borrar pagina %(title)s"
 
 #: hatta/wiki.py:642
 #, python-format
 msgid "Undo of change %(rev)d of page %(title)s"
-msgstr "Revertir cambios en %(rev) de pagina %(title)"
+msgstr "Revertir cambios en %(rev)d de pagina %(title)s"
 
 #: hatta/wiki.py:728
 #, python-format
 msgid ""
 "Differences between revisions %(link1)s and %(link2)s of page %(link)s."
-msgstr "Diferencias entre revisiones %(link1) y %(link2) de la pagina %(link)."
+msgstr "Diferencias entre revisiones %(link1)s y %(link2)s de la pagina %(link)s."
 
 #: hatta/wiki.py:738
 msgid "Diff not available for this kind of pages."
@@ -179,7 +179,7 @@ msgstr ""
 #: hatta/templates/edit_text.html:3 hatta/templates/edit_text.html:4
 #, python-format
 msgid "Editing \"%(title)s\""
-msgstr "Editando \"%(title)\""
+msgstr "Editando \"%(title)s\""
 
 #: hatta/templates/edit_file.html:8
 msgid ""
@@ -219,7 +219,7 @@ msgstr ""
 #: hatta/templates/history.html:11
 #, python-format
 msgid "History of changes for %(link)s."
-msgstr "Historial de cambios para %(link)"
+msgstr "Historial de cambios para %(link)s"
 
 #: hatta/templates/history.html:19
 msgid "Undo"

@@ -3,261 +3,260 @@
 # This file is distributed under the same license as the Hatta Wiki project.
 # 
 # Translators:
-# kirisfex <kuldjlevelet@gmail.com>, 2013
+# ppanhh <ppanhh@gmail.com>, 2013
 msgid ""
 msgstr ""
 "Project-Id-Version: Hatta\n"
 "Report-Msgid-Bugs-To: hatta@sheep.art.pl\n"
 "POT-Creation-Date: 2013-05-18 12:19+0200\n"
-"PO-Revision-Date: 2013-09-11 19:23+0000\n"
-"Last-Translator: kirisfex <kuldjlevelet@gmail.com>\n"
-"Language-Team: Hungarian (http://www.transifex.com/projects/p/hatta/language/hu/)\n"
+"PO-Revision-Date: 2013-09-12 08:03+0000\n"
+"Last-Translator: ppanhh <ppanhh@gmail.com>\n"
+"Language-Team: Vietnamese (http://www.transifex.com/projects/p/hatta/language/vi/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.6\n"
-"Language: hu\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language: vi\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 
 #: hatta/page.py:198 hatta/templates/changes.html:3
 #: hatta/templates/changes.html:4
 msgid "Recent changes"
-msgstr "Korábbi változások"
+msgstr "Các thay đổi gần đây"
 
 #: hatta/page.py:257
 msgid "changed"
-msgstr "megváltozott"
+msgstr "đã thay đổi"
 
 #: hatta/page.py:263
 msgid "uploaded"
-msgstr "feltöltve"
+msgstr "đã tải lên"
 
 #: hatta/page.py:320
 msgid "modified"
-msgstr "módosítva"
+msgstr "đã sửa đổi"
 
 #: hatta/page.py:324
 msgid "created"
-msgstr "létrehozva"
+msgstr "đã tạo"
 
 #: hatta/page.py:582
 msgid "Error parsing CSV file %{file}s on line %{line}d: %{error}s"
-msgstr "Hiba a CSV fájl (%{files}s) feldolgozása során a %{line}d. sorban: %{error}s"
+msgstr "Lỗi phân tích cú pháp tập tin CSV % {file}s  trên dòng % {line} d: %s {error}s"
 
 #: hatta/storage.py:158
 msgid "Can't read or write outside of the pages repository"
-msgstr "A wiki tartalmán kívüli fájlokhoz a program nem fér hozzá"
+msgstr "Không thể đọc hay viết bên ngoài của kho lưu trữ trang"
 
 #: hatta/storage.py:200 hatta/storage.py:443
 msgid "anon"
-msgstr "névtelen"
+msgstr "anon"
 
 #: hatta/storage.py:201 hatta/storage.py:444
 msgid "comment"
-msgstr "megjegyzés"
+msgstr "bình luận"
 
 #: hatta/storage.py:212 hatta/storage.py:468
 msgid "failed merge of edit conflict"
-msgstr "a szerkesztési konfliktusok összevonása sikertelen"
+msgstr "trộn dữ liệu không thành công của phần xung đột khi chỉnh sửa"
 
 #: hatta/wiki.py:346
 msgid "This site is read-only."
-msgstr "Ez a szájt nem szerkeszthető."
+msgstr "Trang này chỉ được đọc."
 
 #: hatta/wiki.py:348
 msgid ""
 "Can't edit this page.\n"
 "It can only be edited by the site admin directly on the disk."
-msgstr "Ezt az oldalt csak az adminisztrátor szerkesztheti."
+msgstr "Không thể chỉnh sửa trang này.\nTrang này chỉ có thể được chỉnh sửa bởi trang chính trực tiếp trên đĩa."
 
 #: hatta/wiki.py:351 hatta/wiki.py:459
 msgid "This page is locked."
-msgstr "Ez egy lezárt oldal."
+msgstr "Trang này đã bị khóa."
 
 #: hatta/wiki.py:377
 msgid "Page not found."
-msgstr "Az oldal nem található."
+msgstr "Không tìm thấy Trang."
 
 #: hatta/wiki.py:395
 #, python-format
 msgid "Content of revision %(rev)d of page %(title)s:"
-msgstr "A(z) %(title)s oldal %(rev)d. változatának tartalma:"
+msgstr "Nội dung của phiên bản %(rev)d của trang %(title)s:"
 
 #: hatta/wiki.py:399
 #, python-format
 msgid "Revision of \"%(title)s\""
-msgstr "\"%(title)s\" egy változata"
+msgstr "Bản sửa đổi của \"%(title)s\""
 
 #: hatta/wiki.py:432
 msgid "No preview for binaries."
-msgstr "Bináris fájlokhoz nem létezik előnézet."
+msgstr "Không có phần xem sơ lược cho dạng nhị phân."
 
 #: hatta/wiki.py:511
 msgid "Track the most recent changes to the wiki in this feed."
-msgstr "Ebben hírfolyamban követheted a wiki legutóbbi módosításait."
+msgstr "Theo dõi những thay đổi gần đây nhất của wiki trong feed này."
 
 #: hatta/wiki.py:637
 #, python-format
 msgid "Delete page %(title)s"
-msgstr "%(title)s törlése"
+msgstr "Xóa trang %(title)s"
 
 #: hatta/wiki.py:641
 #, python-format
 msgid "Undo of change %(rev)d of page %(title)s"
-msgstr "A(z) %(title)s oldal %(rev)d. változatának visszavonása"
+msgstr "Hoàn tác thay đổi %(rev)d của trang %(title)s"
 
 #: hatta/wiki.py:727
 #, python-format
 msgid ""
 "Differences between revisions %(link1)s and %(link2)s of page %(link)s."
-msgstr "A(z) %(link)s oldal %(link1)s. és %(link2)s. változata közötti különbség:"
+msgstr "Sự khác biệt giữa phiên bản %(link1)s và %(link2)s của trang %(link)s."
 
 #: hatta/wiki.py:737
 msgid "Diff not available for this kind of pages."
-msgstr "Az ehhez hasonló oldalakat nem lehet összehasonlítani."
+msgstr "Phân biệt điểm khác nhau hiện không có trên loại trang này."
 
 #: hatta/wiki.py:738
 #, python-format
 msgid "Diff for \"%(title)s\""
-msgstr "\"%(title)s\" változásai"
+msgstr "Khác biệt về \"%(title)s\""
 
 #: hatta/wiki.py:753
 msgid "Index of all pages"
-msgstr "Az összes oldal listája:"
+msgstr "Chỉ mục của tất cả các trang"
 
 #: hatta/wiki.py:754
 msgid "Page Index"
-msgstr "Tartalomjegyzék"
+msgstr "Chỉ mục trang"
 
 #: hatta/wiki.py:788
 msgid "List of pages with no links to them"
-msgstr "Azon oldalak listája, amelyekre nem mutat link:"
+msgstr "Danh sách các trang không kèm theo đường dẫn liên kết với các trang đó"
 
 #: hatta/wiki.py:789
 msgid "Orphaned pages"
-msgstr "Árva oldalak"
+msgstr "Các trang con"
 
 #: hatta/wiki.py:845
 #, python-format
 msgid "%d page(s) containing all words:"
-msgstr "Összesen %d oldal felel meg a keresésnek:"
+msgstr "%d trang chứa các từ:"
 
 #: hatta/wiki.py:863
 #, python-format
 msgid "Searching for \"%s\""
-msgstr "Keresés a \"%s\" kifejezésre"
+msgstr "Tìm kiếm \"%s\""
 
 #: hatta/wiki.py:904
 msgid "Code highlighting is not available."
-msgstr "A szintaxiskiemelés nem érhető el."
+msgstr "Tô đâm dòng mã hiện không thực hiện được."
 
 #: hatta/wiki.py:936
 msgid "Repository access disabled."
-msgstr "Hozzáférés nem engedélyezett."
+msgstr "Truy cập kho lưu trữ bị vô hiệu hoá."
 
 #: hatta/wiki.py:956
 msgid "This URL can only be called locally."
-msgstr "Ez az URL csak helyi címről érhető el."
+msgstr "Đường dẫn liên kết này chỉ có thể được gọi tại ngay phần đó."
 
 #: hatta/templates/backlinks.html:6 hatta/templates/backlinks.html:8
 #, python-format
 msgid "Links to %(title)s"
-msgstr "A(z) %(title)s oldalra mutató linkek"
+msgstr "Liên kết đến %(title)s"
 
 #: hatta/templates/backlinks.html:11
 #, python-format
 msgid "Pages that contain a link to %(link)s."
-msgstr "Az összes oldal, amely a(z) %(link)s oldalra linkel:"
+msgstr "Trang có chứa một liên kết đến %(link)s."
 
 #: hatta/templates/edit_file.html:3 hatta/templates/edit_file.html:5
 #: hatta/templates/edit_text.html:3 hatta/templates/edit_text.html:4
 #, python-format
 msgid "Editing \"%(title)s\""
-msgstr "\"%(title)s\" szerkesztése"
+msgstr "Chỉnh sửa \"%(title)s\""
 
 #: hatta/templates/edit_file.html:8
 msgid ""
 "This is a binary file, it can't be edited on a wiki. Please upload a new "
 "version instead."
-msgstr "Bináris fájlokat nem lehet a wikiben szerkeszteni. Kérlek, hogy tölts fel egy másik fájlt!"
+msgstr "Đây là một tập tin nhị phân, nên không thể được chỉnh sửa trên wiki. Xin vui lòng tải lên một phiên bản mới để thay thế."
 
 #: hatta/templates/edit_file.html:13 hatta/templates/edit_text.html:11
 msgid "Comment"
-msgstr "Megjegyzés"
+msgstr "Bình luận"
 
 #: hatta/templates/edit_file.html:15 hatta/templates/edit_text.html:13
 msgid "Author"
-msgstr "Szerző"
+msgstr "Tác giả"
 
 #: hatta/templates/edit_file.html:21 hatta/templates/edit_text.html:19
 msgid "Save"
-msgstr "Mentés"
+msgstr "Lưu lại"
 
 #: hatta/templates/edit_file.html:22 hatta/templates/edit_text.html:21
 msgid "Cancel"
-msgstr "Mégsem"
+msgstr "Hủy bỏ"
 
 #: hatta/templates/edit_text.html:20
 msgid "Preview"
-msgstr "Előnézet"
+msgstr "Xem sơ lược"
 
 #: hatta/templates/edit_text.html:25
 msgid "Preview, not saved"
-msgstr "Piszkozat (nincs mentve)"
+msgstr "Xem sơ lược, không lưu lại"
 
 #: hatta/templates/history.html:6 hatta/templates/history.html:8
 #, python-format
 msgid "History of %(title)s"
-msgstr "%(title)s változásai"
+msgstr "Lịch sử của %(title)s"
 
 #: hatta/templates/history.html:11
 #, python-format
 msgid "History of changes for %(link)s."
-msgstr "%(link)s változásai."
+msgstr "Lịch sử các phần thay đổi của %(link)s."
 
 #: hatta/templates/history.html:19
 msgid "Undo"
-msgstr "Visszavonás"
+msgstr "Hoàn Tác"
 
 #: hatta/templates/page.html:9
 msgid "Edit"
-msgstr "Szerkesztés"
+msgstr "Chỉnh sửa"
 
 #: hatta/templates/page.html:12
 msgid "History"
-msgstr "Laptörténet"
+msgstr "Lịch sử"
 
 #: hatta/templates/page.html:14
 msgid "Backlinks"
-msgstr "Ide mutató linkek"
+msgstr "Liên kết từ bên ngoài"
 
 #: hatta/templates/page_special.html:9
 msgid "Changes"
-msgstr "Változások"
+msgstr "Các thay đổi"
 
 #: hatta/templates/page_special.html:10
 msgid "Index"
-msgstr "Index"
+msgstr "Chỉ mục"
 
 #: hatta/templates/page_special.html:11
 msgid "Orphaned"
-msgstr "Árvák"
+msgstr "Thuộc phần con"
 
 #: hatta/templates/page_special.html:12
 msgid "Wanted"
-msgstr "Hiányzók"
+msgstr "Được cần"
 
 #: hatta/templates/wanted.html:3 hatta/templates/wanted.html:4
 msgid "Wanted pages"
-msgstr "Hiányzó oldalak"
+msgstr "Các trang được cần"
 
 #: hatta/templates/wanted.html:7
 msgid "List of pages that are linked to, but don't exist yet."
-msgstr "Linkelt, de még nem létező oldalak listája:"
+msgstr "Danh sách các trang được liên kết đến, nhưng không tồn tại."
 
 #: hatta/templates/wanted.html:13
 #, python-format
 msgid "%(num)d reference"
 msgid_plural "%(num)d references"
-msgstr[0] "%(num)d db. referencia"
-msgstr[1] "%(num)d db. referencia"
+msgstr[0] "%(num)d tham chiếu"

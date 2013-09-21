@@ -4,22 +4,18 @@
 import setuptools
 
 
-################### Common settings ######################
-
 setuptools.setup(
     name='Hatta',
-    version='1.6.2',
+    version='1.6.3',
     license='GNU General Public License (GPL)',
     author='Radomir Dopieralski',
     author_email='hatta@sheep.art.pl',
     keywords='wiki wsgi web mercurial repository',
     packages=['hatta'],
     install_requires=[
-        'distribute',
         'werkzeug >=0.3',
         'mercurial >=1.0',
         'jinja2',
-#        'pygments',
     ],
     tests_require=['py.test', 'lxml', 'pygments'],
     data_files=[
@@ -27,14 +23,17 @@ setuptools.setup(
         ('share/locale/da/LC_MESSAGES', ['locale/cs/LC_MESSAGES/hatta.mo']),
         ('share/locale/da/LC_MESSAGES', ['locale/da/LC_MESSAGES/hatta.mo']),
         ('share/locale/de/LC_MESSAGES', ['locale/de/LC_MESSAGES/hatta.mo']),
+        ('share/locale/es/LC_MESSAGES', ['locale/el/LC_MESSAGES/hatta.mo']),
         ('share/locale/es/LC_MESSAGES', ['locale/es/LC_MESSAGES/hatta.mo']),
         ('share/locale/es/LC_MESSAGES', ['locale/et/LC_MESSAGES/hatta.mo']),
+        ('share/locale/fr/LC_MESSAGES', ['locale/fi/LC_MESSAGES/hatta.mo']),
         ('share/locale/fr/LC_MESSAGES', ['locale/fr/LC_MESSAGES/hatta.mo']),
         ('share/locale/ja/LC_MESSAGES', ['locale/hu/LC_MESSAGES/hatta.mo']),
         ('share/locale/ja/LC_MESSAGES', ['locale/ja/LC_MESSAGES/hatta.mo']),
         ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
         ('share/locale/pl/LC_MESSAGES', ['locale/ru/LC_MESSAGES/hatta.mo']),
         ('share/locale/sv/LC_MESSAGES', ['locale/sv/LC_MESSAGES/hatta.mo']),
+        ('share/locale/sv/LC_MESSAGES', ['locale/vi/LC_MESSAGES/hatta.mo']),
         ('share/doc/hatta/examples', [
             'examples/hatta.fcg',
             'examples/hatta.wsgi',

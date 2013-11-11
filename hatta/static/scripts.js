@@ -31,7 +31,8 @@ var hatta = function () {
 
     var _foreach_tag = function (tag_names, func) {
         tag_names.forEach(function (tag_name) {
-            document.getElementsByTagName(tag_name).forEach(func);
+            Array.prototype.forEach.call(
+                document.getElementsByTagName(tag_name), func);
         });
     };
 

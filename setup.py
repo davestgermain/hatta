@@ -6,7 +6,7 @@ import setuptools
 
 setuptools.setup(
     name='Hatta',
-    version='1.6.3',
+    version='1.6.4',
     license='GNU General Public License (GPL)',
     author='Radomir Dopieralski',
     author_email='hatta@sheep.art.pl',
@@ -30,6 +30,7 @@ setuptools.setup(
         ('share/locale/fr/LC_MESSAGES', ['locale/fr/LC_MESSAGES/hatta.mo']),
         ('share/locale/ja/LC_MESSAGES', ['locale/hu/LC_MESSAGES/hatta.mo']),
         ('share/locale/ja/LC_MESSAGES', ['locale/ja/LC_MESSAGES/hatta.mo']),
+        ('share/locale/ja/LC_MESSAGES', ['locale/lt/LC_MESSAGES/hatta.mo']),
         ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
         ('share/locale/pl/LC_MESSAGES', ['locale/ru/LC_MESSAGES/hatta.mo']),
         ('share/locale/sv/LC_MESSAGES', ['locale/sv/LC_MESSAGES/hatta.mo']),

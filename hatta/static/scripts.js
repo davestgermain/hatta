@@ -16,7 +16,7 @@ var format_date = function (d) {
     var tz = -d.getTimezoneOffset() / 60;
     if (tz >= 0) {
         tz = "+" + tz;
-    };
+    }
     return ("" + d.getFullYear() + "-" +
             pad(d.getMonth() + 1) + "-" + 
             pad(d.getDate()) + " " +
@@ -36,9 +36,9 @@ var localize_dates = function () {
             var d = parse_date(node.getAttribute('title'));
             if (d) {
                 node.textContent = format_date(d);
-            };
-        };
-    };
+            }
+        }
+    }
 };
 
 var js_editor = function () {
@@ -77,10 +77,10 @@ var js_editor = function () {
         scrollPre.style.fontSize = style.fontSize;
         scrollPre.style.padding = 0;
         scrollPre.style.overflow = 'scroll';
-        try { scrollPre.style.whiteSpace = "-moz-pre-wrap" } catch(e) {};
-        try { scrollPre.style.whiteSpace = "-o-pre-wrap" } catch(e) {};
-        try { scrollPre.style.whiteSpace = "-pre-wrap" } catch(e) {};
-        try { scrollPre.style.whiteSpace = "pre-wrap" } catch(e) {};
+        try { scrollPre.style.whiteSpace = "-moz-pre-wrap"; } catch(e) {}
+        try { scrollPre.style.whiteSpace = "-o-pre-wrap"; } catch(e) {}
+        try { scrollPre.style.whiteSpace = "-pre-wrap"; } catch(e) {}
+        try { scrollPre.style.whiteSpace = "pre-wrap"; } catch(e) {}
         scrollPre.textContent = scrolledText;
         /* Scroll our editor to the right place. */
         textBox.scrollTop = scrollPre.scrollHeight;
@@ -112,10 +112,10 @@ var js_editor = function () {
                 var tag = tags[i];
                 if (tag.id && tag.id.match(/^line_\d+$/)) {
                     tag.ondblclick = dblclick;
-                };
-            };
-        };
-    };
+                }
+            }
+        }
+    }
 };
 
 var purple_numbers = function () {
@@ -129,16 +129,16 @@ var purple_numbers = function () {
             var prev = tag.previousSibling;
             while (prev && !prev.tagName) {
                 prev = prev.previousSibling;
-            };
+            }
             if (prev && prev.tagName === 'A') {
                 var name = prev.getAttribute('name');
                 if (name) {
                     tag.insertAdjacentHTML('beforeend', '<a href="#' + name +
                         '" class="hatta-purple">&para;</a>');
-                };
-            };
-        };
-    };
+                }
+            }
+        }
+    }
 };
 
 window.onload = function () {

@@ -1,20 +1,20 @@
 var hatta = function () {
     var hatta = {};
 
-    var _parse_date = function (text) {
+    hatta._parse_date = function (text) {
         /* Parse an ISO 8601 date string. */
 
         var m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})Z$/.exec(text);
         return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
     };
 
-    var _pad  = function(number) {
-        /* Pad a number with zeroes. */
+    hatta._pad2  = function(number) {
+        /* Pad a number with zeroes. The result always has 2 digits. */
 
         return ('00' + number).slice(-2);
     };
 
-    var _format_date = function (d) {
+    hatta._format_date = function (d) {
         /* Format a date for output. */
 
         var tz = -d.getTimezoneOffset() / 60;
@@ -22,14 +22,14 @@ var hatta = function () {
             tz = "+" + tz;
         }
         return ("" + d.getFullYear() + "-" +
-                _pad(d.getMonth() + 1) + "-" + 
-                _pad(d.getDate()) + " " +
-                _pad(d.getHours()) + ":" +
-                _pad(d.getMinutes()) + " " +
+                _pad2(d.getMonth() + 1) + "-" + 
+                _pad2(d.getDate()) + " " +
+                _pad2(d.getHours()) + ":" +
+                _pad2(d.getMinutes()) + " " +
                 "GMT" + tz);
     };
 
-    var _foreach_tag = function (tag_names, func) {
+    hatta._foreach_tag = function (tag_names, func) {
         tag_names.forEach(function (tag_name) {
             Array.prototype.forEach.call(
                 document.getElementsByTagName(tag_name), func);
@@ -40,7 +40,7 @@ var hatta = function () {
         /* Scan whole document for UTC dates and replace them with
          * local time versions */
 
-        _foreach_tag(['abbr'], function (tag) {
+        hatta._foreach_tag(['abbr'], function (tag) {
             if (tag.className === 'date') {
                 var d = _parse_date(node.getAttribute('title'));
                 if (d) {
@@ -99,7 +99,7 @@ var hatta = function () {
         } else {
             /* We have a normal page, make it go to editor on double click. */
             var baseUrl = '';
-            _foreach_tag(['link'], function (tag) {
+            hatta._foreach_tag(['link'], function (tag) {
                 if (tag.getAttribute('type') === 'application/wiki') {
                     baseUrl = tag.getAttribute('href');
                 }
@@ -113,7 +113,7 @@ var hatta = function () {
                 document.location = url;
                 return false;
             };
-            _foreach_tag(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'ul',
+            hatta._foreach_tag(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'ul',
                           'div'], function (tag) {
                 if (tag.id && tag.id.match(/^line_\d+$/)) {
                     tag.ondblclick = dblclick;
@@ -125,7 +125,7 @@ var hatta = function () {
     hatta.purple_numbers = function () {
         /* Add links to the headings. */
 
-        _foreach_tag(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], function (tag) {
+        hatta._foreach_tag(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], function (tag) {
             var prev = tag.previousSibling;
             while (prev && !prev.tagName) {
                 prev = prev.previousSibling;

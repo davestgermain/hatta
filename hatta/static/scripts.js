@@ -29,20 +29,24 @@ var hatta = function () {
                 "GMT" + tz);
     };
 
+    var _foreach_tag = function (tag_names, func) {
+        tag_names.forEach(function (tag_name) {
+            document.getElementsByTagName(tag_name).forEach(func);
+        });
+    };
+
     hatta.localize_dates = function () {
         /* Scan whole document for UTC dates and replace them with
          * local time versions */
 
-        var nodes = document.getElementsByTagName('abbr');
-        for (var i=0, len=nodes.length; i < len; ++i) {
-            var node = nodes[i];
-            if (node.className === 'date') {
+        _foreach_tag(['abbr'], function (tag) {
+            if (tag.className === 'date') {
                 var d = _parse_date(node.getAttribute('title'));
                 if (d) {
-                    node.textContent = _format_date(d);
+                    tag.textContent = _format_date(d);
                 }
             }
-        }
+        });
     };
 
     hatta.js_editor = function () {
@@ -94,57 +98,45 @@ var hatta = function () {
         } else {
             /* We have a normal page, make it go to editor on double click. */
             var baseUrl = '';
-            var tags = document.getElementsByTagName('link');
-            for (var i=0, len=tags.length; i < len; ++i) {
-                var tag = tags[i];
+            _foreach_tag(['link'], function (tag) {
                 if (tag.getAttribute('type') === 'application/wiki') {
                     baseUrl = tag.getAttribute('href');
                 }
-            }
+            });
             if (baseUrl==='') {
                 return;
             }
-            var tagList = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre',
-                           'ul', 'div'];
             var dblclick = function () {
                 /* The callback that invokes the editor. */
                 var url = baseUrl + '#' + this.id.replace('line_', '');
                 document.location = url;
                 return false;
             };
-            for (var j=0, len=tagList.length; j < len; ++j) {
-                var tags = document.getElementsByTagName(tagList[j]);
-                for (var i=0, len2=tags.length; i < len2; ++i) {
-                    var tag = tags[i];
-                    if (tag.id && tag.id.match(/^line_\d+$/)) {
-                        tag.ondblclick = dblclick;
-                    }
+            _foreach_tag(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'ul',
+                          'div'], function (tag) {
+                if (tag.id && tag.id.match(/^line_\d+$/)) {
+                    tag.ondblclick = dblclick;
                 }
-            }
+            });
         }
     };
 
     hatta.purple_numbers = function () {
         /* Add links to the headings. */
 
-        var tagList = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
-        for (var j=0, len=tagList.length; j < len; ++j) {
-            var tags = document.getElementsByTagName(tagList[j]);
-            for (var i=0, len2=tags.length; i < len2; ++i) {
-                var tag = tags[i];
-                var prev = tag.previousSibling;
-                while (prev && !prev.tagName) {
-                    prev = prev.previousSibling;
-                }
-                if (prev && prev.tagName === 'A') {
-                    var name = prev.getAttribute('name');
-                    if (name) {
-                        tag.insertAdjacentHTML('beforeend', '<a href="#' +
-                            name + '" class="hatta-purple">&para;</a>');
-                    }
+        _foreach_tag(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], function (tag) {
+            var prev = tag.previousSibling;
+            while (prev && !prev.tagName) {
+                prev = prev.previousSibling;
+            }
+            if (prev && prev.tagName === 'A') {
+                var name = prev.getAttribute('name');
+                if (name) {
+                    tag.insertAdjacentHTML('beforeend', '<a href="#' +
+                        name + '" class="hatta-purple">&para;</a>');
                 }
             }
-        }
+        });
     };
 
     return hatta;

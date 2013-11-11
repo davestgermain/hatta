@@ -88,6 +88,13 @@ def view(request, title=None):
     try:
         content = page.view_content()
     except hatta.error.NotFoundErr:
+        if request.wiki.fallback_url:
+            url = request.wiki.fallback_url
+            if '%s' in url:
+                url = url % werkzeug.url_quote(title)
+            else:
+                url = "%s/%s" % (url, werkzeug.url_quote(title))
+            return werkzeug.routing.redirect(url, code=303)
         if request.wiki.read_only:
             raise hatta.error.NotFoundErr(_(u"Page not found."))
 

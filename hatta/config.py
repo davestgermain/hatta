@@ -46,6 +46,8 @@ _add('-l', '--language', dest='language',
     help='Translate interface to LANG', metavar='LANG')
 _add('-r', '--read-only', dest='read_only',
     help='Whether the wiki should be read-only', action="store_true")
+_add('-f', '--fallback-url', dest='fallback_url',
+    help='Redirect to URL on 404', metavar="URL")
 _add('-g', '--icon-page', dest='icon_page', metavar="PAGE",
     help='Read icons graphics from PAGE.')
 _add('-w', '--hgweb', dest='hgweb',

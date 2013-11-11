@@ -5,7 +5,8 @@ var hatta = function () {
         /* Parse an ISO 8601 date string. */
 
         var m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})Z$/.exec(text);
-        return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+        return new Date(
+            Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]));
     };
 
     hatta._pad2  = function(number) {
@@ -22,10 +23,10 @@ var hatta = function () {
             tz = "+" + tz;
         }
         return ("" + d.getFullYear() + "-" +
-                _pad2(d.getMonth() + 1) + "-" + 
-                _pad2(d.getDate()) + " " +
-                _pad2(d.getHours()) + ":" +
-                _pad2(d.getMinutes()) + " " +
+                hatta._pad2(d.getMonth() + 1) + "-" + 
+                hatta._pad2(d.getDate()) + " " +
+                hatta._pad2(d.getHours()) + ":" +
+                hatta._pad2(d.getMinutes()) + " " +
                 "GMT" + tz);
     };
 
@@ -44,7 +45,7 @@ var hatta = function () {
             if (tag.className === 'date') {
                 var d = _parse_date(node.getAttribute('title'));
                 if (d) {
-                    tag.textContent = _format_date(new Date(d));
+                    tag.textContent = _format_date(d);
                 }
             }
         });

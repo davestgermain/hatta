@@ -5,7 +5,7 @@ var hatta = function () {
         /* Parse an ISO 8601 date string. */
 
         var m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})Z$/.exec(text);
-        return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]));
+        return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
     };
 
     var _pad  = function(number) {
@@ -43,7 +43,7 @@ var hatta = function () {
             if (tag.className === 'date') {
                 var d = _parse_date(node.getAttribute('title'));
                 if (d) {
-                    tag.textContent = _format_date(d);
+                    tag.textContent = _format_date(new Date(d));
                 }
             }
         });

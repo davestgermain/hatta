@@ -607,7 +607,8 @@ class WikiPageImage(WikiPageFile):
             im.save(cache_file, 'PNG')
         except IOError:
             raise hatta.error.UnsupportedMediaTypeErr('Image corrupted')
-        cache_file.close()
+        finally:
+            cache_file.close()
         return cache_path
 
 

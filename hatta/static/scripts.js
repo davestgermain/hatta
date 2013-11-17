@@ -141,6 +141,20 @@ var hatta = function () {
         });
     };
 
+    hatta.toc = function () {
+        var tags = [];
+        hatta._foreach_tag(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], function (tag) {
+            if (tag.getAttribute('id')) {
+                tags.push(tag);
+            }
+        });
+        tags.sort(function (a, b) {
+            /* Sort according to line numbers from id="line_X" attributes. */
+            return a.getAttribute('id').slice(5) - b.getAttribute('id').slice(5);
+        });
+        console.log(tags);
+    };
+
     return hatta;
 }();
 

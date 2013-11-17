@@ -324,6 +324,8 @@ def render(request, title):
             temp_dir = tempfile.mkdtemp(dir=cache_dir)
             result_file = render(temp_dir)
             mercurial.util.rename(result_file, cache_file)
+        except hatta.error.UnsupportedMediaTypeErr:
+            return download(request, title)
         finally:
             rm_temp_dir(temp_dir)
     try:

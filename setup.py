@@ -32,7 +32,7 @@ setuptools.setup(
         ('share/locale/ja/LC_MESSAGES', ['locale/ja/LC_MESSAGES/hatta.mo']),
         ('share/locale/ja/LC_MESSAGES', ['locale/lt/LC_MESSAGES/hatta.mo']),
         ('share/locale/pl/LC_MESSAGES', ['locale/pl/LC_MESSAGES/hatta.mo']),
-        ('share/locale/pl/LC_MESSAGES', ['locale/ru/LC_MESSAGES/hatta.mo']),
+        ('share/locale/ru/LC_MESSAGES', ['locale/ru/LC_MESSAGES/hatta.mo']),
         ('share/locale/sv/LC_MESSAGES', ['locale/sv/LC_MESSAGES/hatta.mo']),
         ('share/locale/sv/LC_MESSAGES', ['locale/vi/LC_MESSAGES/hatta.mo']),
         ('share/doc/hatta/examples', [

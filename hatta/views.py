@@ -547,7 +547,7 @@ def search(request):
     _ = request.wiki.gettext
 
     def highlight_html(m):
-        return werkzeug.html.b(m.group(0), class_="highlighted")
+        return werkzeug.html.b(m.group(0), class_="highlight")
 
     def search_snippet(title, words):
         """Extract a snippet of text for search results."""

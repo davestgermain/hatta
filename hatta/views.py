@@ -546,6 +546,9 @@ def search(request):
 
     _ = request.wiki.gettext
 
+    def highlight_html(m):
+        return werkzeug.html.b(m.group(0), class_="highlighted")
+
     def search_snippet(title, words):
         """Extract a snippet of text for search results."""
 
@@ -562,8 +565,7 @@ def search(request):
         min_pos = max(position - 60, 0)
         max_pos = min(position + 60, len(text))
         snippet = werkzeug.escape(text[min_pos:max_pos])
-        highlighted = werkzeug.html.b(match.group(0), class_="highlight")
-        html = regexp.sub(highlighted, snippet)
+        html = regexp.sub(highlight_html, snippet)
         return html
 
     def page_search(words, page, request):

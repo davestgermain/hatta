@@ -164,6 +164,8 @@ def save(request, title):
                 return edit(request, title, preview=text.split('\n'),
                                  captcha_error=response.error_code)
         comment = request.form.get("comment", "")
+        if u'href="' in comment or u'http:' in comment:
+            raise hatta.error.ForbiddenErr()
         author = request.get_author()
         text = request.form.get("text")
         try:
@@ -179,8 +181,6 @@ def save(request, title):
                     if title == link:
                         raise hatta.error.ForbiddenErr(
                             _(u"This page is locked."))
-            if u'href="' in comment or u'http:' in comment:
-                raise hatta.error.ForbiddenErr()
             if text.strip() == '':
                 request.wiki.storage.delete_page(title, author, comment)
                 url = request.get_url(request.wiki.front_page)

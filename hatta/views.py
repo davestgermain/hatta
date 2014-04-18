@@ -191,7 +191,7 @@ def save(request, title):
             text = u''
             upload = request.files['data']
             f = upload.stream
-            if f is not None and upload.filename is not None:
+            if upload.filename is not u'':
                 request.wiki.storage.save_data(title, f.read(), author,
                                        comment, parent)
             else:

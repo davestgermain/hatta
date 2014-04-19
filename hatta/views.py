@@ -189,9 +189,9 @@ def save(request, title):
                                        parent)
         else:
             text = u''
-            upload = request.files['data']
-            f = upload.stream
-            if upload.filename != u'':
+            upload = request.files.get('data')
+            if upload and upload.stream and upload.filename:
+                f = upload.stream
                 request.wiki.storage.save_data(title, f.read(), author,
                                        comment, parent)
             else:

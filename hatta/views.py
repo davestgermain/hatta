@@ -246,15 +246,14 @@ def atom(request):
                 'to_rev': rev,
             }, force_external=True)
         else:
-            url = request.adapter.build('revision', {
+            url = request.adapter.build('view', {
                 'title': title,
-                'rev': rev,
             }, force_external=True)
         feed.add(title, comment, content_type="text", author=author,
                  url=url, updated=date)
     rev = request.wiki.storage.repo_revision()
-    response = hatta.response.response(request, 'atom', feed.generate(), '/+feed',
-                             'application/xml', rev)
+    response = hatta.response.response(request, 'atom', feed.generate(),
+                                       '/+feed', 'application/xml', rev)
     response.make_conditional(request)
     return response
 

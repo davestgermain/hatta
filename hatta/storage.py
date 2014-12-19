@@ -19,6 +19,7 @@ import mercurial.revlog
 import mercurial.ui
 import mercurial.util
 import mercurial.simplemerge
+import mercurial.__version__
 
 from hatta import error
 from hatta import page
@@ -55,6 +56,37 @@ def _get_ui():
         ui._report_untrusted = False
         ui.setconfig('ui', 'interactive', False)
     return ui
+
+
+def _get_memfilectx(repo, path, data, islink=False, isexec=False, copied=None, memctx=None):
+    try:
+        # For mercurial 3.2+
+        return mercurial.context.memfilectx(
+            repo=repo,
+            path=path,
+            data=data,
+            islink=islink,
+            isexec=isexec,
+            memctx=memctx,
+            copied=copied,
+        )
+    except TypeError:
+        # For older mercurial
+        return mercurial.context.memfilectx(
+            path=path,
+            data=data,
+            islink=islink,
+            isexec=isexec,
+            copied=copied,
+        )
+
+
+def _file_deleted():
+    if mercurial.__version__.version.startswith(('0.', '1.', '2.', '3.0', '3.1')):
+        # For older mercurial
+        raise IOError()
+    # For mercurial 3.2+
+    return None
 
 
 def merge_func(base, other, this):
@@ -193,6 +225,7 @@ class WikiStorage(object):
         other_data = filetip.filectx(other).data()
         return merge_func(parent_data, other_data, data)
 
+
     def save_data(self, title, data, author=None, comment=None, parent_rev=None):
         """Save a new revision of the page. If the data is None, deletes it."""
 
@@ -213,8 +246,8 @@ class WikiStorage(object):
                     text = _(u'failed merge of edit conflict').encode('utf-8')
         def filectxfn(repo, memctx, path):
             if data is None:
-                raise IOError()
-            return mercurial.context.memfilectx(path, data, False, False, None)
+                return _file_deleted()
+            return _get_memfilectx(repo, path, data, memctx=memctx)
         ctx = mercurial.context.memctx(
             repo=self.repo,
             parents=(parent, other),
@@ -469,11 +502,10 @@ class WikiSubdirectoryStorage(WikiStorage):
                     text = _(u'failed merge of edit conflict').encode('utf-8')
         def filectxfn(repo, memctx, path):
             if data is None or path == dir_path:
-                raise IOError()
+                return _file_deleted()
             if path == new_dir_path:
-                return mercurial.context.memfilectx(path, dir_data,
-                        False, False, dir_path)
-            return mercurial.context.memfilectx(path, data, False, False, None)
+                return _get_memfilectx(repo, path, dir_data, memctx=memctx, copied=dir_path)
+            return _get_memfilectx(repo, path, data, memctx=memctx)
         ctx = mercurial.context.memctx(
             repo=self.repo,
             parents=(parent, other),

@@ -53,7 +53,7 @@ def init_gettext(language):
 
 
 def init_template(translation, template_path):
-    loaders = [ jinja2.PackageLoader('hatta', 'templates') ]
+    loaders = [jinja2.PackageLoader('hatta', 'templates')]
 
     if template_path is not None:
         loaders.insert(0, jinja2.FileSystemLoader(os.path.abspath(template_path)))

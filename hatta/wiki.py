@@ -52,10 +52,13 @@ def init_gettext(language):
     return translation
 
 
-def init_template(translation):
+def init_template(translation, template_path):
     template_env = jinja2.Environment(
         extensions=['jinja2.ext.i18n'],
-        loader=jinja2.PackageLoader('hatta', 'templates'),
+        loader=jinja2.ChoiceLoader([
+            jinja2.FileSystemLoader(template_path),
+            jinja2.PackageLoader('hatta', 'templates')
+        ]),
     )
     template_env.autoescape = True
     template_env.install_gettext_translations(translation, True)
@@ -82,7 +85,9 @@ class Wiki(object):
         self.language = config.get('language')
         translation = init_gettext(self.language)
         self.gettext = translation.ugettext
-        self.template_env = init_template(translation)
+        self.template_path = os.path.abspath(config.get('template_path',
+                                                        'templates'))
+        self.template_env = init_template(translation, self.template_path)
         self.path = os.path.abspath(config.get('pages_path', 'docs'))
         self.repo_path = config.get('repo_path')
         self.page_charset = config.get('page_charset', 'utf-8')

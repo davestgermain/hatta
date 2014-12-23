@@ -24,6 +24,8 @@ _add('-R', '--repo-dir', dest='repo_path',
     help='Use the repository at DIR', metavar='DIR')
 _add('-t', '--cache-dir', dest='cache_path',
     help='Store cache in DIR', metavar='DIR')
+_add('-T', '--template-dir', dest='template_path',
+    help='Use templates in DIR', metavar='DIR')
 _add('-i', '--interface', dest='interface',
     help='Listen on interface INT', metavar='INT')
 _add('-p', '--port', dest='port', type='int',

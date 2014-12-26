@@ -341,7 +341,7 @@ class WikiParser(object):
         return self._line_link(link_target=link_url)
 
     @markup_rules(ur"""(?P<mail_address>(mailto:)?"""
-                  ur"""\S+@\S+(\.[^\s.,:;!?()'"\*/=+<>-]+)+)""" , 90)
+                  ur"""[^\s()\[\]<>{}"']+@\S+(\.[^\s.,:;!?()'"\*/=+<>-]+)+)""" , 90)
     def _line_mail(self, mail_address):
         text = mail_address
         if mail_address.startswith(u'mailto:'):

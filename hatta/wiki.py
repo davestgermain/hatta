@@ -165,3 +165,10 @@ class Wiki(object):
         except werkzeug.exceptions.HTTPException as err:
             return err
 
+    def refresh(self):
+        """Make sure we have the latest revision of storage."""
+
+        storage_rev = self.storage.repo_revision()
+        index_rev = self.index.get_last_revision()
+        if storage_rev < index_rev:
+            self.storage.reopen()

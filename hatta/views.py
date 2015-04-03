@@ -82,6 +82,7 @@ def _serve_default(request, title, content=None, mime=None):
 @URL('/')
 def view(request, title=None):
     _ = request.wiki.gettext
+    request.wiki.refresh()
     if title is None:
         title = request.wiki.front_page
     page = hatta.page.get_page(request, title)
@@ -108,6 +109,7 @@ def view(request, title=None):
 @URL('/+history/<title:title>/<int:rev>')
 def revision(request, title, rev):
     _ = request.wiki.gettext
+    request.wiki.refresh()
     text = request.wiki.storage.revision_text(title, rev)
     link = werkzeug.html.a(werkzeug.html(title),
                            href=request.get_url(title))
@@ -140,6 +142,7 @@ def version(request, title=None):
 @URL('/+edit/<title:title>', methods=['POST'])
 def save(request, title):
     _ = request.wiki.gettext
+    request.wiki.refresh()
     hatta.page.check_lock(request.wiki, title)
     url = request.get_url(title)
     if request.form.get('cancel'):
@@ -172,8 +175,6 @@ def save(request, title):
             parent = int(request.form.get("parent"))
         except (ValueError, TypeError):
             parent = None
-        request.wiki.storage.reopen()
-        request.wiki.index.update(request.wiki)
         page = hatta.page.get_page(request, title)
         if text is not None:
             if title == request.wiki.locked_page:
@@ -197,7 +198,7 @@ def save(request, title):
             else:
                 request.wiki.storage.delete_page(title, author, comment)
                 url = request.get_url(request.wiki.front_page)
-        request.wiki.index.update_page(page, title, text=text)
+        request.wiki.index.update(request.wiki)
     response = werkzeug.routing.redirect(url, code=303)
     response.set_cookie('author',
                         werkzeug.url_quote(request.get_author()),
@@ -207,7 +208,7 @@ def save(request, title):
 @URL('/+edit/<title:title>', methods=['GET'])
 def edit(request, title, preview=None, captcha_error=None):
     hatta.page.check_lock(request.wiki, title)
-    request.wiki.storage.reopen()
+    request.wiki.refresh()
     exists = title in request.wiki.storage
     if exists:
         request.wiki.storage.reopen()
@@ -261,6 +262,7 @@ def atom(request):
 def download(request, title):
     """Serve the raw content of a page directly from disk."""
 
+    request.wiki.refresh()
     mime = hatta.page.page_mime(title)
     if mime == 'text/x-wiki':
         mime = 'text/plain'
@@ -304,6 +306,7 @@ def render(request, title):
         except OSError:
             pass
 
+    request.wiki.refresh()
     page = hatta.page.get_page(request, title)
     try:
         cache_filename, cache_mime = page.render_mime()
@@ -342,6 +345,7 @@ def undo(request, title):
     """Revert a change to a page."""
 
     _ = request.wiki.gettext
+    request.wiki.refresh()
     hatta.page.check_lock(request.wiki, title)
     rev = None
     for key in request.form:
@@ -378,6 +382,7 @@ def history(request, title):
 
     max_rev = -1
     history = []
+    request.wiki.refresh()
     page = hatta.page.get_page(request, title)
     for rev, date, author, comment in request.wiki.storage.page_history(title):
         if max_rev < rev:
@@ -431,6 +436,7 @@ def recent_changes(request):
 
             yield date, date_url, title, author, comment
 
+    request.wiki.refresh()
     page = hatta.page.get_page(request, '')
     html = page.template('changes.html', changes=_changes_list(),
                          date_html=hatta.page.date_html)
@@ -444,6 +450,7 @@ def diff(request, title, from_rev, to_rev):
     """Show the differences between specified revisions."""
 
     _ = request.wiki.gettext
+    request.wiki.refresh()
     page = hatta.page.get_page(request, title)
     build = request.adapter.build
     from_url = build('revision', {'title': title, 'rev': from_rev})
@@ -476,6 +483,7 @@ def all_pages(request):
     """Show index of all pages in the request.wiki."""
 
     _ = request.wiki.gettext
+    request.wiki.refresh()
     page = hatta.page.get_page(request, '')
     html = page.template('list.html',
                          pages=sorted(request.wiki.storage.all_pages()),
@@ -506,6 +514,7 @@ def orphaned(request):
     """Show all pages that don't have backlinks."""
 
     _ = request.wiki.gettext
+    request.wiki.refresh()
     page = hatta.page.get_page(request, '')
     orphaned = [
         title
@@ -532,6 +541,7 @@ def wanted(request):
                     or title.startswith(':')):
                 yield refs, title
 
+    request.wiki.refresh()
     page = hatta.page.get_page(request, '')
     html = page.template('wanted.html', pages=_wanted_pages_list())
     response = hatta.response.WikiResponse(html, mimetype='text/html')
@@ -571,7 +581,6 @@ def search(request):
         """Display the search results."""
 
         h = werkzeug.html
-        request.wiki.storage.reopen()
         request.wiki.index.update(request.wiki)
         result = sorted(request.wiki.index.find(words), key=lambda x: -x[0])
         yield werkzeug.html.p(h(_(u'%d page(s) containing all words:')
@@ -585,6 +594,7 @@ def search(request):
         yield u'</ol>'
 
     query = request.values.get('q', u'').strip()
+    request.wiki.refresh()
     page = hatta.page.get_page(request, '')
     if not query:
         url = request.get_url(view='all_pages', external=True)
@@ -602,7 +612,7 @@ def search(request):
 def backlinks(request, title):
     """Serve the page with backlinks."""
 
-    request.wiki.storage.reopen()
+    request.wiki.refresh()
     request.wiki.index.update(request.wiki)
     page = hatta.page.get_page(request, title)
     html = page.template('backlinks.html',
@@ -691,4 +701,3 @@ def die(request):
         yield u'Oh dear!'
         request.wiki.dead = True
     return hatta.response.WikiResponse(agony(), mimetype='text/plain')
-

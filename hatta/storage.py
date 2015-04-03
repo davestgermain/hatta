@@ -257,7 +257,7 @@ class WikiStorage(object):
             user=user,
         )
         self.repo.commitctx(ctx)
-        self._tips = {}
+        self.reopen()
 
     def delete_page(self, title, author, comment):
         self.save_data(title, None, author, comment)
@@ -525,4 +525,3 @@ class WikiSubdirectoryStorage(WikiStorage):
                 title = self._file_to_title(repo_file)
                 if title in self:
                     yield title
-

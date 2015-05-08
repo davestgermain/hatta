@@ -249,16 +249,15 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
             except hatta.error.NotFoundErr:
                 text = None
                 title_id = self.title_id(title, cursor)
-                if not list(self.page_backlinks(title)):
-                    cursor.execute("DELETE FROM titles WHERE id=?;",
-                                   (title_id,))
+                cursor.execute("DELETE FROM titles WHERE id=?;", (title_id,))
         extract_links = getattr(page, 'extract_links', None)
         if extract_links and text:
             links = extract_links(text)
         else:
             links = []
         self.update_links(title, links, cursor=cursor)
-        self.update_words(title, text or u'', cursor=cursor)
+        if text is not None:
+            self.update_words(title, text, cursor=cursor)
 
     def update_page(self, page, title, data=None, text=None):
         """Updates the index with new page content, for a single page."""

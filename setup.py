@@ -36,7 +36,8 @@ setuptools.setup(
         ('share/locale/sv/LC_MESSAGES', ['locale/sv/LC_MESSAGES/hatta.mo']),
         ('share/locale/vi/LC_MESSAGES', ['locale/vi/LC_MESSAGES/hatta.mo']),
         ('share/doc/hatta/examples', [
-            'examples/hatta.fcg',
+            'examples/hatta.fcgi',
+            'examples/hatta.gzip.fcgi',
             'examples/hatta.wsgi',
             'examples/extend_parser.py'
         ]),

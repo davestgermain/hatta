@@ -402,7 +402,7 @@ class WikiStorage(object):
 
         for repo_file in self._changectx():
             if (repo_file.startswith(self.repo_prefix) and
-                '/' not in repo_file[len(self.repo_prefix):]):
+                '/' not in repo_file[len(self.repo_prefix):].strip('/')):
                 title = self._file_to_title(repo_file)
                 if title in self:
                     yield title

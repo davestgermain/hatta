@@ -223,67 +223,80 @@ class TestHTML(object):
         wiki, request = req
         content = ["some &lt;content&gt;"]
         title = "page <title>"
-        page = wiki.get_page(request, title)
-        parts = page.render_content(content)
-        html = HTML(u"".join(parts))
+        page = hatta.page.get_page(request, title)
+        parts = page.view_content(content)
+        rendered = page.template("page.html", content=parts)
+        html = HTML(u"".join(rendered))
         assert html == u"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
+    <meta content="text/html;charset=utf-8" http-equiv="content-type">
     <title>page &lt;title&gt; - Hatta Wiki</title>
-    <link type="text/css" href="/+download/pygments.css" rel="stylesheet">
-    <link type="text/css" href="/+download/style.css" rel="stylesheet">
-    <link type="application/wiki" href="/+edit/page%20%3Ctitle%3E" rel="alternate">
+    <link type="text/css" href="/%2Bdownload/style.css" rel="stylesheet">
+    <link type="text/css" href="/%2Bdownload/pygments.css" rel="stylesheet">
     <link type="image/x-icon" href="/favicon.ico" rel="shortcut icon">
-    <link type="application/rss+xml" href="/+feed/atom" rel="alternate" title="Hatta Wiki (ATOM)">
-    <script src="/+download/scripts.js" type="text/javascript"></script>
+    <link type="application/rss+xml" href="/%2Bfeed/rss" rel="alternate" title="Hatta Wiki (ATOM)">
+    <link type="application/wiki" href="/%2Bedit/page%20%3Ctitle%3E" rel="alternate">
 </head><body>
-    <div class="header">
-        <form action="/+search" class="search" method="GET"><div>
-            <input class="search" name="q">
+    <div id="hatta-header">
+        <form action="/%2Bsearch" id="hatta-search" method="GET"><div>
+            <input id="hatta-search-q" name="q">
             <input class="button" type="submit" value="Search">
         </div></form>
-        <div class="menu">
+        <div id="hatta-menu">
           <a href="/Home" title="Home" class="wiki nonexistent">Home</a>
           <a href="/+history" title="+history" class="special">Recent changes</a>
         </div>
         <h1>page &lt;title&gt;</h1>
     </div>
-    <div class="content">some &lt;content&gt;
-    <div class="footer">
-        <a href="/+edit/page%20%3Ctitle%3E" class="edit">Edit</a>
-        <a href="/+history/page%20%3Ctitle%3E" class="history">History</a>
-        <a href="/+search/page%20%3Ctitle%3E" class="backlinks">Backlinks</a>
-    </div></div>
+    <div id="hatta-content">
+         <p id="line_0">some &amp;lt;content&amp;gt;</p>
+    </div>
+    <div id="hatta-footer">
+        <a href="/%2Bedit/page%20%3Ctitle%3E" class="edit">Edit</a>
+        <a href="/%2Bhistory/page%20%3Ctitle%3E" class="hatta-history">History</a>
+        <a href="/%2Bsearch/page%20%3Ctitle%3E" class="hatta-backlinks">Backlinks</a>
+    </div>
+    <script src="/%2Bdownload/scripts.js" type="text/javascript"></script>
 </body></html>"""
 
         page_title = "different <title>"
-        page = wiki.get_page(request, title)
-        parts = page.render_content(content, page_title)
-        html = HTML(u"".join(parts))
+        page = hatta.page.get_page(request, title)
+        page.title = page_title
+        parts = page.view_content(content)
+        rendered = page.template("page.html", content=parts)
+        html = HTML(u"".join(rendered))
         assert html == u"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
+    <meta content="text/html;charset=utf-8" http-equiv="content-type">
     <title>different &lt;title&gt; - Hatta Wiki</title>
-    <link type="text/css" href="/+download/pygments.css" rel="stylesheet">
-    <link type="text/css" href="/+download/style.css" rel="stylesheet">
-    <meta content="NOINDEX,NOFOLLOW" name="robots">
+    <link type="text/css" href="/%2Bdownload/style.css" rel="stylesheet">
+    <link type="text/css" href="/%2Bdownload/pygments.css" rel="stylesheet">
     <link type="image/x-icon" href="/favicon.ico" rel="shortcut icon">
-    <link type="application/rss+xml" href="/+feed/atom" rel="alternate" title="Hatta Wiki (ATOM)">
-    <script src="/+download/scripts.js" type="text/javascript"></script>
+    <link type="application/rss+xml" href="/%2Bfeed/rss" rel="alternate" title="Hatta Wiki (ATOM)">
+    <link type="application/wiki" href="/%2Bedit/different%20%3Ctitle%3E" rel="alternate">
 </head><body>
-    <div class="header">
-        <form action="/+search" class="search" method="GET"><div>
-            <input class="search" name="q">
+    <div id="hatta-header">
+        <form action="/%2Bsearch" id="hatta-search" method="GET"><div>
+            <input id="hatta-search-q" name="q">
             <input class="button" type="submit" value="Search">
         </div></form>
-        <div class="menu">
+        <div id="hatta-menu">
           <a href="/Home" title="Home" class="wiki nonexistent">Home</a>
           <a href="/+history" title="+history" class="special">Recent changes</a>
         </div>
         <h1>different &lt;title&gt;</h1>
     </div>
-    <div class="content">some &lt;content&gt;
-       </div>
+    <div id="hatta-content">
+        <p id="line_0">some &amp;lt;content&amp;gt;</p>
+    </div>
+    <div id="hatta-footer">
+        <a href="/%2Bedit/different%20%3Ctitle%3E" class="edit">Edit</a>
+        <a href="/%2Bhistory/different%20%3Ctitle%3E" class="hatta-history">History</a>
+        <a href="/%2Bsearch/different%20%3Ctitle%3E" class="hatta-backlinks">Backlinks</a>
+    </div>
+    <script src="/%2Bdownload/scripts.js" type="text/javascript"></script>
 </body></html>"""
 
 

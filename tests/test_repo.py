@@ -359,10 +359,10 @@ class TestStorage(object):
         """
 
         repo.save_text(self.title, self.text, self.author, self.comment,
-                           parent=-1)
+                       parent=-1)
         assert self.title in repo.all_pages()
 
         repo.repo_prefix = "prefix"
         repo.save_text(self.title, self.text, self.author, self.comment,
-                           parent=-1)
+                       parent=-1)
         assert self.title in repo.all_pages()

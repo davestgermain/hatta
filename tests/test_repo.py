@@ -353,3 +353,16 @@ class TestStorage(object):
         assert author == self.author
         assert comment == self.comment
 
+    def test_all_pages(self, repo):
+        """
+        Test for page listing both using repo prefix or not.
+        """
+
+        repo.save_text(self.title, self.text, self.author, self.comment,
+                           parent=-1)
+        assert self.title in repo.all_pages()
+
+        repo.repo_prefix = "prefix"
+        repo.save_text(self.title, self.text, self.author, self.comment,
+                           parent=-1)
+        assert self.title in repo.all_pages()

@@ -48,7 +48,7 @@ def pytest_funcarg__repo(request):
 
 def pytest_funcarg__subdir_repo(request):
     """
-    This function is executed whenever a test needs a "repo" parameter.
+    This function is executed whenever a test needs a "subdir_repo" parameter.
     It creates a new WikiSubdirectoryStorage object with Hatta repository in a
     temporary directory.
     """
@@ -237,7 +237,7 @@ class TestMercurialStorage(object):
 
     def test_directories_not_exist(self, repo):
         """
-        Make sure direcotries are not reported as existing pages.
+        Make sure directories are not reported as existing pages.
         """
 
         path = os.path.join(repo.path, self.filename)

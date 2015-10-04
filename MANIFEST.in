@@ -3,3 +3,4 @@ recursive-include examples *
 recursive-include locale *
 recursive-include hatta/templates *.html
 recursive-include hatta/static *
+recursive-include tests *

@@ -226,6 +226,19 @@ class WikiStorage(object):
         other_data = filetip.filectx(other).data()
         return merge_func(parent_data, other_data, data)
 
+    def _commit(self, parent, other, text, files, filectxfn, user):
+        ctx = mercurial.context.memctx(
+            repo=self.repo,
+            parents=(parent, other),
+            text=text,
+            files=files,
+            filectxfn=filectxfn,
+            user=user,
+        )
+        ret = self.repo.commitctx(ctx)
+        if self.repo.changelog.hasnode(ret):
+            self.repo.hook("commit", node=mercurial.node.hex(ret),
+                           parent1=parent, parent2=other)
 
     def save_data(self, title, data, author=None, comment=None, parent_rev=None):
         """Save a new revision of the page. If the data is None, deletes it."""
@@ -249,18 +262,7 @@ class WikiStorage(object):
             if data is None:
                 return _file_deleted()
             return _get_memfilectx(repo, path, data, memctx=memctx)
-        ctx = mercurial.context.memctx(
-            repo=self.repo,
-            parents=(parent, other),
-            text=text,
-            files=[repo_file],
-            filectxfn=filectxfn,
-            user=user,
-        )
-        ret = self.repo.commitctx(ctx)
-        if self.repo.changelog.hasnode(ret):
-            self.repo.hook("commit", node=mercurial.node.hex(ret),
-                           parent1=parent, parent2=other)
+        self._commit(parent, other, text, [repo_file], filectxfn, user)
         self.reopen()
 
     def delete_page(self, title, author, comment):
@@ -510,18 +512,7 @@ class WikiSubdirectoryStorage(WikiStorage):
             if path == new_dir_path:
                 return _get_memfilectx(repo, path, dir_data, memctx=memctx, copied=dir_path)
             return _get_memfilectx(repo, path, data, memctx=memctx)
-        ctx = mercurial.context.memctx(
-            repo=self.repo,
-            parents=(parent, other),
-            text=text,
-            files=files,
-            filectxfn=filectxfn,
-            user=user,
-        )
-        ret = self.repo.commitctx(ctx)
-        if self.repo.changelog.hasnode(ret):
-            self.repo.hook("commit", node=mercurial.node.hex(ret),
-                           parent1=parent, parent2=other)
+        self._commit(parent, other, text, [repo_file], filectxfn, user)
         self._tips = {}
 
     def all_pages(self):

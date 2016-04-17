@@ -15,6 +15,7 @@ import mercurial.commands
 import mercurial.hg
 import mercurial.hgweb
 import mercurial.merge
+import mercurial.node
 import mercurial.revlog
 import mercurial.ui
 import mercurial.util
@@ -256,7 +257,10 @@ class WikiStorage(object):
             filectxfn=filectxfn,
             user=user,
         )
-        self.repo.commitctx(ctx)
+        ret = self.repo.commitctx(ctx)
+        if self.repo.changelog.hasnode(ret):
+            self.repo.hook("commit", node=mercurial.node.hex(ret),
+                           parent1=parent, parent2=other)
         self.reopen()
 
     def delete_page(self, title, author, comment):
@@ -514,7 +518,10 @@ class WikiSubdirectoryStorage(WikiStorage):
             filectxfn=filectxfn,
             user=user,
         )
-        self.repo.commitctx(ctx)
+        ret = self.repo.commitctx(ctx)
+        if self.repo.changelog.hasnode(ret):
+            self.repo.hook("commit", node=mercurial.node.hex(ret),
+                           parent1=parent, parent2=other)
         self._tips = {}
 
     def all_pages(self):

@@ -512,7 +512,7 @@ class WikiSubdirectoryStorage(WikiStorage):
             if path == new_dir_path:
                 return _get_memfilectx(repo, path, dir_data, memctx=memctx, copied=dir_path)
             return _get_memfilectx(repo, path, data, memctx=memctx)
-        self._commit(parent, other, text, [repo_file], filectxfn, user)
+        self._commit(parent, other, text, files, filectxfn, user)
         self._tips = {}
 
     def all_pages(self):

@@ -138,11 +138,16 @@ class TestHattaParser(object):
             return u"<a></a>"
         def image(addr, label=None, class_=None, image=None, alt=None):
             return u"<img>"
-        return u''.join(parser(text.split('\n'), link, image))
+        lines = '\n\r'.join(text.split('\n')).split('\r')
+        return u''.join(parser(lines, link, image))
 
 
     test_cases = {
 u"""hello world""": u"""<p id="line_0">hello world</p>""",
+#--------------------------------------------------------------------
+u"""hello
+world""": u"""<p id="line_0">hello
+world</p>""",
 #--------------------------------------------------------------------
 u"""{{{
 some code
@@ -152,7 +157,8 @@ some text
 {{{
 more code
 }}}""": u"""<pre class="code" id="line_1">some code
-more</pre><p id="line_4">some text</p><pre class="code" id="line_6">more code</pre>""",
+more</pre><p id="line_4">some text
+</p><pre class="code" id="line_6">more code</pre>""",
 #--------------------------------------------------------------------
 u"""{{{#!python
 some code
@@ -162,16 +168,20 @@ some text
 {{{#!bash
 more code
 }}}""": u"""<div class="highlight"><pre id="line_1">some code
-more</pre></div><p id="line_4">some text</p><div class="highlight"><pre id="line_6">more code</pre></div>""",
+more</pre></div><p id="line_4">some text
+</p><div class="highlight"><pre id="line_6">more code</pre></div>""",
 #--------------------------------------------------------------------
 u"""Here's a quote:
 > Here is
 > another //quote//:
 >> A quote **within
 >> a quote
-normal text""": u"""<p id="line_0">Here's a quote:</p><blockquote><p id="line_1">Here is
-another <i>quote</i>:</p><blockquote><p id="line_3">A quote <b>within
-a quote</b></p></blockquote></blockquote><p id="line_5">normal text</p>""",
+normal text""": u"""<p id="line_0">Here's a quote:
+</p><blockquote><p id="line_1">Here is
+another <i>quote</i>:
+</p><blockquote><p id="line_3">A quote <b>within
+a quote
+</b></p></blockquote></blockquote><p id="line_5">normal text</p>""",
 #--------------------------------------------------------------------
 u"""* sample list
 ** sublist

@@ -219,19 +219,18 @@ class WikiParser(object):
                 yield ret
             links[:] = []
 
-    def parse(self):
+    def parse(self, enumerated_lines=None):
         """Parse a list of lines of wiki markup, yielding HTML for it."""
 
-        self.headings = {}
-        self.stack = []
-        self.line_no = 0
+        if enumerated_lines is None:
+            enumerated_lines = self.enumerated_lines
 
         def key(enumerated_line):
             line_no, line = enumerated_line
             name, params = self.block_rules.match_one(line)
             return name or "_block_paragraph"
 
-        for kind, block in itertools.groupby(self.enumerated_lines, key):
+        for kind, block in itertools.groupby(enumerated_lines, key):
             func = getattr(self, kind)
             for part in func(block):
                 yield part
@@ -546,32 +545,18 @@ class WikiParser(object):
 
     @block_rules(quote_pat, 80)
     def _block_quote(self, block):
-        level = 0
-        in_p = False
-        for self.line_no, line in block:
-            nest = len(self.quote_re.match(line).group(0).strip())
-            if nest == level:
-                yield u'\n'
-            while nest > level:
-                if in_p:
-                    yield '%s</p>' % self.pop_to("")
-                    in_p = False
-                yield '<blockquote>'
-                level += 1
-            while nest < level:
-                if in_p:
-                    yield '%s</p>' % self.pop_to("")
-                    in_p = False
-                yield '</blockquote>'
-                level -= 1
-            content = line.lstrip().lstrip('>').strip()
-            if not in_p:
-                yield '<p id="line_%d">' % self.line_no
-                in_p = True
-            yield u"".join(self.parse_line(content))
-        if in_p:
-            yield '%s</p>' % self.pop_to("")
-        yield '</blockquote>' * level
+        yield '<blockquote>'
+
+        def remove_lead(enumerated_line):
+            line_no, line = enumerated_line
+            stripped = line.lstrip()[1:].lstrip()
+            return (line_no, stripped)
+
+        enumerated_lines = map(remove_lead, block)
+        for content in self.parse(enumerated_lines):
+            yield content
+
+        yield '</blockquote>'
 
     @block_rules(ur"^<<<<<<< local\s*$", 30)
     def _block_conflict(self, block):

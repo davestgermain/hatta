@@ -397,3 +397,31 @@ test</p>"""
         html = parse(u'This is ##monotyped## text.')
         assert html == """<p id="line_0">This is <tt>monotyped</tt> text.</p>"""
 
+    def test_inline_quote(self):
+        html = parse(u'> //Simple// quote with\n> one paragraph')
+        assert html == """
+            <blockquote>
+                <p id="line_0"><i>Simple</i> quote with\none paragraph</p>
+            </blockquote>
+        """
+
+    def test_block_quote(self):
+        html = parse(u'> //Complex// quote\n> with\n>\n> = extra markup')
+        assert html == """
+            <blockquote>
+                <p id="line_0"><i>Complex</i> quote\nwith</p>
+                <a name="head-1"></a><h1 id="line_3">extra markup</h1>
+            </blockquote>
+        """
+
+    def test_nested_quotes(self):
+        html = parse(u'> Outer quote\n>> Inner quote')
+        assert html == """
+            <blockquote>
+                <p id="line_0">Outer quote</p>
+                <blockquote>
+                    <p id="line_1">Inner quote</p>
+                </blockquote>
+            </blockquote>
+        """
+

@@ -63,11 +63,11 @@ def hgh(text, mime=None, syntax=None, line_no=0):
     return DummyPage().highlight(text, mime, syntax, line_no)
 
 def parse(text):
-    lines = '\n\r'.join(text.split('\n')).split('\r')
+    lines = text.splitlines(True)
     return HTML(u''.join(hatta.parser.WikiParser(lines, link, img, hgh)))
 
 def wiki_parse(text):
-    lines = '\n\r'.join(text.split('\n')).split('\r')
+    lines = text.splitlines(True)
     return HTML(u''.join(hatta.parser.WikiWikiParser(lines, link, img, hgh)))
 
 

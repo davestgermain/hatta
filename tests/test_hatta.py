@@ -138,7 +138,7 @@ class TestHattaParser(object):
             return u"<a></a>"
         def image(addr, label=None, class_=None, image=None, alt=None):
             return u"<img>"
-        lines = '\n\r'.join(text.split('\n')).split('\r')
+        lines = text.splitlines(True)
         return u''.join(parser(lines, link, image))
 
 

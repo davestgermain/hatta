@@ -31,6 +31,16 @@ def pytest_funcarg__wiki(request):
     return hatta.Wiki(config)
 
 
+class MemorySearch(hatta.search.WikiSearch):
+    @property
+    def filename(self):
+        return ":memory:"
+
+    @filename.setter
+    def filename(self, value):
+        pass  # read-only property, ignores setting
+
+
 class TestHattaStandalone(object):
     docstring = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">'''
@@ -202,6 +212,7 @@ def pytest_funcarg__req(request):
         cache_path=os.path.join(basedir, 'cache'),
         default_style="...",
     )
+    hatta.Wiki.index_class = MemorySearch
     wiki = hatta.Wiki(config)
     environ = {
         'SERVER_NAME': 'hatta',

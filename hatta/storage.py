@@ -189,7 +189,8 @@ class WikiStorage(object):
         if not filepath.startswith(self.repo_prefix):
             raise error.ForbiddenErr(
                 _(u"Can't read or write outside of the pages repository"))
-        name = filepath[len(self.repo_prefix):].strip('/')
+        sep = os.path.sep
+        name = filepath[len(self.repo_prefix):].strip(sep)
         # Un-escape special windows filenames and dot files
         if name.startswith('_') and len(name) > 1:
             name = name[1:]
@@ -406,9 +407,10 @@ class WikiStorage(object):
     def all_pages(self):
         """Iterate over the titles of all pages in the wiki."""
 
+        sep = os.path.sep
         for repo_file in self._changectx():
             if (repo_file.startswith(self.repo_prefix) and
-                '/' not in repo_file[len(self.repo_prefix):].strip('/')):
+                sep not in repo_file[len(self.repo_prefix):].strip(sep)):
                 title = self._file_to_title(repo_file)
                 if title in self:
                     yield title

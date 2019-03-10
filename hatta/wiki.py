@@ -104,7 +104,7 @@ class Wiki(object):
         self.help_page = self.config.get('help_page', 'Help')
         self.math_url = self.config.get(
             'math_url',
-            'http://www.mathtran.org/cgi-bin/mathtran?tex=',
+            'mathjax',
         )
         self.pygments_style = self.config.get('pygments_style', 'tango')
         self.extension = self.config.get('extension')

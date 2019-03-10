@@ -486,7 +486,7 @@ class WikiPageColorText(WikiPageText):
                 lexer = pygments.lexers.get_lexer_by_name(syntax)
             else:
                 lexer = pygments.lexers.guess_lexer(text)
-        except pygments.util.ClassNotFoundErr:
+        except:
             yield werkzeug.html.pre(werkzeug.html(text))
             return
         html = pygments.highlight(text, lexer, formatter)

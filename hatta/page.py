@@ -178,14 +178,14 @@ class WikiPage(object):
                 text = text.replace('@', '&#64;').replace('.', '&#46;')
                 href = werkzeug.utils.escape(addr).replace('@', '%40').replace('.', '%2E')
             else:
-                href = werkzeug.utils.escape(werkzeug.url_fix(addr))
+                href = werkzeug.utils.escape(werkzeug.urls.url_fix(addr))
         else:
             if '#' in addr:
                 addr, chunk = addr.split('#', 1)
-                chunk = '#' + werkzeug.url_fix(chunk)
+                chunk = '#' + werkzeug.urls.url_fix(chunk)
             if addr.startswith(':'):
                 alias = self.link_alias(addr[1:])
-                href = werkzeug.utils.escape(werkzeug.url_fix(alias) + chunk)
+                href = werkzeug.utils.escape(werkzeug.urls.url_fix(alias) + chunk)
                 classes.append('external')
                 classes.append('alias')
             elif addr.startswith('+'):
@@ -213,7 +213,7 @@ class WikiPage(object):
         html = werkzeug.utils.html
         chunk = ''
         if hatta.parser.external_link(addr):
-            return html.img(src=werkzeug.url_fix(addr), class_="external",
+            return html.img(src=werkzeug.urls.url_fix(addr), class_="external",
                             alt=alt)
         if '#' in addr:
             addr, chunk = addr.split('#', 1)
@@ -223,7 +223,7 @@ class WikiPage(object):
             if chunk:
                 chunk = '#' + chunk
             alias = self.link_alias(addr[1:])
-            href = werkzeug.url_fix(alias + chunk)
+            href = werkzeug.urls.url_fix(alias + chunk)
             return html.img(src=href, class_="external alias", alt=alt)
         elif addr in self.storage:
             mime = page_mime(addr)

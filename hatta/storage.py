@@ -153,7 +153,7 @@ class WikiStorage(object):
 
     def _title_to_file(self, title):
         title = str(title).strip()
-        filename = werkzeug.urls.url_quote(title, safe='')
+        filename = werkzeug.urls.url_quote(title, safe='', unsafe='~')
         # Escape special windows filenames and dot files
         _windows_device_files = ('CON', 'AUX', 'COM1', 'COM2', 'COM3',
                                  'COM4', 'LPT1', 'LPT2', 'LPT3', 'PRN',

@@ -69,18 +69,18 @@ class TestSubdirectoryStorage(object):
 
     pytestmark = py.test.mark.skip
 
-    author = u'test author'
-    text = u'test text'
-    comment = u'test comment'
+    author = 'test author'
+    text = 'test text'
+    comment = 'test comment'
 
     title_encodings = {
-        u'test title': 'test title',
-        u'.test title': '%2Etest title',
-        u'../test title': '%2E./test title',
-        u'test/./title': 'test/%2E/title',
-        u'test/../title': 'test/%2E./title',
-        u'test//title': 'test/%2Ftitle',
-        u'/test/title': '%2Ftest/title',
+        'test title': 'test title',
+        '.test title': '%2Etest title',
+        '../test title': '%2E./test title',
+        'test/./title': 'test/%2E/title',
+        'test/../title': 'test/%2E./title',
+        'test//title': 'test/%2Ftitle',
+        '/test/title': '%2Ftest/title',
     }
 
 
@@ -89,7 +89,7 @@ class TestSubdirectoryStorage(object):
         Test the modified filename escpaing.
         """
 
-        for title, filename in self.title_encodings.iteritems():
+        for title, filename in self.title_encodings.items():
             escaped = subdir_repo._title_to_file(title)
             assert escaped == filename
 
@@ -98,7 +98,7 @@ class TestSubdirectoryStorage(object):
         Check if the page's file is named properly.
         """
 
-        for title, filename in self.title_encodings.iteritems():
+        for title, filename in self.title_encodings.items():
             filepath = os.path.join(subdir_repo.path, filename)
             subdir_repo.save_text(title, self.text, self.author, self.comment,
                                   parent=-1)
@@ -111,7 +111,7 @@ class TestSubdirectoryStorage(object):
         Check if empty subdirectories are removed on page delete.
         """
 
-        title = u'foo/bar'
+        title = 'foo/bar'
         filepath = os.path.join(subdir_repo.path, 'foo/bar')
         dirpath = os.path.join(subdir_repo.path, 'foo')
         subdir_repo.save_text(title, self.text, self.author, self.comment,
@@ -128,7 +128,7 @@ class TestSubdirectoryStorage(object):
         Check if deleting non-subdirectory page works.
         """
 
-        title = u'ziew'
+        title = 'ziew'
         filepath = os.path.join(subdir_repo.path, 'ziew')
         subdir_repo.save_text(title, self.text, self.author, self.comment,
                               parent=-1)
@@ -145,7 +145,7 @@ class TestSubdirectoryStorage(object):
         Check if deleting non-existing non-subdirectory page works.
         """
 
-        title = u'ziew2'
+        title = 'ziew2'
         filepath = os.path.join(subdir_repo.path, 'ziew2')
         assert not os.path.exists(filepath)
         with py.test.raises(hatta.error.NotFoundErr):
@@ -158,9 +158,9 @@ class TestSubdirectoryStorage(object):
         Make sure you can create a parent page of existing page.
         """
 
-        subdir_repo.save_text(u'xxx/yyy', self.text, self.author, self.comment,
+        subdir_repo.save_text('xxx/yyy', self.text, self.author, self.comment,
                               parent=-1)
-        subdir_repo.save_text(u'xxx', self.text, self.author, self.comment,
+        subdir_repo.save_text('xxx', self.text, self.author, self.comment,
                               parent=-1)
         update(subdir_repo)
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx'))
@@ -172,9 +172,9 @@ class TestSubdirectoryStorage(object):
         Make sure you can create a subpage of existing page.
         """
 
-        subdir_repo.save_text(u'xxx', self.text, self.author, self.comment,
+        subdir_repo.save_text('xxx', self.text, self.author, self.comment,
                               parent=-1)
-        subdir_repo.save_text(u'xxx/yyy', self.text, self.author, self.comment,
+        subdir_repo.save_text('xxx/yyy', self.text, self.author, self.comment,
                               parent=-1)
         update(subdir_repo)
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx'))
@@ -188,9 +188,9 @@ class TestSubdirectoryStorage(object):
         Make sure you can create a subpage of existing page.
         """
 
-        subdir_repo.save_text(u'xxx', self.text, self.author, self.comment,
+        subdir_repo.save_text('xxx', self.text, self.author, self.comment,
                               parent=-1)
-        subdir_repo.save_text(u'xxx/yyy/zzz', self.text, self.author, self.comment,
+        subdir_repo.save_text('xxx/yyy/zzz', self.text, self.author, self.comment,
                               parent=-1)
         update(subdir_repo)
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx'))
@@ -206,9 +206,9 @@ class TestMercurialStorage(object):
 
     title = 'test title'
     filename = 'test%20title'
-    author = u'test author'
-    text = u'test text'
-    comment = u'test comment'
+    author = 'test author'
+    text = 'test text'
+    comment = 'test comment'
 
     def test_filename(self, repo):
         """
@@ -216,22 +216,22 @@ class TestMercurialStorage(object):
         """
 
         files = {
-            u'../some/+s page/ąęść?.txt':
+            '../some/+s page/ąęść?.txt':
                 '_..%2Fsome%2F%2Bs%20page%2F%C4%85%C4%99%C5%9B%C4%87%3F.txt',
-            u'simple': 'simple',
-            u'COM1': '_COM1',
-            u'_weird': '__weird',
-            u'/absolute': '%2Fabsolute',
-            u'slash/': 'slash%2F',
-            u'%percent%': '%25percent%25',
+            'simple': 'simple',
+            'COM1': '_COM1',
+            '_weird': '__weird',
+            '/absolute': '%2Fabsolute',
+            'slash/': 'slash%2F',
+            '%percent%': '%25percent%25',
         }
-        for title, filename in files.iteritems():
+        for title, filename in files.items():
             filepath = os.path.join(repo.path, filename)
             repo.save_text(title, self.text, self.author, self.comment,
                            parent=-1)
             update(repo)
             exists = os.path.exists(filepath)
-            print '%s -> %s' % (repr(title), filename)
+            print('%s -> %s' % (repr(title), filename))
             assert exists
 
 
@@ -261,10 +261,10 @@ class TestStorage(object):
     always pass, no matter what configuration is used.
     """
 
-    text = u"test text"
-    title = u"test title"
-    author = u"test author"
-    comment = u"test comment"
+    text = "test text"
+    title = "test title"
+    author = "test author"
+    comment = "test comment"
 
     def test_save_text(self, repo):
         """
@@ -292,7 +292,7 @@ class TestStorage(object):
         it is merged correctly.
         """
 
-        text = u"test\ntext"
+        text = "test\ntext"
         repo.save_text(self.title, text, self.author, self.comment, parent=-1)
         repo.save_text(self.title, text, self.author, self.comment, parent=-1)
         saved = repo.open_page(self.title).read()
@@ -304,15 +304,15 @@ class TestStorage(object):
         markers are inserted properly.
         """
 
-        text = u"""\
+        text = """\
 123
 456
 789"""
-        text1 = u"""\
+        text1 = """\
 123
 000
 789"""
-        text2 = u"""\
+        text2 = """\
 123
 111
 789"""
@@ -320,7 +320,7 @@ class TestStorage(object):
         repo.save_text(self.title, text1, self.author, self.comment, parent=0)
         repo.save_text(self.title, text2, self.author, self.comment, parent=0)
         saved = repo.open_page(self.title).read()
-        assert saved == u"""\
+        assert saved == """\
 123
 <<<<<<< local
 111

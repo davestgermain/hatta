@@ -4,7 +4,7 @@
 import os
 import re
 import sqlite3
-import thread
+import _thread
 
 import hatta.error
 import hatta.page
@@ -15,23 +15,23 @@ class WikiSearch(object):
     backlinks. Uses a cache directory to store the index files.
     """
 
-    word_pattern = re.compile(ur"""\w[-~&\w]+\w""", re.UNICODE)
+    word_pattern = re.compile(r"""\w[-~&\w]+\w""", re.UNICODE)
     jword_pattern = re.compile(
-ur"""[ｦ-ﾟ]+|[ぁ-ん～ー]+|[ァ-ヶ～ー]+|[0-9A-Za-z]+|"""
-ur"""[０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+|"""
-ur"""[^- !"#$%&'()*+,./:;<=>?@\[\\\]^_`{|}"""
-ur"""‾｡｢｣､･　、。，．・：；？！゛゜´｀¨"""
-ur"""＾￣＿／〜‖｜…‥‘’“”"""
-ur"""（）〔〕［］｛｝〈〉《》「」『』【】＋−±×÷"""
-ur"""＝≠＜＞≦≧∞∴♂♀°′″℃￥＄¢£"""
-ur"""％＃＆＊＠§☆★○●◎◇◆□■△▲▽▼※〒"""
-ur"""→←↑↓〓∈∋⊆⊇⊂⊃∪∩∧∨¬⇒⇔∠∃∠⊥"""
-ur"""⌒∂∇≡≒≪≫√∽∝∵∫∬Å‰♯♭♪†‡¶◾"""
-ur"""─│┌┐┘└├┬┤┴┼"""
-ur"""━┃┏┓┛┗┣┫┻╋"""
-ur"""┠┯┨┷┿┝┰┥┸╂"""
-ur"""ｦ-ﾟぁ-ん～ーァ-ヶ"""
-ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
+r"""[ｦ-ﾟ]+|[ぁ-ん～ー]+|[ァ-ヶ～ー]+|[0-9A-Za-z]+|"""
+r"""[０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+|"""
+r"""[^- !"#$%&'()*+,./:;<=>?@\[\\\]^_`{|}"""
+r"""‾｡｢｣､･　、。，．・：；？！゛゜´｀¨"""
+r"""＾￣＿／〜‖｜…‥‘’“”"""
+r"""（）〔〕［］｛｝〈〉《》「」『』【】＋−±×÷"""
+r"""＝≠＜＞≦≧∞∴♂♀°′″℃￥＄¢£"""
+r"""％＃＆＊＠§☆★○●◎◇◆□■△▲▽▼※〒"""
+r"""→←↑↓〓∈∋⊆⊇⊂⊃∪∩∧∨¬⇒⇔∠∃∠⊥"""
+r"""⌒∂∇≡≒≪≫√∽∝∵∫∬Å‰♯♭♪†‡¶◾"""
+r"""─│┌┐┘└├┬┤┴┼"""
+r"""━┃┏┓┛┗┣┫┻╋"""
+r"""┠┯┨┷┿┝┰┥┸╂"""
+r"""ｦ-ﾟぁ-ん～ーァ-ヶ"""
+r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
 
     def __init__(self, cache_path, lang, storage):
         self._con = {}
@@ -67,7 +67,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
     def con(self):
         """Keep one connection per thread."""
 
-        thread_id = thread.get_ident()
+        thread_id = _thread.get_ident()
         try:
             return self._con[thread_id]
         except KeyError:
@@ -117,9 +117,9 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
             return
         words = self.count_words(self.split_text(text))
         title_words = self.count_words(self.split_text(title))
-        for word, count in title_words.iteritems():
+        for word, count in title_words.items():
             words[word] = words.get(word, 0) + count
-        for word, count in words.iteritems():
+        for word, count in words.items():
             cursor.execute('INSERT INTO words VALUES (?, ?, ?);',
                              (word, title_id, count))
 
@@ -140,7 +140,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
                    '(SELECT * FROM links WHERE target=title) '
                    'ORDER BY title;')
             for (title,) in con.execute(sql):
-                yield unicode(title)
+                yield str(title)
         finally:
             con.commit()
 
@@ -155,7 +155,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
                    '(SELECT * FROM titles WHERE target=title) '
                    'GROUP BY target ORDER BY -COUNT(*);')
             for (refs, db_title,) in con.execute(sql):
-                title = unicode(db_title)
+                title = str(db_title)
                 yield refs, title
         finally:
             con.commit()
@@ -170,7 +170,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
                    'WHERE links.target=? AND titles.id=links.src '
                    'ORDER BY titles.title;')
             for (backlink,) in con.execute(sql, (title,)):
-                yield unicode(backlink)
+                yield str(backlink)
         finally:
             con.commit()
 
@@ -182,7 +182,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
             title_id = self.title_id(title, con)
             sql = 'SELECT target FROM links WHERE src=? ORDER BY number;'
             for (link,) in con.execute(sql, (title_id,)):
-                yield unicode(link)
+                yield str(link)
         finally:
             con.commit()
 
@@ -193,7 +193,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
             sql = ('SELECT target, label FROM links '
                    'WHERE src=? ORDER BY number;')
             for link, label in con.execute(sql, (title_id,)):
-                yield unicode(link), unicode(label)
+                yield str(link), str(label)
         finally:
             con.commit()
 
@@ -235,7 +235,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
                         break
                     score += float(count) / rank
                 if score > 0:
-                    yield int(100 * score), unicode(title)
+                    yield int(100 * score), str(title)
         finally:
             con.commit()
 
@@ -243,7 +243,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         """Updates the content of the database, needs locks around."""
 
         if text is None:
-            get_text = getattr(page, 'plain_text', lambda: u'')
+            get_text = getattr(page, 'plain_text', lambda: '')
             try:
                 text = get_text()
             except hatta.error.NotFoundErr:
@@ -263,7 +263,7 @@ ur"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         """Updates the index with new page content, for a single page."""
 
         if text is None and data is not None:
-            text = unicode(data, self.storage.charset, 'replace')
+            text = str(data, self.storage.charset, 'replace')
         cursor = self.con.cursor()
         try:
             self.set_last_revision(self.storage.repo_revision())

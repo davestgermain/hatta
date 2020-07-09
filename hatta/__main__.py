@@ -36,21 +36,18 @@ def main(config=None, wiki=None):
     host, port = (config.get('interface', '0.0.0.0'),
                   int(config.get('port', 8080)))
     try:
-        from cherrypy import wsgiserver
+        from cheroot import wsgi
     except ImportError:
+        import wsgiref.simple_server
+        server = wsgiref.simple_server.make_server(host, port, app)
         try:
-            from cherrypy import _cpwsgiserver as wsgiserver
-        except ImportError:
-            import wsgiref.simple_server
-            server = wsgiref.simple_server.make_server(host, port, app)
-            try:
-                server.serve_forever()
-            except KeyboardInterrupt:
-                pass
-            return
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        return
     name = wiki.site_name
-    server = wsgiserver.CherryPyWSGIServer((host, port), app,
-                                           server_name=name)
+    server = wsgi.Server((host, port), app,
+                                       server_name=name)
     try:
         server.start()
     except KeyboardInterrupt:

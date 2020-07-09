@@ -92,18 +92,18 @@ def view(request, title=None):
         if request.wiki.fallback_url:
             url = request.wiki.fallback_url
             if '%s' in url:
-                url = url % werkzeug.url_quote(title)
+                url = url % werkzeug.urls.url_quote(title)
             else:
-                url = "%s/%s" % (url, werkzeug.url_quote(title))
+                url = "%s/%s" % (url, werkzeug.urls.url_quote(title))
             return werkzeug.routing.redirect(url, code=303)
         if request.wiki.read_only:
-            raise hatta.error.NotFoundErr(_(u"Page not found."))
+            raise hatta.error.NotFoundErr(_("Page not found."))
 
         url = request.get_url(title, 'edit', external=True)
         return werkzeug.routing.redirect(url, code=303)
     html = page.template("page.html", content=content)
     dependencies = page.dependencies()
-    etag = '/(%s)' % u','.join(dependencies)
+    etag = '/(%s)' % ','.join(dependencies)
     return hatta.response.response(request, title, html, etag=etag)
 
 @URL('/+history/<title:title>/<int:rev>')
@@ -111,16 +111,16 @@ def revision(request, title, rev):
     _ = request.wiki.gettext
     request.wiki.refresh()
     text = request.wiki.storage.revision_text(title, rev)
-    link = werkzeug.html.a(werkzeug.html(title),
+    link = werkzeug.utils.html.a(werkzeug.utils.html(title),
                            href=request.get_url(title))
     content = [
-        werkzeug.html.p(
-            werkzeug.html(
-                _(u'Content of revision %(rev)d of page %(title)s:'))
+        werkzeug.utils.html.p(
+            werkzeug.utils.html(
+                _('Content of revision %(rev)d of page %(title)s:'))
             % {'rev': rev, 'title': link}),
-        werkzeug.html.pre(werkzeug.html(text)),
+        werkzeug.utils.html.pre(werkzeug.utils.html(text)),
     ]
-    special_title = _(u'Revision of "%(title)s"') % {'title': title}
+    special_title = _('Revision of "%(title)s"') % {'title': title}
     page = hatta.page.get_page(request, title)
     html = page.template('page_special.html', content=content,
                          special_title=special_title)
@@ -134,7 +134,7 @@ def version(request, title=None):
         version = request.wiki.storage.repo_revision()
     else:
         try:
-            version, x, x, x = request.wiki.storage.page_history(title).next()
+            version, x, x, x = next(request.wiki.storage.page_history(title))
         except StopIteration:
             version = 0
     return hatta.response.WikiResponse('%d' % version, mimetype="text/plain")
@@ -153,8 +153,8 @@ def save(request, title):
         if text is not None:
             lines = text.split('\n')
         else:
-            lines = [werkzeug.html.p(werkzeug.html(
-                _(u'No preview for binaries.')))]
+            lines = [werkzeug.utils.html.p(werkzeug.utils.html(
+                _('No preview for binaries.')))]
         return edit(request, title, preview=lines)
     elif request.form.get('save'):
         if captcha and request.wiki.recaptcha_private_key:
@@ -167,7 +167,7 @@ def save(request, title):
                 return edit(request, title, preview=text.split('\n'),
                                  captcha_error=response.error_code)
         comment = request.form.get("comment", "")
-        if u'href="' in comment or u'http:' in comment:
+        if 'href="' in comment or 'http:' in comment:
             raise hatta.error.ForbiddenErr()
         author = request.get_author()
         text = request.form.get("text")
@@ -181,7 +181,7 @@ def save(request, title):
                 for link, label in page.extract_links(text):
                     if title == link:
                         raise hatta.error.ForbiddenErr(
-                            _(u"This page is locked."))
+                            _("This page is locked."))
             if text.strip() == '':
                 request.wiki.storage.delete_page(title, author, comment)
                 url = request.get_url(request.wiki.front_page)
@@ -189,7 +189,7 @@ def save(request, title):
                 request.wiki.storage.save_text(title, text, author, comment,
                                        parent)
         else:
-            text = u''
+            text = ''
             upload = request.files.get('data')
             if upload and upload.stream and upload.filename:
                 f = upload.stream
@@ -201,7 +201,7 @@ def save(request, title):
         request.wiki.index.update(request.wiki)
     response = werkzeug.routing.redirect(url, code=303)
     response.set_cookie('author',
-                        werkzeug.url_quote(request.get_author()),
+                        werkzeug.urls.url_quote(request.get_author()),
                         max_age=604800)
     return response
 
@@ -232,8 +232,8 @@ def atom(request):
     feed = werkzeug.contrib.atom.AtomFeed(request.wiki.site_name,
         feed_url=request.url,
         url=request.adapter.build('view', force_external=True),
-        subtitle=_(u'Track the most recent changes to the wiki '
-                   u'in this feed.'))
+        subtitle=_('Track the most recent changes to the wiki '
+                   'in this feed.'))
     history = itertools.islice(request.wiki.storage.history(), None, 10, None)
     unique_titles = set()
     for title, rev, date, author, comment in history:
@@ -315,7 +315,7 @@ def render(request, title):
         return download(request, title)
 
     cache_dir = os.path.join(request.wiki.cache, 'render',
-                              werkzeug.url_quote(title, safe=''))
+                              werkzeug.urls.url_quote(title, safe=''))
     cache_file = os.path.join(cache_dir, cache_filename)
     rev, date, author, comment = request.wiki.storage.page_meta(title)
     cache_mtime, cache_size = file_time_and_size(cache_file)
@@ -362,11 +362,11 @@ def undo(request, title):
         request.wiki.storage.reopen()
         request.wiki.index.update(request.wiki)
         if rev == 0:
-            comment = _(u'Delete page %(title)s') % {'title': title}
+            comment = _('Delete page %(title)s') % {'title': title}
             data = ''
             request.wiki.storage.delete_page(title, author, comment)
         else:
-            comment = _(u'Undo of change %(rev)d of page %(title)s') % {
+            comment = _('Undo of change %(rev)d of page %(title)s') % {
                 'rev': rev, 'title': title}
             data = request.wiki.storage.page_revision(title, rev - 1)
             request.wiki.storage.save_data(title, data, author, comment, parent)
@@ -455,24 +455,24 @@ def diff(request, title, from_rev, to_rev):
     build = request.adapter.build
     from_url = build('revision', {'title': title, 'rev': from_rev})
     to_url = build('revision', {'title': title, 'rev': to_rev})
-    a = werkzeug.html.a
+    a = werkzeug.utils.html.a
     links = {
         'link1': a(str(from_rev), href=from_url),
         'link2': a(str(to_rev), href=to_url),
-        'link': a(werkzeug.html(title), href=request.get_url(title)),
+        'link': a(werkzeug.utils.html(title), href=request.get_url(title)),
     }
-    message = werkzeug.html(_(
-        u'Differences between revisions %(link1)s and %(link2)s '
-        u'of page %(link)s.')) % links
+    message = werkzeug.utils.html(_(
+        'Differences between revisions %(link1)s and %(link2)s '
+        'of page %(link)s.')) % links
     diff_content = getattr(page, 'diff_content', None)
     if diff_content:
         from_text = request.wiki.storage.revision_text(page.title, from_rev)
         to_text = request.wiki.storage.revision_text(page.title, to_rev)
         content = page.diff_content(from_text, to_text, message)
     else:
-        content = [werkzeug.html.p(werkzeug.html(
-            _(u"Diff not available for this kind of pages.")))]
-    special_title = _(u'Diff for "%(title)s"') % {'title': title}
+        content = [werkzeug.utils.html.p(werkzeug.utils.html(
+            _("Diff not available for this kind of pages.")))]
+    special_title = _('Diff for "%(title)s"') % {'title': title}
     html = page.template('page_special.html', content=content,
                         special_title=special_title)
     response = hatta.response.WikiResponse(html, mimetype='text/html')
@@ -488,8 +488,8 @@ def all_pages(request):
     html = page.template('list.html',
                          pages=sorted(request.wiki.storage.all_pages()),
                          class_='index',
-                         message=_(u'Index of all pages'),
-                         special_title=_(u'Page Index'))
+                         message=_('Index of all pages'),
+                         special_title=_('Page Index'))
     response = hatta.response.WikiResponse(html, mimetype='text/html')
     response.set_etag('/+index/%d' % request.wiki.storage.repo_revision())
     response.make_conditional(request)
@@ -524,8 +524,8 @@ def orphaned(request):
     html = page.template('list.html',
                          pages=orphaned,
                          class_='orphaned',
-                         message=_(u'List of pages with no links to them'),
-                         special_title=_(u'Orphaned pages'))
+                         message=_('List of pages with no links to them'),
+                         special_title=_('Orphaned pages'))
     response = hatta.response.WikiResponse(html, mimetype='text/html')
     response.set_etag('/+orphaned/%d' % request.wiki.storage.repo_revision())
     response.make_conditional(request)
@@ -556,7 +556,7 @@ def search(request):
     _ = request.wiki.gettext
 
     def highlight_html(m):
-        return werkzeug.html.b(m.group(0), class_="highlight")
+        return werkzeug.utils.html.b(m.group(0), class_="highlight")
 
     def search_snippet(title, words):
         """Extract a snippet of text for search results."""
@@ -564,36 +564,36 @@ def search(request):
         try:
             text = request.wiki.storage.page_text(title)
         except hatta.error.NotFoundErr:
-            return u''
-        regexp = re.compile(u"|".join(re.escape(w) for w in words),
+            return ''
+        regexp = re.compile("|".join(re.escape(w) for w in words),
                             re.U | re.I)
         match = regexp.search(text)
         if match is None:
-            return u""
+            return ""
         position = match.start()
         min_pos = max(position - 60, 0)
         max_pos = min(position + 60, len(text))
-        snippet = werkzeug.escape(text[min_pos:max_pos])
+        snippet = werkzeug.utils.escape(text[min_pos:max_pos])
         html = regexp.sub(highlight_html, snippet)
         return html
 
     def page_search(words, page, request):
         """Display the search results."""
 
-        h = werkzeug.html
+        h = werkzeug.utils.html
         request.wiki.index.update(request.wiki)
         result = sorted(request.wiki.index.find(words), key=lambda x: -x[0])
-        yield werkzeug.html.p(h(_(u'%d page(s) containing all words:')
+        yield werkzeug.utils.html.p(h(_('%d page(s) containing all words:')
                               % len(result)))
-        yield u'<ol id="hatta-search-results">'
+        yield '<ol id="hatta-search-results">'
         for number, (score, title) in enumerate(result):
-            yield h.li(h.b(page.wiki_link(title)), u' ', h.i(str(score)),
+            yield h.li(h.b(page.wiki_link(title)), ' ', h.i(str(score)),
                        h.div(search_snippet(title, words),
                              class_="hatta-snippet"),
                        id_="search-%d" % (number + 1))
-        yield u'</ol>'
+        yield '</ol>'
 
-    query = request.values.get('q', u'').strip()
+    query = request.values.get('q', '').strip()
     request.wiki.refresh()
     page = hatta.page.get_page(request, '')
     if not query:
@@ -602,7 +602,7 @@ def search(request):
     words = tuple(request.wiki.index.split_text(query))
     if not words:
         words = (query,)
-    title = _(u'Searching for "%s"') % u" ".join(words)
+    title = _('Searching for "%s"') % " ".join(words)
     content = page_search(words, page, request)
     html = page.template('page_special.html', content=content,
                          special_title=title)
@@ -643,7 +643,7 @@ def pygments_css(request):
     _ = request.wiki.gettext
     if pygments is None:
         raise hatta.error.NotImplementedErr(
-            _(u"Code highlighting is not available."))
+            _("Code highlighting is not available."))
 
     pygments_style = request.wiki.pygments_style
     if pygments_style not in pygments.styles.STYLE_MAP:
@@ -675,7 +675,7 @@ def hgweb(request, path=None):
 
     _ = request.wiki.gettext
     if not request.wiki.config.get_bool('hgweb', False):
-        raise hatta.error.ForbiddenErr(_(u'Repository access disabled.'))
+        raise hatta.error.ForbiddenErr(_('Repository access disabled.'))
     app = mercurial.hgweb.request.wsgiapplication(
         lambda: mercurial.hgweb.hgweb(request.wiki.storage.repo, request.wiki.site_name))
 
@@ -695,9 +695,9 @@ def die(request):
     _ = request.wiki.gettext
     if not request.remote_addr.startswith('127.'):
         raise hatta.error.ForbiddenErr(
-            _(u'This URL can only be called locally.'))
+            _('This URL can only be called locally.'))
 
     def agony():
-        yield u'Oh dear!'
+        yield 'Oh dear!'
         request.wiki.dead = True
     return hatta.response.WikiResponse(agony(), mimetype='text/plain')

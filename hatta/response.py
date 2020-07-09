@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import werkzeug
-
+from werkzeug.wrappers import Response, ETagResponseMixin, CommonResponseDescriptorsMixin
 
 def response(request, title, content, etag='', mime='text/html',
              rev=None, size=None):
@@ -10,11 +10,11 @@ def response(request, title, content, etag='', mime='text/html',
     response = WikiResponse(content, mimetype=mime)
     if rev is None:
         rev, date, author, comment = request.wiki.storage.page_meta(title)
-        response.set_etag(u'%s/%s/%d-%s' % (etag,
-                                            werkzeug.url_quote(title),
+        response.set_etag('%s/%s/%d-%s' % (etag,
+                                            werkzeug.urls.url_quote(title),
                                             rev, date.isoformat()))
     else:
-        response.set_etag(u'%s/%s/%s' % (etag, werkzeug.url_quote(title),
+        response.set_etag('%s/%s/%s' % (etag, werkzeug.urls.url_quote(title),
                                          rev))
     if size:
         response.content_length = size
@@ -22,8 +22,8 @@ def response(request, title, content, etag='', mime='text/html',
     return response
 
 
-class WikiResponse(werkzeug.BaseResponse, werkzeug.ETagResponseMixin,
-                   werkzeug.CommonResponseDescriptorsMixin):
+class WikiResponse(Response, ETagResponseMixin,
+                   CommonResponseDescriptorsMixin):
     """A typical HTTP response class made out of Werkzeug's mixins."""
 
     def make_conditional(self, request):

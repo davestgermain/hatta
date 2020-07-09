@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import werkzeug
-
+from werkzeug.wrappers import Request, ETagRequestMixin
 import hatta.views
 
 
-class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
+class WikiRequest(Request, ETagRequestMixin):
     """
     A Werkzeug's request with additional functions for handling file
     uploads and wiki-specific link generation.
@@ -15,7 +15,7 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
     encoding_errors = 'ignore'
 
     def __init__(self, wiki, adapter, environ, **kw):
-        werkzeug.BaseRequest.__init__(self, environ, shallow=False, **kw)
+        Request.__init__(self, environ, shallow=False, **kw)
         self.wiki = wiki
         self.adapter = adapter
 
@@ -35,11 +35,11 @@ class WikiRequest(werkzeug.BaseRequest, werkzeug.ETagRequestMixin):
         """Try to guess the author name. Use IP address as last resort."""
 
         try:
-            cookie = werkzeug.url_unquote(self.cookies.get("author", ""))
+            cookie = werkzeug.urls.url_unquote(self.cookies.get("author", ""))
         except UnicodeError:
             cookie = None
         try:
-            auth = werkzeug.url_unquote(self.environ.get('REMOTE_USER', ""))
+            auth = werkzeug.urls.url_unquote(self.environ.get('REMOTE_USER', ""))
         except UnicodeError:
             auth = None
         author = (self.form.get("author") or cookie or auth or

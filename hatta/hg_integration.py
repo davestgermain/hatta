@@ -4,7 +4,7 @@
 import os
 
 from hatta.config import WikiConfig
-from __main__ import main
+from .__main__ import main
 
 
 def run_wiki(ui, repo, directory=None, **opts):

@@ -7,7 +7,7 @@ import os
 import re
 
 import werkzeug
-import werkzeug.contrib.atom
+# import werkzeug.contrib.atom
 
 pygments = None
 try:
@@ -42,12 +42,12 @@ def check_lock(wiki, title):
         'robots.txt',
     ]
     if wiki.read_only:
-        raise hatta.error.ForbiddenErr(_(u"This site is read-only."))
+        raise hatta.error.ForbiddenErr(_("This site is read-only."))
     if title in restricted_pages:
-        raise hatta.error.ForbiddenErr(_(u"""Can't edit this page.
+        raise hatta.error.ForbiddenErr(_("""Can't edit this page.
 It can only be edited by the site admin directly on the disk."""))
     if title in wiki.index.page_links(wiki.locked_page):
-        raise hatta.error.ForbiddenErr(_(u"This page is locked."))
+        raise hatta.error.ForbiddenErr(_("This page is locked."))
 
 
 
@@ -103,7 +103,7 @@ def page_mime(title):
     'archive/gzip'
     """
 
-    addr = title.encode('utf-8')  # the encoding doesn't relly matter here
+    addr = title #.encode('utf-8')  # the encoding doesn't relly matter here
     mime, encoding = mimetypes.guess_type(addr, strict=False)
     if encoding:
         mime = 'archive/%s' % encoding
@@ -164,7 +164,7 @@ class WikiPage(object):
         """Create HTML for a wiki link."""
 
         addr = addr.strip()
-        text = werkzeug.escape(label or addr)
+        text = werkzeug.utils.escape(label or addr)
         chunk = ''
         if class_ is not None:
             classes = [class_]
@@ -176,42 +176,41 @@ class WikiPage(object):
                 # Obfuscate e-mails a little bit.
                 classes.append('mail')
                 text = text.replace('@', '&#64;').replace('.', '&#46;')
-                href = werkzeug.escape(addr,
-                    quote=True).replace('@', '%40').replace('.', '%2E')
+                href = werkzeug.utils.escape(addr).replace('@', '%40').replace('.', '%2E')
             else:
-                href = werkzeug.escape(werkzeug.url_fix(addr), quote=True)
+                href = werkzeug.utils.escape(werkzeug.url_fix(addr))
         else:
             if '#' in addr:
                 addr, chunk = addr.split('#', 1)
                 chunk = '#' + werkzeug.url_fix(chunk)
             if addr.startswith(':'):
                 alias = self.link_alias(addr[1:])
-                href = werkzeug.escape(werkzeug.url_fix(alias) + chunk, True)
+                href = werkzeug.utils.escape(werkzeug.url_fix(alias) + chunk)
                 classes.append('external')
                 classes.append('alias')
             elif addr.startswith('+'):
                 href = '/'.join([self.request.script_root,
-                                 '+' + werkzeug.escape(addr[1:], quote=True)])
+                                 '+' + werkzeug.utils.escape(addr[1:])])
                 classes.append('special')
-            elif addr == u'':
-                href = werkzeug.escape(chunk, True)
+            elif addr == '':
+                href = werkzeug.utils.escape(chunk)
                 classes.append('anchor')
             else:
                 classes.append('wiki')
-                href = werkzeug.escape(self.get_url(addr) + chunk, True)
+                href = werkzeug.utils.escape(self.get_url(addr) + chunk)
                 if addr not in self.storage:
                     classes.append('nonexistent')
-        class_ = werkzeug.escape(' '.join(classes) or '', True)
+        class_ = werkzeug.utils.escape(' '.join(classes) or '')
         # We need to output HTML on our own to prevent escaping of href
         return '<a href="%s" class="%s" title="%s">%s</a>' % (
-                href, class_, werkzeug.escape(addr + chunk, True),
+                href, class_, werkzeug.utils.escape(addr + chunk),
                 image or text)
 
     def wiki_image(self, addr, alt, class_='wiki', lineno=0):
         """Create HTML for a wiki image."""
 
         addr = addr.strip()
-        html = werkzeug.html
+        html = werkzeug.utils.html
         chunk = ''
         if hatta.parser.external_link(addr):
             return html.img(src=werkzeug.url_fix(addr), class_="external",
@@ -244,7 +243,7 @@ class WikiPage(object):
         else:
             items = [
                 (self.wiki.front_page, self.wiki.front_page),
-                ('+history', _(u'Recent changes')),
+                ('+history', _('Recent changes')),
             ]
         for link, label in items:
             if link == self.title:
@@ -284,11 +283,11 @@ class WikiPage(object):
         dependencies = set()
         for title in [self.wiki.logo_page, self.wiki.menu_page]:
             if title not in self.storage:
-                dependencies.add(werkzeug.url_quote(title))
+                dependencies.add(werkzeug.urls.url_quote(title))
         for title in [self.wiki.menu_page]:
             if title in self.storage:
                 rev, date, author, comment = self.storage.page_meta(title)
-                etag = '%s/%d-%s' % (werkzeug.url_quote(title), rev, date.isoformat())
+                etag = '%s/%d-%s' % (werkzeug.urls.url_quote(title), rev, date.isoformat())
                 dependencies.add(etag)
         return dependencies
 
@@ -303,13 +302,13 @@ class WikiPage(object):
         _ = self.wiki.gettext
         author = self.request.get_author()
         if self.title in self.storage:
-            comment = _(u'changed')
+            comment = _('changed')
             (rev, old_date, old_author,
                 old_comment) = self.storage.page_meta(self.title)
             if old_author == author:
                 comment = old_comment
         else:
-            comment = _(u'uploaded')
+            comment = _('uploaded')
             rev = -1
         if captcha and self.wiki.recaptcha_public_key:
             recaptcha_html = captcha.displayhtml(
@@ -336,7 +335,7 @@ class WikiPageText(WikiPage):
     def content_iter(self, lines):
         yield '<pre>'
         for line in lines:
-            yield werkzeug.html(line)
+            yield werkzeug.utils.html(line)
         yield '</pre>'
 
     def plain_text(self):
@@ -366,14 +365,14 @@ class WikiPageText(WikiPage):
             lines = self.storage.page_text(self.title).splitlines(True)
             (rev, old_date, old_author,
                 old_comment) = self.storage.page_meta(self.title)
-            comment = _(u'modified')
+            comment = _('modified')
             if old_author == author:
                 comment = old_comment
         except hatta.error.NotFoundErr:
-            comment = _(u'created')
+            comment = _('created')
             rev = -1
-        except hatta.error.ForbiddenErr, e:
-            return werkzeug.html.p(werkzeug.html(unicode(e)))
+        except hatta.error.ForbiddenErr as e:
+            return werkzeug.utils.html.p(werkzeug.utils.html(str(e)))
         if preview:
             lines = preview
             comment = self.request.form.get('comment', comment)
@@ -393,7 +392,7 @@ class WikiPageText(WikiPage):
         }
         return self.template('edit_text.html', **context)
 
-    def diff_content(self, from_text, to_text, message=u''):
+    def diff_content(self, from_text, to_text, message=''):
         """Generate the HTML markup for a diff."""
 
         def infiniter(iterator):
@@ -407,42 +406,42 @@ class WikiPageText(WikiPage):
         diff = difflib._mdiff(from_text.split('\n'), to_text.split('\n'))
         mark_re = re.compile('\0[-+^]([^\1\0]*)\1|([^\0\1])')
         yield message
-        yield u'<pre class="diff">'
+        yield '<pre class="diff">'
         for old_line, new_line, changed in diff:
             old_no, old_text = old_line
             new_no, new_text = new_line
             line_no = (new_no or old_no or 1) - 1
             if changed:
-                yield u'<div class="change" id="line_%d">' % line_no
+                yield '<div class="change" id="line_%d">' % line_no
                 old_iter = infiniter(mark_re.finditer(old_text))
                 new_iter = infiniter(mark_re.finditer(new_text))
-                old = old_iter.next()
-                new = new_iter.next()
-                buff = u''
+                old = next(old_iter)
+                new = next(new_iter)
+                buff = ''
                 while old or new:
                     while old and old.group(1):
                         if buff:
-                            yield werkzeug.escape(buff)
-                            buff = u''
-                        yield u'<del>%s</del>' % werkzeug.escape(old.group(1))
-                        old = old_iter.next()
+                            yield werkzeug.utils.escape(buff)
+                            buff = ''
+                        yield '<del>%s</del>' % werkzeug.utils.escape(old.group(1))
+                        old = next(old_iter)
                     while new and new.group(1):
                         if buff:
-                            yield werkzeug.escape(buff)
-                            buff = u''
-                        yield u'<ins>%s</ins>' % werkzeug.escape(new.group(1))
-                        new = new_iter.next()
+                            yield werkzeug.utils.escape(buff)
+                            buff = ''
+                        yield '<ins>%s</ins>' % werkzeug.utils.escape(new.group(1))
+                        new = next(new_iter)
                     if new:
                         buff += new.group(2)
-                    old = old_iter.next()
-                    new = new_iter.next()
+                    old = next(old_iter)
+                    new = next(new_iter)
                 if buff:
-                    yield werkzeug.escape(buff)
-                yield u'</div>'
+                    yield werkzeug.utils.escape(buff)
+                yield '</div>'
             else:
-                yield u'<div class="orig" id="line_%d">%s</div>' % (
-                    line_no, werkzeug.escape(old_text))
-        yield u'</pre>'
+                yield '<div class="orig" id="line_%d">%s</div>' % (
+                    line_no, werkzeug.utils.escape(old_text))
+        yield '</pre>'
 
 
 class WikiPageColorText(WikiPageText):
@@ -461,7 +460,7 @@ class WikiPageColorText(WikiPageText):
         """Colorize the source code."""
 
         if pygments is None:
-            yield werkzeug.html.pre(werkzeug.html(text))
+            yield werkzeug.utils.html.pre(werkzeug.utils.html(text))
             return
 
         formatter = pygments.formatters.HtmlFormatter()
@@ -473,7 +472,7 @@ class WikiPageColorText(WikiPageText):
             yield 0, '<div class="highlight"><pre>'
             for lineno, line in source:
                 yield (lineno,
-                       werkzeug.html.span(line, id_="line_%d" %
+                       werkzeug.utils.html.span(line, id_="line_%d" %
                                          formatter.line_no))
                 formatter.line_no += 1
             yield 0, '</pre></div>'
@@ -487,7 +486,7 @@ class WikiPageColorText(WikiPageText):
             else:
                 lexer = pygments.lexers.guess_lexer(text)
         except:
-            yield werkzeug.html.pre(werkzeug.html(text))
+            yield werkzeug.utils.html.pre(werkzeug.utils.html(text))
             return
         html = pygments.highlight(text, lexer, formatter)
         yield html
@@ -515,7 +514,7 @@ class WikiPageWiki(WikiPageColorText):
             try:
                 text = self.storage.page_text(self.title)
             except hatta.error.NotFoundErr:
-                text = u''
+                text = ''
         return self.parser.extract_links(text)
 
     def view_content(self, lines=None):
@@ -533,29 +532,29 @@ class WikiPageWiki(WikiPageColorText):
     def wiki_math(self, math_text, display=False):
         math_url = self.wiki.math_url
         if math_url == '':
-            return werkzeug.escape(math_text)
+            return werkzeug.utils.escape(math_text)
         elif math_url == 'mathjax':
             if display:
-                return werkzeug.escape(u"$$\n%s\n$$" % math_text)
+                return werkzeug.utils.escape("$$\n%s\n$$" % math_text)
             else:
-                return werkzeug.escape(u"$%s$" % math_text)
+                return werkzeug.utils.escape("$%s$" % math_text)
         if '%s' in math_url:
-            url = math_url % werkzeug.url_quote(math_text)
+            url = math_url % werkzeug.urls.url_quote(math_text)
         else:
-            url = '%s%s' % (math_url, werkzeug.url_quote(math_text))
-        label = werkzeug.escape(math_text, quote=True)
-        return werkzeug.html.img(src=url, alt=label, class_="math")
+            url = '%s%s' % (math_url, werkzeug.urls.url_quote(math_text))
+        label = werkzeug.utils.escape(math_text)
+        return werkzeug.utils.html.img(src=url, alt=label, class_="math")
 
     def dependencies(self):
         dependencies = WikiPage.dependencies(self)
         for title in [self.wiki.icon_page, self.wiki.alias_page]:
             if title in self.storage:
                 rev, date, author, comment = self.storage.page_meta(title)
-                etag = '%s/%d-%s' % (werkzeug.url_quote(title), rev, date.isoformat())
+                etag = '%s/%d-%s' % (werkzeug.urls.url_quote(title), rev, date.isoformat())
                 dependencies.add(etag)
         for link in self.index.page_links(self.title):
             if link not in self.storage:
-                dependencies.add(werkzeug.url_quote(link))
+                dependencies.add(werkzeug.urls.url_quote(link))
         return dependencies
 
 
@@ -567,7 +566,7 @@ class WikiPageFile(WikiPage):
             raise hatta.error.NotFoundErr()
         content = ['<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>' %
                    (self.request.get_download_url(self.title),
-                    werkzeug.escape(self.title), self.mime)]
+                    werkzeug.utils.escape(self.title), self.mime)]
         return content
 
 
@@ -582,7 +581,7 @@ class WikiPageImage(WikiPageFile):
         content = ['<a href="%s"><img src="%s" alt="%s"></a>'
                    % (self.request.get_url(self.title, 'download'),
                       self.request.get_url(self.title, 'render'),
-                      werkzeug.escape(self.title))]
+                      werkzeug.utils.escape(self.title))]
         return content
 
     def render_mime(self):
@@ -621,21 +620,21 @@ class WikiPageCSV(WikiPageFile):
         # XXX Add preview support
         csv_file = self.storage.open_page(self.title)
         reader = csv.reader(csv_file)
-        html_title = werkzeug.escape(self.title, quote=True)
-        yield u'<table id="%s" class="csvfile">' % html_title
+        html_title = werkzeug.utils.escape(self.title)
+        yield '<table id="%s" class="csvfile">' % html_title
         try:
             for row in reader:
-                yield u'<tr>%s</tr>' % (u''.join(u'<td>%s</td>' % cell
+                yield '<tr>%s</tr>' % (''.join('<td>%s</td>' % cell
                                                  for cell in row))
-        except csv.Error, e:
-            yield u'</table>'
-            yield werkzeug.html.p(werkzeug.html(
-                _(u'Error parsing CSV file %{file}s on '
-                  u'line %{line}d: %{error}s') %
+        except csv.Error as e:
+            yield '</table>'
+            yield werkzeug.utils.html.p(werkzeug.utils.html(
+                _('Error parsing CSV file %{file}s on '
+                  'line %{line}d: %{error}s') %
                 {'file': html_title, 'line': reader.line_num, 'error': e}))
         finally:
             csv_file.close()
-        yield u'</table>'
+        yield '</table>'
 
     def view_content(self, lines=None):
         if self.title not in self.storage:
@@ -691,31 +690,31 @@ class WikiPageBugs(WikiPageText):
                     yield '<div id="line_%d">' % (line_no)
                     in_bug = True
                     if title:
-                        yield werkzeug.html.h2(werkzeug.html(title))
+                        yield werkzeug.utils.html.h2(werkzeug.utils.html(title))
                     if attributes:
                         yield '<dl>'
-                        for attribute, value in attributes.iteritems():
-                            yield werkzeug.html.dt(werkzeug.html(attribute))
-                            yield werkzeug.html.dd(werkzeug.html(value))
+                        for attribute, value in attributes.items():
+                            yield werkzeug.utils.html.dt(werkzeug.utils.html(attribute))
+                            yield werkzeug.utils.html.dd(werkzeug.utils.html(value))
                         yield '</dl>'
                     in_header = False
                 if not line.strip():
                     if last_lines:
                         if last_lines[0][0] in ' \t':
-                            yield werkzeug.html.pre(werkzeug.html(
+                            yield werkzeug.utils.html.pre(werkzeug.utils.html(
                                             ''.join(last_lines)))
                         else:
-                            yield werkzeug.html.p(werkzeug.html(
+                            yield werkzeug.utils.html.p(werkzeug.utils.html(
                                             ''.join(last_lines)))
                         last_lines = []
                 else:
                     last_lines.append(line)
         if last_lines:
             if last_lines[0][0] in ' \t':
-                yield werkzeug.html.pre(werkzeug.html(
+                yield werkzeug.utils.html.pre(werkzeug.utils.html(
                                 ''.join(last_lines)))
             else:
-                yield werkzeug.html.p(werkzeug.html(
+                yield werkzeug.utils.html.p(werkzeug.utils.html(
                                 ''.join(last_lines)))
         if in_bug:
             yield '</div>'

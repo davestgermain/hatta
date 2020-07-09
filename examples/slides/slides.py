@@ -17,10 +17,10 @@ class WikiPageWiki(hatta.page.WikiPageWiki):
         _ = self.wiki.gettext
         for part in super(WikiPageWiki, self).footer(special_title, edit_url):
             yield part
-        yield werkzeug.html.a(werkzeug.html(_('Slides')),
+        yield werkzeug.utils.html.a(werkzeug.utils.html(_('Slides')),
             href=self.get_url(self.title, 'slides'),
             class_='slides')
-        yield u'\n'
+        yield '\n'
 
 
 @hatta.views.URL('/+slides/<title:title>')
@@ -35,7 +35,7 @@ def slides(request, title):
             html = ''.join(page.view_content())
         except hatta.error.NotFoundErr:
             continue
-        slide_title = (u'<h1>%s</h1>' % werkzeug.escape(label))
+        slide_title = ('<h1>%s</h1>' % werkzeug.utils.escape(label))
         contents.append(slide_title + html)
     content = ('<div class="slide">%s</div>'
                % '</div><div class="slide">'.join(contents))
@@ -47,7 +47,7 @@ def slides(request, title):
 %s
 <script src="../+download/jquery.js"></script>
 <script src="../+download/slides.js"></script>
-""" % (werkzeug.escape(title), content)
+""" % (werkzeug.utils.escape(title), content)
     response = hatta.WikiResponse(html, mimetype='text/html')
     return response
 

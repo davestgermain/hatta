@@ -8,7 +8,7 @@ import unicodedata
 import werkzeug
 
 
-EXTERNAL_URL_RE = re.compile(ur'^[a-z]+://|^mailto:', re.I | re.U)
+EXTERNAL_URL_RE = re.compile(r'^[a-z]+://|^mailto:', re.I | re.U)
 
 
 def external_link(addr):
@@ -65,10 +65,10 @@ class RuleSet(object):
     def compile(self):
         """Prepare the registered rule patterns for parsing."""
 
-        rules = sorted(self.rules.iteritems(), key=lambda x: x[1][0])
+        rules = sorted(iter(self.rules.items()), key=lambda x: x[1][0])
         self.compiled_re = re.compile(
-            ur"|".join(
-                ur"(?P<%s>%s)" % (function_name, pattern) for
+            r"|".join(
+                r"(?P<%s>%s)" % (function_name, pattern) for
                     (function_name, (priority, pattern, function)) in rules
             ), re.U)
 
@@ -100,7 +100,7 @@ class RuleSet(object):
             priority, pattern, function = self.rules[function_name]
             if bind_to is not None:
                 function = getattr(bind_to, function.__name__)
-            params = dict((str(k), v) for (k, v) in params.iteritems()
+            params = dict((str(k), v) for (k, v) in params.items()
                           if v is not None and k not in self.rules)
             yield function(**params)
 
@@ -127,11 +127,11 @@ class WikiParser(object):
     block_rules = RuleSet()
     markup_rules = RuleSet()
 
-    list_pat = ur"^\s*[*#]+\s+"
-    heading_pat = ur"^\s*=+"
-    quote_pat = ur"^[>]+\s+"
-    image_pat = (ur"\{\{(?P<image_target>([^|}]|}[^|}])*)"
-                 ur"(\|(?P<image_text>([^}]|}[^}])*))?}}")
+    list_pat = r"^\s*[*#]+\s+"
+    heading_pat = r"^\s*=+"
+    quote_pat = r"^[>]+\s+"
+    image_pat = (r"\{\{(?P<image_target>([^|}]|}[^|}])*)"
+                 r"(\|(?P<image_text>([^}]|}[^}])*))?}}")
     smilies = {
         r':)': "smile.png",
         r':(': "frown.png",
@@ -180,15 +180,15 @@ class WikiParser(object):
         self.quote_re = re.compile(self.quote_pat, re.U)
         self.heading_re = re.compile(self.heading_pat, re.U)
         self.list_re = re.compile(self.list_pat, re.U)
-        self.code_close_re = re.compile(ur"^\}\}\}\s*$", re.U)
-        self.macro_close_re = re.compile(ur"^>>\s*$", re.U)
-        self.conflict_close_re = re.compile(ur"^>>>>>>> other\s*$", re.U)
-        self.conflict_sep_re = re.compile(ur"^=======\s*$", re.U)
-        self.display_math_close_re = re.compile(ur"^[$][$]\s*$", re.U)
+        self.code_close_re = re.compile(r"^\}\}\}\s*$", re.U)
+        self.macro_close_re = re.compile(r"^>>\s*$", re.U)
+        self.conflict_close_re = re.compile(r"^>>>>>>> other\s*$", re.U)
+        self.conflict_sep_re = re.compile(r"^=======\s*$", re.U)
+        self.display_math_close_re = re.compile(r"^[$][$]\s*$", re.U)
         self.image_re = re.compile(self.image_pat, re.U)
-        smileys = ur"|".join(re.escape(k) for k in self.smilies)
-        smiley_pat = (ur"(^|\b|(?<=\s))(?P<smiley_face>%s)"
-                      ur"((?=[\s.,:;!?)/&=+-])|$)" % smileys)
+        smileys = r"|".join(re.escape(k) for k in self.smilies)
+        smiley_pat = (r"(^|\b|(?<=\s))(?P<smiley_face>%s)"
+                      r"((?=[\s.,:;!?)/&=+-])|$)" % smileys)
         self.markup_rules.add_rule(
                 self._line_smiley, smiley_pat, 125)
         self.markup_rules.compile()
@@ -206,13 +206,13 @@ class WikiParser(object):
             addr = addr.strip()
             if external_link(addr):
                 # Don't index external links
-                return u''
+                return ''
             if '#' in addr:
                 addr, chunk = addr.split('#', 1)
-            if addr == u'':
-                return u''
+            if addr == '':
+                return ''
             links.append((addr, label))
-            return u''
+            return ''
         lines = text.split('\n')
         for part in cls(lines, link, link):
             for ret in links:
@@ -256,25 +256,25 @@ class WikiParser(object):
                 tags.append(tag)
         except IndexError:
             pass
-        return u"".join(u"</%s>" % tag for tag in tags)
+        return "".join("</%s>" % tag for tag in tags)
 
     def lines_until(self, close_re):
         """Get lines from input until the closing markup is encountered."""
 
-        self.line_no, line = self.enumerated_lines.next()
+        self.line_no, line = next(self.enumerated_lines)
         while not close_re.match(line):
             yield line.rstrip()
-            line_no, line = self.enumerated_lines.next()
+            line_no, line = next(self.enumerated_lines)
 
 # methods for the markup inside lines:
 
-    @markup_rules(ur"(?P<table_cell>=?\|=?)", 140)
+    @markup_rules(r"(?P<table_cell>=?\|=?)", 140)
     def _line_table(self, table_cell):
         return table_cell
 
-    @markup_rules(ur"\\\\", 70)
+    @markup_rules(r"\\\\", 70)
     def _line_linebreak(self):
-        return u'<br>'
+        return '<br>'
 
     # Added in .compile()
     def _line_smiley(self, smiley_face):
@@ -284,73 +284,73 @@ class WikiParser(object):
             url = ''
         return self.wiki_image(url, smiley_face, class_="smiley")
 
-    @markup_rules(ur"[*][*]", 10)
+    @markup_rules(r"[*][*]", 10)
     def _line_bold(self):
         if 'b' in self.stack:
             return self.pop_to('b')
         else:
             self.stack.append('b')
-            return u"<b>"
+            return "<b>"
 
-    @markup_rules(ur"//", 40)
+    @markup_rules(r"//", 40)
     def _line_italic(self):
         if 'i' in self.stack:
             return self.pop_to('i')
         else:
             self.stack.append('i')
-            return u"<i>"
+            return "<i>"
 
-    @markup_rules(ur"##", 110)
+    @markup_rules(r"##", 110)
     def _line_mono(self):
         if 'tt' in self.stack:
             return self.pop_to('tt')
         else:
             self.stack.append('tt')
-            return u"<tt>"
+            return "<tt>"
 
-    @markup_rules(ur'(?P<punct>'
-                  ur'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+"\'—-])|\b|$))' %
-                  ur"|".join(re.escape(k) for k in punct), 130)
+    @markup_rules(r'(?P<punct>'
+                  r'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+"\'—-])|\b|$))' %
+                  r"|".join(re.escape(k) for k in punct), 130)
     def _line_punct(self, punct):
         return self.punct.get(punct, punct)
 
-    @markup_rules(ur"\n", 120)
+    @markup_rules(r"\n", 120)
     def _line_newline(self):
         return "\n"
 
-    @markup_rules(ur"(?P<plain_text>.+?)", 150)
+    @markup_rules(r"(?P<plain_text>.+?)", 150)
     def _line_text(self, plain_text):
-        return werkzeug.escape(plain_text)
+        return werkzeug.utils.escape(plain_text)
 
-    @markup_rules(ur"\$\$(?P<math_text>[^$]+)\$\$", 100)
+    @markup_rules(r"\$\$(?P<math_text>[^$]+)\$\$", 100)
     def _line_math(self, math_text):
         if self.wiki_math:
             math_text = self.wiki_math(math_text, False)
         else:
-            math_text = werkzeug.escape(math_text)
-        return werkzeug.html.var(math_text, class_="inline-math")
+            math_text = werkzeug.utils.escape(math_text)
+        return werkzeug.utils.html.var(math_text, class_="inline-math")
 
-    @markup_rules(ur"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
-                  ur"*[}]*)[}][}][}]", 20)
+    @markup_rules(r"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
+                  r"*[}]*)[}][}][}]", 20)
     def _line_code(self, code_text):
-        return u'<code>%s</code>' % werkzeug.escape(code_text)
+        return '<code>%s</code>' % werkzeug.utils.escape(code_text)
 
-    @markup_rules(ur"""(?P<link_url>[a-zA-Z]+://\S+[^\s.,:;!?()'"\*/=+<>-])""", 30)
+    @markup_rules(r"""(?P<link_url>[a-zA-Z]+://\S+[^\s.,:;!?()'"\*/=+<>-])""", 30)
     def _line_free_link(self, link_url):
         return self._line_link(link_target=link_url)
 
-    @markup_rules(ur"""(?P<mail_address>(mailto:)?"""
-                  ur"""[^\s()\[\]<>{}"']+@\S+(\.[^\s.,:;!?()'"\*/=+<>-]+)+)""" , 90)
+    @markup_rules(r"""(?P<mail_address>(mailto:)?"""
+                  r"""[^\s()\[\]<>{}"']+@\S+(\.[^\s.,:;!?()'"\*/=+<>-]+)+)""" , 90)
     def _line_mail(self, mail_address):
         text = mail_address
-        if mail_address.startswith(u'mailto:'):
+        if mail_address.startswith('mailto:'):
             text = text[len('mailto:'):]
         else:
-            mail_address = u'mailto:%s' % mail_address
+            mail_address = 'mailto:%s' % mail_address
         return self._line_link(link_text=text, link_target=mail_address)
 
-    @markup_rules(ur"\[\[(?P<link_target>([^|\]]|\][^|\]])+)"
-                  ur"(\|(?P<link_text>([^\]]|\][^\]])+))?\]\]", 50)
+    @markup_rules(r"\[\[(?P<link_target>([^|\]]|\][^|\]])+)"
+                  r"(\|(?P<link_text>([^\]]|\][^\]])+))?\]\]", 50)
     def _line_link(self, link_target, link_text=None):
         if not link_text:
             link_text = link_target
@@ -359,7 +359,7 @@ class WikiParser(object):
         match = self.image_re.match(link_text)
         if match:
             params = dict((str(k), v) for (k, v) in
-                          match.groupdict().iteritems())
+                          match.groupdict().items())
             image = self._line_image(**params)
             return self.wiki_link(link_target, link_text, image=image)
         return self.wiki_link(link_target, link_text)
@@ -370,58 +370,58 @@ class WikiParser(object):
             image_text = image_target
         return self.wiki_image(image_target, image_text)
 
-    @markup_rules(ur"[<][<](?P<macro_name>\w+)\s+"
-                  ur"(?P<macro_text>([^>]|[^>][>])+)[>][>]", 80)
+    @markup_rules(r"[<][<](?P<macro_name>\w+)\s+"
+                  r"(?P<macro_text>([^>]|[^>][>])+)[>][>]", 80)
     def _line_macro(self, macro_name, macro_text):
         macro_text = macro_text.strip()
-        return u'<span class="%s">%s</span>' % (
-            werkzeug.escape(macro_name, quote=True),
-            werkzeug.escape(macro_text))
+        return '<span class="%s">%s</span>' % (
+            werkzeug.utils.escape(macro_name),
+            werkzeug.utils.escape(macro_text))
 
 # methods for the block (multiline) markup:
 
     @block_rules(r"^[$][$]\s*$", 25)
     def _block_display_math(self, block):
         for self.line_no, part in block:
-            math_text = u"\n".join(self.lines_until(self.display_math_close_re))
+            math_text = "\n".join(self.lines_until(self.display_math_close_re))
             if self.wiki_math:
                 math_text = self.wiki_math(math_text, True)
             else:
-                math_text = werkzeug.escape(math_text)
-            yield werkzeug.html.div(
+                math_text = werkzeug.utils.escape(math_text)
+            yield werkzeug.utils.html.div(
                 math_text,
                 class_="display-math",
                 id="line_%d" % self.line_no,
             )
 
-    @block_rules(ur"^[{][{][{]+\s*$", 20)
+    @block_rules(r"^[{][{][{]+\s*$", 20)
     def _block_code(self, block):
         for self.line_no, part in block:
-            inside = u"\n".join(self.lines_until(self.code_close_re))
-            yield werkzeug.html.pre(werkzeug.html(inside), class_="code",
+            inside = "\n".join(self.lines_until(self.code_close_re))
+            yield werkzeug.utils.html.pre(werkzeug.utils.html(inside), class_="code",
                                     id="line_%d" % self.line_no)
 
-    @block_rules(ur"^\{\{\{\#![\w+#.-]+\s*$", 100)
+    @block_rules(r"^\{\{\{\#![\w+#.-]+\s*$", 100)
     def _block_syntax(self, block):
         for self.line_no, part in block:
             syntax = part.lstrip('{#!').strip()
-            inside = u"\n".join(self.lines_until(self.code_close_re))
+            inside = "\n".join(self.lines_until(self.code_close_re))
             if self.wiki_syntax:
                 return self.wiki_syntax(inside, syntax=syntax,
                                         line_no=self.line_no)
             else:
-                return [werkzeug.html.div(werkzeug.html.pre(
-                    werkzeug.html(inside), id="line_%d" % self.line_no),
+                return [werkzeug.utils.html.div(werkzeug.utils.html.pre(
+                    werkzeug.utils.html(inside), id="line_%d" % self.line_no),
                     class_="highlight")]
 
-    @block_rules(ur"^<<\w+\s*$", 70)
+    @block_rules(r"^<<\w+\s*$", 70)
     def _block_macro(self, block):
         for self.line_no, part in block:
             name = part.lstrip('<').strip()
-            inside = u"\n".join(self.lines_until(self.macro_close_re))
-            yield u'<div class="%s">%s</div>' % (
-                werkzeug.escape(name, quote=True),
-                werkzeug.escape(inside))
+            inside = "\n".join(self.lines_until(self.macro_close_re))
+            yield '<div class="%s">%s</div>' % (
+                werkzeug.utils.escape(name),
+                werkzeug.utils.escape(inside))
 
     def _block_paragraph(self, block):
         parts = []
@@ -430,10 +430,10 @@ class WikiParser(object):
             if first_line is None:
                 first_line = self.line_no
             parts.append(part)
-        text = u"".join(self.parse_line(u"".join(parts)))
-        yield werkzeug.html.p(text, self.pop_to(""), id="line_%d" % first_line)
+        text = "".join(self.parse_line("".join(parts)))
+        yield werkzeug.utils.html.p(text, self.pop_to(""), id="line_%d" % first_line)
 
-    @block_rules(ur"^[ \t]+", 60)
+    @block_rules(r"^[ \t]+", 60)
     def _block_indent(self, block):
         parts = []
         first_line = None
@@ -441,17 +441,17 @@ class WikiParser(object):
             if first_line is None:
                 first_line = self.line_no
             parts.append(part.rstrip())
-        text = u"\n".join(parts)
-        yield werkzeug.html.pre(werkzeug.html(text), id="line_%d" % first_line)
+        text = "\n".join(parts)
+        yield werkzeug.utils.html.pre(werkzeug.utils.html(text), id="line_%d" % first_line)
 
-    @block_rules(ur"^\|", 110)
+    @block_rules(r"^\|", 110)
     def _block_table(self, block):
         first_line = None
         in_head = False
         for self.line_no, line in block:
             if first_line is None:
                 first_line = self.line_no
-                yield u'<table id="line_%d">' % first_line
+                yield '<table id="line_%d">' % first_line
             table_row = line.strip()
             is_header = table_row.startswith('|=') and table_row.endswith('=|')
             if not in_head and is_header:
@@ -490,27 +490,27 @@ class WikiParser(object):
                 else:
                     yield '</td>'
             yield '</tr>'
-        yield u'</table>'
+        yield '</table>'
 
-    @block_rules(ur"^\s*$", 40)
+    @block_rules(r"^\s*$", 40)
     def _block_empty(self, block):
-        yield u''
+        yield ''
 
-    @block_rules(ur"^\s*---+\s*$", 90)
+    @block_rules(r"^\s*---+\s*$", 90)
     def _block_rule(self, block):
         for self.line_no, line in block:
-            yield werkzeug.html.hr()
+            yield werkzeug.utils.html.hr()
 
     @block_rules(heading_pat, 50)
     def _block_heading(self, block):
         for self.line_no, line in block:
             level = min(len(self.heading_re.match(line).group(0).strip()), 5)
             self.headings[level - 1] = self.headings.get(level - 1, 0) + 1
-            label = u"-".join(str(self.headings.get(i, 0))
+            label = "-".join(str(self.headings.get(i, 0))
                               for i in range(level))
-            yield werkzeug.html.a(name="head-%s" % label)
-            yield u'<h%d id="line_%d">%s</h%d>' % (level, self.line_no,
-                werkzeug.escape(line.strip("= \t\n\r\v")), level)
+            yield werkzeug.utils.html.a(name="head-%s" % label)
+            yield '<h%d id="line_%d">%s</h%d>' % (level, self.line_no,
+                werkzeug.utils.escape(line.strip("= \t\n\r\v")), level)
 
     @block_rules(list_pat, 10)
     def _block_list(self, block):
@@ -538,7 +538,7 @@ class WikiParser(object):
             if nest == level and not in_ul:
                 yield '</li>'
             content = line.lstrip().lstrip('*#').strip()
-            yield '<li>%s%s' % (u"".join(self.parse_line(content)),
+            yield '<li>%s%s' % ("".join(self.parse_line(content)),
                                 self.pop_to(""))
             in_ul = False
         yield ('</li></%s>' % kind) * level
@@ -552,25 +552,25 @@ class WikiParser(object):
             stripped = line.lstrip()[1:].lstrip()
             return (line_no, stripped)
 
-        enumerated_lines = map(remove_lead, block)
+        enumerated_lines = list(map(remove_lead, block))
         for content in self.parse(enumerated_lines):
             yield content
 
         yield '</blockquote>'
 
-    @block_rules(ur"^<<<<<<< local\s*$", 30)
+    @block_rules(r"^<<<<<<< local\s*$", 30)
     def _block_conflict(self, block):
         for self.line_no, part in block:
-            yield u'<div class="conflict">'
-            local = u"\n".join(self.lines_until(self.conflict_sep_re))
-            yield werkzeug.html.pre(werkzeug.html(local),
+            yield '<div class="conflict">'
+            local = "\n".join(self.lines_until(self.conflict_sep_re))
+            yield werkzeug.utils.html.pre(werkzeug.utils.html(local),
                                     class_="local",
                                     id="line_%d" % self.line_no)
-            other = u"\n".join(self.lines_until(self.conflict_close_re))
-            yield werkzeug.html.pre(werkzeug.html(other),
+            other = "\n".join(self.lines_until(self.conflict_close_re))
+            yield werkzeug.utils.html.pre(werkzeug.utils.html(other),
                                     class_="other",
                                     id="line_%d" % self.line_no)
-            yield u'</div>'
+            yield '</div>'
 
 
 class WikiWikiParser(WikiParser):
@@ -578,14 +578,14 @@ class WikiWikiParser(WikiParser):
 
     markup_rules = RuleSet(WikiParser.markup_rules)
 
-    camel_link = ur"\w+[%s]\w+" % re.escape(
-        u''.join(unichr(i) for i in xrange(sys.maxunicode)
-        if unicodedata.category(unichr(i)) == 'Lu'))
+    camel_link = r"\w+[%s]\w+" % re.escape(
+        ''.join(chr(i) for i in range(sys.maxunicode)
+        if unicodedata.category(chr(i)) == 'Lu'))
 
-    @markup_rules(ur'(?P<camel_link>%s)' % camel_link, 105)
+    @markup_rules(r'(?P<camel_link>%s)' % camel_link, 105)
     def _line_camel_link(self, camel_link):
         return self._line_link(link_target=camel_link)
 
-    @markup_rules(ur"[!~](?P<camel_text>%s)" % camel_link, 106)
+    @markup_rules(r"[!~](?P<camel_text>%s)" % camel_link, 106)
     def _line_camel_nolink(self, camel_text):
-        return werkzeug.escape(camel_text)
+        return werkzeug.utils.escape(camel_text)

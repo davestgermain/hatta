@@ -17,7 +17,7 @@ setuptools.setup(
         'mercurial >=1.0',
         'jinja2',
     ],
-    tests_require=['py.test', 'lxml', 'pygments'],
+    tests_require=['pytest', 'lxml', 'pygments'],
     data_files=[
         ('share/locale/ar/LC_MESSAGES', ['locale/ar/LC_MESSAGES/hatta.mo']),
         ('share/locale/cs/LC_MESSAGES', ['locale/cs/LC_MESSAGES/hatta.mo']),

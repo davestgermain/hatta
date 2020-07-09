@@ -22,7 +22,7 @@ class WikiTitleConverter(werkzeug.routing.PathConverter):
     """Behaves like the path converter, but doesn't match the "+ pages"."""
 
     def to_url(self, value):
-        return werkzeug.url_quote(value.strip(), self.map.charset, safe="/")
+        return werkzeug.urls.url_quote(value.strip(), self.map.charset, safe="/")
 
     regex = '([^+%]|%[^2]|%2[^Bb]).*'
 
@@ -86,17 +86,17 @@ class Wiki(object):
 
         self.language = config.get('language')
         translation = init_gettext(self.language)
-        self.gettext = translation.ugettext
+        self.gettext = translation.gettext
         self.template_path = config.get('template_path')
         self.template_env = init_template(translation, self.template_path)
         self.path = os.path.abspath(config.get('pages_path', 'docs'))
         self.repo_path = config.get('repo_path')
         self.page_charset = config.get('page_charset', 'utf-8')
-        self.menu_page = self.config.get('menu_page', u'Menu')
-        self.front_page = self.config.get('front_page', u'Home')
-        self.logo_page = self.config.get('logo_page', u'logo.png')
-        self.locked_page = self.config.get('locked_page', u'Locked')
-        self.site_name = self.config.get('site_name', u'Hatta Wiki')
+        self.menu_page = self.config.get('menu_page', 'Menu')
+        self.front_page = self.config.get('front_page', 'Home')
+        self.logo_page = self.config.get('logo_page', 'logo.png')
+        self.locked_page = self.config.get('locked_page', 'Locked')
+        self.site_name = self.config.get('site_name', 'Hatta Wiki')
         self.read_only = self.config.get_bool('read_only', False)
         self.fallback_url = self.config.get('fallback_url')
         self.icon_page = self.config.get('icon_page')
@@ -152,7 +152,7 @@ class Wiki(object):
             converters=self.url_converters,
         )
 
-    @werkzeug.responder
+    @werkzeug.wsgi.responder
     def application(self, environ, start):
         """The main application loop."""
 

@@ -10,10 +10,10 @@ VALID_NAMES = set()
 
 
 def _add(short, long, dest, help, default=None, metavar=None,
-         action=None, type=None):
+         action=None, otype=None):
     """Helper for building the list of options."""
 
-    OPTIONS.append((short, long, dest, help, default, metavar, action, type))
+    OPTIONS.append((short, long, dest, help, default, metavar, action, otype))
     VALID_NAMES.add(dest)
 
 _add('-V', '--version', dest='show_version', default=False,
@@ -28,7 +28,7 @@ _add('-T', '--template-dir', dest='template_path',
     help='Use templates in DIR', metavar='DIR')
 _add('-i', '--interface', dest='interface',
     help='Listen on interface INT', metavar='INT')
-_add('-p', '--port', dest='port', type='int',
+_add('-p', '--port', dest='port', otype='int',
     help='Listen on port PORT', metavar='PORT')
 _add('-s', '--script-name', dest='script_name',
     help='Override SCRIPT_NAME to NAME', metavar='NAME')
@@ -91,7 +91,7 @@ class WikiConfig(object):
     2080
     """
 
-    default_filename = u'hatta.conf'
+    default_filename = 'hatta.conf'
 
     def __init__(self, **kw):
         self.config = dict(kw)
@@ -113,7 +113,7 @@ class WikiConfig(object):
         """Check the environment variables for options."""
 
         prefix = 'HATTA_'
-        for key, value in os.environ.iteritems():
+        for key, value in os.environ.items():
             if key.startswith(prefix):
                 name = key[len(prefix):].lower()
                 if name in self.valid_names:
@@ -126,12 +126,12 @@ class WikiConfig(object):
 
         parser = optparse.OptionParser()
         for (short, long, dest, help, default, metavar, action,
-             type) in self.options:
-            parser.add_option(short, long, dest=dest, help=help, type=type,
+             otype) in self.options:
+            parser.add_option(short, long, dest=dest, help=help, type=otype,
                               default=default, metavar=metavar, action=action)
 
         options, args = parser.parse_args()
-        for option, value in options.__dict__.iteritems():
+        for option, value in options.__dict__.items():
             if value is not None:
                 self.config[option] = value
         if args:

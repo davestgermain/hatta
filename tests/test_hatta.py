@@ -5,7 +5,7 @@ import werkzeug
 import os
 import py.test
 import lxml.doctestcompare
-from test_parser import HTML
+from .test_parser import HTML
 
 import hatta
 
@@ -47,8 +47,8 @@ class TestHattaStandalone(object):
 
 
     def test_japanese_splitting(self, wiki):
-        text = u"ルビハイパンツアクセシウェブ内容アテストスイトどらプロセスドクリック」インタラクションディア,情報セットセシビリティングシステムをマその他リア式会を始めてみようサイトをアクセシブ内准剛のな,健二仕ルビの再形式化セシビリテのためらすかるコンテンウェブ内容アネッユザエクアップテキストマでの,ネックセスふべからずビリティにるその他クアップコンテンツアクセネッ"
-        after = [u'ルビハイパンツアクセシウェブ', u'内容', u'アテストスイト', u'どら', u'プロセスドクリック', u'インタラクションディア', u'情報', u'セットセシビリティングシステム', u'を', u'マ', u'その', u'他', u'リア', u'式会', u'を', u'始', u'めてみよう', u'サイト', u'を', u'アクセシブ', u'内准剛', u'のな', u'健二仕', u'ルビ', u'の', u'再形式化', u'セシビリテ', u'のためらすかる', u'コンテンウェブ', u'内容', u'アネッユザエクアップテキストマ', u'での', u'ネックセス', u'ふべからず', u'ビリティ', u'にるその', u'他', u'クアップコンテンツアクセネッ']
+        text = "ルビハイパンツアクセシウェブ内容アテストスイトどらプロセスドクリック」インタラクションディア,情報セットセシビリティングシステムをマその他リア式会を始めてみようサイトをアクセシブ内准剛のな,健二仕ルビの再形式化セシビリテのためらすかるコンテンウェブ内容アネッユザエクアップテキストマでの,ネックセスふべからずビリティにるその他クアップコンテンツアクセネッ"
+        after = ['ルビハイパンツアクセシウェブ', '内容', 'アテストスイト', 'どら', 'プロセスドクリック', 'インタラクションディア', '情報', 'セットセシビリティングシステム', 'を', 'マ', 'その', '他', 'リア', '式会', 'を', '始', 'めてみよう', 'サイト', 'を', 'アクセシブ', '内准剛', 'のな', '健二仕', 'ルビ', 'の', '再形式化', 'セシビリテ', 'のためらすかる', 'コンテンウェブ', '内容', 'アネッユザエクアップテキストマ', 'での', 'ネックセス', 'ふべからず', 'ビリティ', 'にるその', '他', 'クアップコンテンツアクセネッ']
         result = list(wiki.index.split_japanese_text(text))
         for got, expected in zip(result, after):
             assert got == expected
@@ -145,62 +145,62 @@ class TestHattaParser(object):
     def parse_text(self, text):
         parser = hatta.parser.WikiParser
         def link(addr, label=None, class_=None, image=None, alt=None):
-            return u"<a></a>"
+            return "<a></a>"
         def image(addr, label=None, class_=None, image=None, alt=None):
-            return u"<img>"
+            return "<img>"
         lines = text.splitlines(True)
-        return u''.join(parser(lines, link, image))
+        return ''.join(parser(lines, link, image))
 
 
     test_cases = {
-u"""hello world""": u"""<p id="line_0">hello world</p>""",
+"""hello world""": """<p id="line_0">hello world</p>""",
 #--------------------------------------------------------------------
-u"""hello
-world""": u"""<p id="line_0">hello
+"""hello
+world""": """<p id="line_0">hello
 world</p>""",
 #--------------------------------------------------------------------
-u"""{{{
+"""{{{
 some code
 more
 }}}
 some text
 {{{
 more code
-}}}""": u"""<pre class="code" id="line_1">some code
+}}}""": """<pre class="code" id="line_1">some code
 more</pre><p id="line_4">some text
 </p><pre class="code" id="line_6">more code</pre>""",
 #--------------------------------------------------------------------
-u"""{{{#!python
+"""{{{#!python
 some code
 more
 }}}
 some text
 {{{#!bash
 more code
-}}}""": u"""<div class="highlight"><pre id="line_1">some code
+}}}""": """<div class="highlight"><pre id="line_1">some code
 more</pre></div><p id="line_4">some text
 </p><div class="highlight"><pre id="line_6">more code</pre></div>""",
 #--------------------------------------------------------------------
-u"""Here's a quote:
+"""Here's a quote:
 > Here is
 > another //quote//:
 >> A quote **within
 >> a quote
-normal text""": u"""<p id="line_0">Here's a quote:
+normal text""": """<p id="line_0">Here's a quote:
 </p><blockquote><p id="line_1">Here is
 another <i>quote</i>:
 </p><blockquote><p id="line_3">A quote <b>within
 a quote
 </b></p></blockquote></blockquote><p id="line_5">normal text</p>""",
 #--------------------------------------------------------------------
-u"""* sample list
+"""* sample list
 ** sublist
 *** sub-sub-list with **bold
-* list""": u"""<ul id="line_0"><li>sample list<ul id="line_1"><li>sublist<ul id="line_2"><li>sub-sub-list with <b>bold</b></li></ul></li></ul></li><li>list</li></ul>""",
+* list""": """<ul id="line_0"><li>sample list<ul id="line_1"><li>sublist<ul id="line_2"><li>sub-sub-list with <b>bold</b></li></ul></li></ul></li><li>list</li></ul>""",
 }
 
     def test_test_cases(self):
-        for text, expect in self.test_cases.iteritems():
+        for text, expect in self.test_cases.items():
             assert expect == self.parse_text(text)
 
 
@@ -228,16 +228,16 @@ def pytest_funcarg__req(request):
 class TestHTML(object):
     def test_wiki_request_get_url(self, req):
         wiki, request = req
-        assert request.get_url('title') == u'/title'
+        assert request.get_url('title') == '/title'
         assert request.get_download_url('title') in (
-            u'/+download/title',
-            u'/%2Bdownload/title',
+            '/+download/title',
+            '/%2Bdownload/title',
         )
         assert request.get_url('title', 'edit') in (
-            u'/+edit/title',
-            u'/%2Bedit/title',
+            '/+edit/title',
+            '/%2Bedit/title',
         )
-        assert request.get_url(None, 'favicon_ico') == u'/favicon.ico'
+        assert request.get_url(None, 'favicon_ico') == '/favicon.ico'
 
     @py.test.mark.xfail
     def test_html_page(self, req):
@@ -247,8 +247,8 @@ class TestHTML(object):
         page = hatta.page.get_page(request, title)
         parts = page.view_content(content)
         rendered = page.template("page.html", content=parts)
-        html = HTML(u"".join(rendered))
-        assert html == u"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+        html = HTML("".join(rendered))
+        assert html == """<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
     <meta content="text/html;charset=utf-8" http-equiv="content-type">
@@ -286,8 +286,8 @@ class TestHTML(object):
         page.title = page_title
         parts = page.view_content(content)
         rendered = page.template("page.html", content=parts)
-        html = HTML(u"".join(rendered))
-        assert html == u"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+        html = HTML("".join(rendered))
+        assert html == """<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">
 <html><head>
     <meta content="text/html;charset=utf-8" http-equiv="content-type">

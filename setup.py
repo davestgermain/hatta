@@ -6,15 +6,15 @@ import setuptools
 
 setuptools.setup(
     name='Hatta',
-    version='1.6.7',
+    version='2.0',
     license='GNU General Public License (GPL)',
     author='Radomir Dopieralski',
     author_email='hatta@sheep.art.pl',
     keywords='wiki wsgi web mercurial repository',
     packages=['hatta'],
     install_requires=[
-        'werkzeug >=0.3',
-        'mercurial >=1.0',
+        'werkzeug >=1.0',
+        'mercurial >=5.4',
         'jinja2',
     ],
     tests_require=['pytest', 'lxml', 'pygments'],

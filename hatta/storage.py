@@ -5,7 +5,7 @@ import datetime
 import os
 import re
 import _thread
-import werkzeug
+from werkzeug.urls import url_quote, url_unquote
 import io
 
 # Note: we have to set these before importing Mercurial
@@ -153,7 +153,7 @@ class WikiStorage(object):
 
     def _title_to_file(self, title):
         title = str(title).strip()
-        filename = werkzeug.urls.url_quote(title, safe='', unsafe='~')
+        filename = url_quote(title, safe='', unsafe='~')
         # Escape special windows filenames and dot files
         _windows_device_files = ('CON', 'AUX', 'COM1', 'COM2', 'COM3',
                                  'COM4', 'LPT1', 'LPT2', 'LPT3', 'PRN',
@@ -177,7 +177,7 @@ class WikiStorage(object):
             name = name[1:]
         if self.extension and name.endswith(self.extension):
             name = name[:-len(self.extension)]
-        return werkzeug.urls.url_unquote(name)
+        return url_unquote(name)
 
     def __contains__(self, title):
         repo_file = self._title_to_file(title)
@@ -269,7 +269,7 @@ class WikiStorage(object):
 
     def open_page(self, title):
         """Open the page and return a file-like object with its contents."""
-        return io.StringIO(self.page_data(title))
+        return io.BytesIO(self.page_data(title))
 
     def page_data(self, title):
         repo_file = self._title_to_file(title)
@@ -442,7 +442,7 @@ class WikiSubdirectoryStorage(WikiStorage):
         """
 
         title = str(title).strip()
-        escaped = werkzeug.urls.url_quote(title, safe='/ ')
+        escaped = url_quote(title, safe='/ ')
         escaped = self.periods_re.sub('%2E', escaped)
         escaped = self.slashes_re.sub('%2F', escaped)
         path = os.path.join(self.repo_prefix, escaped)

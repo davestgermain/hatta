@@ -5,7 +5,7 @@ import itertools
 import re
 import sys
 import unicodedata
-import werkzeug
+from werkzeug.utils import escape, html
 
 
 EXTERNAL_URL_RE = re.compile(r'^[a-z]+://|^mailto:', re.I | re.U)
@@ -320,20 +320,20 @@ class WikiParser(object):
 
     @markup_rules(r"(?P<plain_text>.+?)", 150)
     def _line_text(self, plain_text):
-        return werkzeug.utils.escape(plain_text)
+        return escape(plain_text)
 
     @markup_rules(r"\$\$(?P<math_text>[^$]+)\$\$", 100)
     def _line_math(self, math_text):
         if self.wiki_math:
             math_text = self.wiki_math(math_text, False)
         else:
-            math_text = werkzeug.utils.escape(math_text)
-        return werkzeug.utils.html.var(math_text, class_="inline-math")
+            math_text = escape(math_text)
+        return html.var(math_text, class_="inline-math")
 
     @markup_rules(r"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
                   r"*[}]*)[}][}][}]", 20)
     def _line_code(self, code_text):
-        return '<code>%s</code>' % werkzeug.utils.escape(code_text)
+        return '<code>%s</code>' % escape(code_text)
 
     @markup_rules(r"""(?P<link_url>[a-zA-Z]+://\S+[^\s.,:;!?()'"\*/=+<>-])""", 30)
     def _line_free_link(self, link_url):
@@ -375,8 +375,8 @@ class WikiParser(object):
     def _line_macro(self, macro_name, macro_text):
         macro_text = macro_text.strip()
         return '<span class="%s">%s</span>' % (
-            werkzeug.utils.escape(macro_name),
-            werkzeug.utils.escape(macro_text))
+            escape(macro_name),
+            escape(macro_text))
 
 # methods for the block (multiline) markup:
 
@@ -387,8 +387,8 @@ class WikiParser(object):
             if self.wiki_math:
                 math_text = self.wiki_math(math_text, True)
             else:
-                math_text = werkzeug.utils.escape(math_text)
-            yield werkzeug.utils.html.div(
+                math_text = escape(math_text)
+            yield html.div(
                 math_text,
                 class_="display-math",
                 id="line_%d" % self.line_no,
@@ -398,7 +398,7 @@ class WikiParser(object):
     def _block_code(self, block):
         for self.line_no, part in block:
             inside = "\n".join(self.lines_until(self.code_close_re))
-            yield werkzeug.utils.html.pre(werkzeug.utils.html(inside), class_="code",
+            yield html.pre(html(inside), class_="code",
                                     id="line_%d" % self.line_no)
 
     @block_rules(r"^\{\{\{\#![\w+#.-]+\s*$", 100)
@@ -410,8 +410,8 @@ class WikiParser(object):
                 return self.wiki_syntax(inside, syntax=syntax,
                                         line_no=self.line_no)
             else:
-                return [werkzeug.utils.html.div(werkzeug.utils.html.pre(
-                    werkzeug.utils.html(inside), id="line_%d" % self.line_no),
+                return [html.div(html.pre(
+                    html(inside), id="line_%d" % self.line_no),
                     class_="highlight")]
 
     @block_rules(r"^<<\w+\s*$", 70)
@@ -420,8 +420,8 @@ class WikiParser(object):
             name = part.lstrip('<').strip()
             inside = "\n".join(self.lines_until(self.macro_close_re))
             yield '<div class="%s">%s</div>' % (
-                werkzeug.utils.escape(name),
-                werkzeug.utils.escape(inside))
+                escape(name),
+                escape(inside))
 
     def _block_paragraph(self, block):
         parts = []
@@ -431,7 +431,7 @@ class WikiParser(object):
                 first_line = self.line_no
             parts.append(part)
         text = "".join(self.parse_line("".join(parts)))
-        yield werkzeug.utils.html.p(text, self.pop_to(""), id="line_%d" % first_line)
+        yield html.p(text, self.pop_to(""), id="line_%d" % first_line)
 
     @block_rules(r"^[ \t]+", 60)
     def _block_indent(self, block):
@@ -442,7 +442,7 @@ class WikiParser(object):
                 first_line = self.line_no
             parts.append(part.rstrip())
         text = "\n".join(parts)
-        yield werkzeug.utils.html.pre(werkzeug.utils.html(text), id="line_%d" % first_line)
+        yield html.pre(html(text), id="line_%d" % first_line)
 
     @block_rules(r"^\|", 110)
     def _block_table(self, block):
@@ -499,7 +499,7 @@ class WikiParser(object):
     @block_rules(r"^\s*---+\s*$", 90)
     def _block_rule(self, block):
         for self.line_no, line in block:
-            yield werkzeug.utils.html.hr()
+            yield html.hr()
 
     @block_rules(heading_pat, 50)
     def _block_heading(self, block):
@@ -508,9 +508,9 @@ class WikiParser(object):
             self.headings[level - 1] = self.headings.get(level - 1, 0) + 1
             label = "-".join(str(self.headings.get(i, 0))
                               for i in range(level))
-            yield werkzeug.utils.html.a(name="head-%s" % label)
+            yield html.a(name="head-%s" % label)
             yield '<h%d id="line_%d">%s</h%d>' % (level, self.line_no,
-                werkzeug.utils.escape(line.strip("= \t\n\r\v")), level)
+                escape(line.strip("= \t\n\r\v")), level)
 
     @block_rules(list_pat, 10)
     def _block_list(self, block):
@@ -563,11 +563,11 @@ class WikiParser(object):
         for self.line_no, part in block:
             yield '<div class="conflict">'
             local = "\n".join(self.lines_until(self.conflict_sep_re))
-            yield werkzeug.utils.html.pre(werkzeug.utils.html(local),
+            yield html.pre(html(local),
                                     class_="local",
                                     id="line_%d" % self.line_no)
             other = "\n".join(self.lines_until(self.conflict_close_re))
-            yield werkzeug.utils.html.pre(werkzeug.utils.html(other),
+            yield html.pre(html(other),
                                     class_="other",
                                     id="line_%d" % self.line_no)
             yield '</div>'
@@ -588,4 +588,4 @@ class WikiWikiParser(WikiParser):
 
     @markup_rules(r"[!~](?P<camel_text>%s)" % camel_link, 106)
     def _line_camel_nolink(self, camel_text):
-        return werkzeug.utils.escape(camel_text)
+        return escape(camel_text)

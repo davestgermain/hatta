@@ -330,11 +330,8 @@ def render(request, title):
             return download(request, title)
         finally:
             rm_temp_dir(temp_dir)
-    try:
-        wrap_file = werkzeug.wrap_file
-    except AttributeError:
-        wrap_file = lambda x, y: y
-    f = wrap_file(request.environ, open(cache_file))
+
+    f = werkzeug.wsgi.wrap_file(request.environ, open(cache_file, 'rb'))
     response = hatta.response.response(request, title, f, '/render', cache_mime,
                              size=cache_size)
     response.direct_passthrough = True

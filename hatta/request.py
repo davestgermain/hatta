@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import werkzeug
+from werkzeug.urls import url_unquote
 from werkzeug.wrappers import Request, ETagRequestMixin
 import hatta.views
 
@@ -35,11 +35,11 @@ class WikiRequest(Request, ETagRequestMixin):
         """Try to guess the author name. Use IP address as last resort."""
 
         try:
-            cookie = werkzeug.urls.url_unquote(self.cookies.get("author", ""))
+            cookie = url_unquote(self.cookies.get("author", ""))
         except UnicodeError:
             cookie = None
         try:
-            auth = werkzeug.urls.url_unquote(self.environ.get('REMOTE_USER', ""))
+            auth = url_unquote(self.environ.get('REMOTE_USER', ""))
         except UnicodeError:
             auth = None
         author = (self.form.get("author") or cookie or auth or

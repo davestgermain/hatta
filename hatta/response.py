@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import werkzeug
-from werkzeug.wrappers import Response, ETagResponseMixin, CommonResponseDescriptorsMixin
+from werkzeug.urls import url_quote
+from werkzeug.wrappers import Response #, ETagResponseMixin, CommonResponseDescriptorsMixin
+
 
 def response(request, title, content, etag='', mime='text/html',
              rev=None, size=None):
@@ -11,10 +12,10 @@ def response(request, title, content, etag='', mime='text/html',
     if rev is None:
         rev, date, author, comment = request.wiki.storage.page_meta(title)
         response.set_etag('%s/%s/%d-%s' % (etag,
-                                            werkzeug.urls.url_quote(title),
+                                            url_quote(title),
                                             rev, date.isoformat()))
     else:
-        response.set_etag('%s/%s/%s' % (etag, werkzeug.urls.url_quote(title),
+        response.set_etag('%s/%s/%s' % (etag, url_quote(title),
                                          rev))
     if size:
         response.content_length = size
@@ -22,31 +23,5 @@ def response(request, title, content, etag='', mime='text/html',
     return response
 
 
-class WikiResponse(Response, ETagResponseMixin,
-                   CommonResponseDescriptorsMixin):
+class WikiResponse(Response):
     """A typical HTTP response class made out of Werkzeug's mixins."""
-
-    def make_conditional(self, request):
-        ret = super(WikiResponse, self).make_conditional(request)
-        # Remove all headers if it's 304, according to
-        # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3.5
-        if self.status.startswith('304'):
-            self.response = []
-            try:
-                del self.content_type
-            except (AttributeError, KeyError, IndexError):
-                pass
-            try:
-                del self.content_length
-            except (AttributeError, KeyError, IndexError):
-                pass
-            try:
-                del self.headers['Content-length']
-            except (AttributeError, KeyError, IndexError):
-                pass
-            try:
-                del self.headers['Content-type']
-            except (AttributeError, KeyError, IndexError):
-                pass
-        return ret
-

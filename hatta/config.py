@@ -72,6 +72,8 @@ _add('-E', '--extension', dest='extension',
 _add('-U', '--unix-eol', dest='unix_eol',
     action="store_true",
     help='Convert all text pages to UNIX-style CR newlines')
+_add('-v', '--vcs', dest='vcs', default='hg',
+    help='Which VCS to use (hg or git)')
 _add('', '--recaptcha-public-key', dest='recaptcha_public_key',
     metavar='KEY',
     help='A public key KEY for ReCAPTCHA service.')

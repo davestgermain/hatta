@@ -7,6 +7,7 @@ import sys
 
 import werkzeug
 import werkzeug.routing
+from werkzeug.exceptions import HTTPException
 import jinja2
 
 import hatta.error
@@ -72,7 +73,7 @@ class Wiki(object):
     The main class of the wiki, handling initialization of the whole
     application and most of the logic.
     """
-    storage_class = hatta.storage.hg.WikiStorage
+    storage_class = None
     index_class = hatta.search.WikiSearch
     filename_map = hatta.page.filename_map
     mime_map = hatta.page.mime_map
@@ -114,6 +115,8 @@ class Wiki(object):
         self.subdirectories = self.config.get_bool('subdirectories', False)
         if self.subdirectories:
             self.storage_class = hatta.storage.WikiSubdirectoryStorage
+        vcs = self.config.get('vcs', 'hg')
+        self.storage_class = getattr(getattr(hatta.storage, vcs), 'WikiStorage')
         self.storage = self.storage_class(
             self.path,
             charset=self.page_charset,
@@ -126,7 +129,7 @@ class Wiki(object):
         self.cache = os.path.abspath(
             config.get(
                 'cache_path',
-                os.path.join(self.repo_path, '.hg', 'hatta', 'cache'),
+                self.storage.get_cache_path()
             )
         )
         self.index = self.index_class(self.cache, self.language, self.storage)
@@ -162,7 +165,7 @@ class Wiki(object):
             endpoint, values = adapter.match()
             view = self.views[endpoint]
             return view(request, **values)
-        except werkzeug.exceptions.HTTPException as err:
+        except HTTPException as err:
             return err
 
     def refresh(self):

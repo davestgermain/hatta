@@ -121,6 +121,9 @@ class WikiStorage(BaseWikiStorage):
         self._repos = {}
         self._tips = {}
 
+    def get_cache_path(self):
+        return os.path.join(self.repo_path, '.hg', 'hatta', 'cache')
+
     @property
     def repo(self):
         """Keep one open repository per thread."""
@@ -398,7 +401,7 @@ class WikiStorage(BaseWikiStorage):
 
         try:
             last = self.repo.lookup(str(rev or 0).encode('utf8'))
-        except IndexError:
+        except mercurial.error.RepoLookupError:
             for page in self.all_pages():
                 yield page
             return

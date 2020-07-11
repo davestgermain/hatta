@@ -20,6 +20,9 @@ class WikiStorage(BaseWikiStorage):
         self.object_store = self.repo.object_store
         self.control_dir = self.repo.controldir()
 
+    def get_cache_path(self):
+        return os.path.join(self.repo_path, '.git', 'hatta', 'cache')
+
     @property
     def index(self):
         return self.repo.open_index()
@@ -169,12 +172,12 @@ class WikiStorage(BaseWikiStorage):
         yield last_item
 
     def history(self):
-        if self.repo_revision() != -1:
+        if self.repo_revision():
             for item in self.repo.get_walker():
                 yield self._log_item(item)
 
     def changed_since(self, rev):
-        if rev is None:
+        if rev is None or 'HEAD':
             return self.all_pages()
         else:
             for item in self.repo.get_walker(exclude=[rev.encode('utf8')]):

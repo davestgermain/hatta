@@ -7,7 +7,10 @@ import os
 import tempfile
 import pkgutil
 
+from werkzeug import urls
+from werkzeug.utils import html, escape
 import werkzeug
+
 captcha = None
 try:
     from recaptcha.client import captcha
@@ -92,19 +95,19 @@ def view(request, title=None):
         if request.wiki.fallback_url:
             url = request.wiki.fallback_url
             if '%s' in url:
-                url = url % werkzeug.urls.url_quote(title)
+                url = url % urls.url_quote(title)
             else:
-                url = "%s/%s" % (url, werkzeug.urls.url_quote(title))
+                url = "%s/%s" % (url, urls.url_quote(title))
             return werkzeug.routing.redirect(url, code=303)
         if request.wiki.read_only:
             raise hatta.error.NotFoundErr(_("Page not found."))
 
         url = request.get_url(title, 'edit', external=True)
         return werkzeug.routing.redirect(url, code=303)
-    html = page.template("page.html", content=content)
+    phtml = page.template("page.html", content=content)
     dependencies = page.dependencies()
     etag = '/(%s)' % ','.join(dependencies)
-    return response(request, title, html, etag=etag)
+    return response(request, title, phtml, etag=etag)
 
 
 @URL('/+history/<title:title>/<title:rev>')
@@ -112,20 +115,20 @@ def revision(request, title, rev):
     _ = request.wiki.gettext
     request.wiki.refresh()
     text = request.wiki.storage.revision_text(title, rev)
-    link = werkzeug.utils.html.a(werkzeug.utils.html(title),
+    link = html.a(html(title),
                            href=request.get_url(title))
     content = [
-        werkzeug.utils.html.p(
-            werkzeug.utils.html(
+        html.p(
+            html(
                 _('Content of revision %(rev)s of page %(title)s:'))
             % {'rev': rev[:8], 'title': link}),
-        werkzeug.utils.html.pre(werkzeug.utils.html(text)),
+        html.pre(html(text)),
     ]
     special_title = _('Revision of "%(title)s"') % {'title': title}
     page = hatta.page.get_page(request, title)
-    html = page.template('page_special.html', content=content,
+    resp = page.template('page_special.html', content=content,
                          special_title=special_title)
-    return response(request, title, html, rev=rev, etag='/old')
+    return response(request, title, resp, rev=rev, etag='/old')
 
 
 @URL('/+version/')
@@ -155,7 +158,7 @@ def save(request, title):
         if text is not None:
             lines = text.split('\n')
         else:
-            lines = [werkzeug.utils.html.p(werkzeug.utils.html(
+            lines = [html.p(html(
                 _('No preview for binaries.')))]
         return edit(request, title, preview=lines)
     elif request.form.get('save'):
@@ -203,7 +206,7 @@ def save(request, title):
         request.wiki.index.update(request.wiki)
     response = werkzeug.routing.redirect(url, code=303)
     response.set_cookie('author',
-                        werkzeug.urls.url_quote(request.get_author()),
+                        urls.url_quote(request.get_author()),
                         max_age=604800)
     return response
 
@@ -215,15 +218,15 @@ def edit(request, title, preview=None, captcha_error=None):
     if exists:
         request.wiki.storage.reopen()
     page = hatta.page.get_page(request, title)
-    html = page.render_editor(preview, captcha_error)
+    phtml = page.render_editor(preview, captcha_error)
     if not exists:
-        resp = WikiResponse(html, mimetype="text/html",
+        resp = WikiResponse(phtml, mimetype="text/html",
                                  status='404 Not found')
 
     elif preview:
-        resp = WikiResponse(html, mimetype="text/html")
+        resp = WikiResponse(phtml, mimetype="text/html")
     else:
-        resp = response(request, title, html, '/edit')
+        resp = response(request, title, phtml, '/edit')
     resp.headers.add('Cache-Control', 'no-cache')
     return resp
 
@@ -317,7 +320,7 @@ def render(request, title):
         return download(request, title)
 
     cache_dir = os.path.join(request.wiki.cache, 'render',
-                              werkzeug.urls.url_quote(title, safe=''))
+                              urls.url_quote(title, safe=''))
     cache_file = os.path.join(cache_dir, cache_filename)
     rev, date, author, comment = request.wiki.storage.page_meta(title)
     cache_mtime, cache_size = file_time_and_size(cache_file)
@@ -405,9 +408,9 @@ def history(request, title):
         if item['rev']:
             max_rev = item['rev']
 
-    html = page.template('history.html', history=history,
+    phtml = page.template('history.html', history=history,
                          date_html=hatta.page.date_html, parent_rev=max_rev)
-    resp = response(request, title, html, '/history')
+    resp = response(request, title, phtml, '/history')
     return resp
 
 
@@ -452,9 +455,9 @@ def recent_changes(request):
 
     request.wiki.refresh()
     page = hatta.page.get_page(request, '')
-    html = page.template('changes.html', changes=_changes_list(),
+    phtml = page.template('changes.html', changes=_changes_list(),
                          date_html=hatta.page.date_html)
-    resp = WikiResponse(html, mimetype='text/html')
+    resp = WikiResponse(phtml, mimetype='text/html')
     resp.set_etag('/history/%s' % request.wiki.storage.repo_revision())
     resp.make_conditional(request)
     return resp
@@ -469,13 +472,13 @@ def diff(request, title, from_rev, to_rev):
     build = request.adapter.build
     from_url = build('revision', {'title': title, 'rev': from_rev})
     to_url = build('revision', {'title': title, 'rev': to_rev})
-    a = werkzeug.utils.html.a
+    a = html.a
     links = {
         'link1': a(str(from_rev)[:8], href=from_url),
         'link2': a(str(to_rev)[:8], href=to_url),
-        'link': a(werkzeug.utils.html(title), href=request.get_url(title)),
+        'link': a(html(title), href=request.get_url(title)),
     }
-    message = werkzeug.utils.html(_(
+    message = html(_(
         'Differences between revisions %(link1)s and %(link2)s '
         'of page %(link)s.')) % links
     diff_content = getattr(page, 'diff_content', None)
@@ -484,12 +487,12 @@ def diff(request, title, from_rev, to_rev):
         to_text = request.wiki.storage.revision_text(page.title, to_rev)
         content = page.diff_content(from_text, to_text, message)
     else:
-        content = [werkzeug.utils.html.p(werkzeug.utils.html(
+        content = [html.p(html(
             _("Diff not available for this kind of pages.")))]
     special_title = _('Diff for "%(title)s"') % {'title': title}
-    html = page.template('page_special.html', content=content,
+    phtml = page.template('page_special.html', content=content,
                         special_title=special_title)
-    resp = WikiResponse(html, mimetype='text/html')
+    resp = WikiResponse(phtml, mimetype='text/html')
     return resp
 
 
@@ -500,12 +503,12 @@ def all_pages(request):
     _ = request.wiki.gettext
     request.wiki.refresh()
     page = hatta.page.get_page(request, '')
-    html = page.template('list.html',
+    phtml = page.template('list.html',
                          pages=sorted(request.wiki.storage.all_pages()),
                          class_='index',
                          message=_('Index of all pages'),
                          special_title=_('Page Index'))
-    resp = WikiResponse(html, mimetype='text/html')
+    resp = WikiResponse(phtml, mimetype='text/html')
     resp.set_etag('/+index/%s' % request.wiki.storage.repo_revision())
     resp.make_conditional(request)
     return resp
@@ -538,12 +541,12 @@ def orphaned(request):
         for title in request.wiki.index.orphaned_pages()
         if title in request.wiki.storage
     ]
-    html = page.template('list.html',
+    phtml = page.template('list.html',
                          pages=orphaned,
                          class_='orphaned',
                          message=_('List of pages with no links to them'),
                          special_title=_('Orphaned pages'))
-    resp = WikiResponse(html, mimetype='text/html')
+    resp = WikiResponse(phtml, mimetype='text/html')
     resp.set_etag('/+orphaned/%s' % request.wiki.storage.repo_revision())
     resp.make_conditional(request)
     return resp
@@ -560,8 +563,8 @@ def wanted(request):
 
     request.wiki.refresh()
     page = hatta.page.get_page(request, '')
-    html = page.template('wanted.html', pages=_wanted_pages_list())
-    resp = WikiResponse(html, mimetype='text/html')
+    phtml = page.template('wanted.html', pages=_wanted_pages_list())
+    resp = WikiResponse(phtml, mimetype='text/html')
     resp.set_etag('/+wanted/%s' % request.wiki.storage.repo_revision())
     resp.make_conditional(request)
     return resp
@@ -573,7 +576,7 @@ def search(request):
     _ = request.wiki.gettext
 
     def highlight_html(m):
-        return werkzeug.utils.html.b(m.group(0), class_="highlight")
+        return html.b(m.group(0), class_="highlight")
 
     def search_snippet(title, words):
         """Extract a snippet of text for search results."""
@@ -590,17 +593,17 @@ def search(request):
         position = match.start()
         min_pos = max(position - 60, 0)
         max_pos = min(position + 60, len(text))
-        snippet = werkzeug.utils.escape(text[min_pos:max_pos])
-        html = regexp.sub(highlight_html, snippet)
-        return html
+        snippet = escape(text[min_pos:max_pos])
+        phtml = regexp.sub(highlight_html, snippet)
+        return phtml
 
     def page_search(words, page, request):
         """Display the search results."""
 
-        h = werkzeug.utils.html
+        h = html
         request.wiki.index.update(request.wiki)
         result = sorted(request.wiki.index.find(words), key=lambda x: -x[0])
-        yield werkzeug.utils.html.p(h(_('%d page(s) containing all words:')
+        yield html.p(h(_('%d page(s) containing all words:')
                               % len(result)))
         yield '<ol id="hatta-search-results">'
         for number, (score, title) in enumerate(result):
@@ -621,9 +624,9 @@ def search(request):
         words = (query,)
     title = _('Searching for "%s"') % " ".join(words)
     content = page_search(words, page, request)
-    html = page.template('page_special.html', content=content,
+    phtml = page.template('page_special.html', content=content,
                          special_title=title)
-    return WikiResponse(html, mimetype='text/html')
+    return WikiResponse(phtml, mimetype='text/html')
 
 @URL('/+search/<title:title>', methods=['GET', 'POST'])
 def backlinks(request, title):
@@ -632,9 +635,9 @@ def backlinks(request, title):
     request.wiki.refresh()
     request.wiki.index.update(request.wiki)
     page = hatta.page.get_page(request, title)
-    html = page.template('backlinks.html',
+    phtml = page.template('backlinks.html',
                          pages=request.wiki.index.page_backlinks(title))
-    resp = WikiResponse(html, mimetype='text/html')
+    resp = WikiResponse(phtml, mimetype='text/html')
     resp.set_etag('/+search/%s' % request.wiki.storage.repo_revision())
     resp.make_conditional(request)
     return resp

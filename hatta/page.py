@@ -605,6 +605,7 @@ class WikiPageImage(WikiPageFile):
                 im.save(cache_file, 'PNG')
             except IOError:
                 raise hatta.error.UnsupportedMediaTypeErr('Image corrupted')
+        page_file.close()
         return cache_path
 
 
@@ -630,6 +631,7 @@ class WikiPageCSV(WikiPageFile):
                     _('Error parsing CSV file %{file}s on '
                       'line %{line}d: %{error}s') %
                     {'file': html_title, 'line': reader.line_num, 'error': e}))
+        csv_file.close()
         yield '</table>'
 
     def view_content(self, lines=None):

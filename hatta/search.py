@@ -51,6 +51,8 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         self.init_db(self.con)
 
     def init_db(self, con):
+        con.execute('CREATE TABLE IF NOT EXISTS versions'
+                '(id INTEGER PRIMARY KEY, version VARCHAR);')
         con.execute('CREATE TABLE IF NOT EXISTS titles '
                 '(id INTEGER PRIMARY KEY, title VARCHAR);')
         con.execute('CREATE TABLE IF NOT EXISTS words '
@@ -289,25 +291,28 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
 
     def set_last_revision(self, rev):
         """Store the last indexed repository revision."""
-
-        # We use % here because the sqlite3's substitiution doesn't work
-        # We store revision 0 as 1, 1 as 2, etc. because 0 means "no revision"
-        self.con.execute('PRAGMA USER_VERSION=%d;' % (int(rev + 1),))
+        try:
+            self.con.execute('INSERT INTO versions (version) VALUES (?);', (str(rev),))
+            self.con.commit()
+        except:
+            self.con.rollback()
+            raise
 
     def get_last_revision(self):
         """Retrieve the last indexed repository revision."""
-
         con = self.con
-        c = con.execute('PRAGMA USER_VERSION;')
-        rev = c.fetchone()[0]
-        # -1 means "no revision", 1 means revision 0, 2 means revision 1, etc.
-        return rev - 1
+        c = con.execute('SELECT version from versions ORDER BY id DESC LIMIT 1;')
+        row = c.fetchone()
+        if row:
+            return row[0]
+        else:
+            return None
 
     def update(self, wiki):
         """Reindex al pages that changed since last indexing."""
-
+        # return
         last_rev = self.get_last_revision()
-        if last_rev == -1:
+        if last_rev is None:
             changed = self.storage.all_pages()
         else:
             changed = self.storage.changed_since(last_rev)

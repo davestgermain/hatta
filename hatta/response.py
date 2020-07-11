@@ -14,7 +14,7 @@ def response(request, title, content, etag='', mime='text/html',
     response = WikiResponse(content, mimetype=mime)
     if rev is None:
         rev, date, author, comment = request.wiki.storage.page_meta(title)
-        response.set_etag('%s/%s/%d-%s' % (etag,
+        response.set_etag('%s/%s/%s-%s' % (etag,
                                             url_quote(title),
                                             rev, date.isoformat()))
         # add a modified date for better conditional requests

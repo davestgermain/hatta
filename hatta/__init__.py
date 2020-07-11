@@ -23,7 +23,7 @@ from hatta.__main__ import main
 from hatta.page import WikiPageColorText, WikiPageFile, WikiPageImage
 from hatta.page import WikiPage, WikiPageText, WikiPageWiki
 from hatta.parser import WikiParser, WikiWikiParser
-from hatta.storage import WikiStorage, WikiSubdirectoryStorage
+# from hatta.storage import WikiStorage, WikiSubdirectoryStorage
 from hatta.request import WikiRequest
 from hatta.response import WikiResponse
 from hatta.wiki import Wiki

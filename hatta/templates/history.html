@@ -11,12 +11,11 @@
     <p>{{ _("History of changes for %(link)s.", link=page.wiki_link(title)|safe) }}</p>
     <form action="{{ url(title, 'undo', method='POST') }}" method="POST">
         <ul id="hatta-history">
-            {% for date, date_url, rev, author, comment in history %}
-                <li><a href="{{ date_url }}"
-                    >{{ date_html(date)|safe }}</a>
+            {% for date, date_url, rev, last_rev, author, comment in history %}
+                <li><a href="{{ date_url }}">{{ date_html(date)|safe }}</a>
                 {% if edit_url %}
                 <input class="button"
-                       type="submit" name="{{ rev }}" value="{{ _('Undo') }}">
+                       type="submit" name="{{ last_rev }}" value="{{ _('Undo') }}">
                 {% endif %}
                 . . . .
                 <i>{{ page.wiki_link('~%s' % author, author)|safe }}</i>

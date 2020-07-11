@@ -11,19 +11,17 @@ import io
 # Note: we have to set these before importing Mercurial
 os.environ['HGENCODING'] = 'utf-8'
 
-import mercurial.commands
 import mercurial.hg
-import mercurial.hgweb
 import mercurial.merge
 import mercurial.node
 import mercurial.revlog
 import mercurial.ui
-import mercurial.util
 import mercurial.simplemerge
-import mercurial.__version__
 
 from hatta import error
 from hatta import page
+
+from .base import BaseWikiStorage
 
 
 class StorageError(Exception):
@@ -71,18 +69,6 @@ def _get_memfilectx(repo, path, data, islink=False, isexec=False, copied=None, m
     )
 
 
-def merge_func(base, other, this):
-    """Used for merging edit conflicts."""
-
-    if (base.isbinary() or
-        other.isbinary()):
-        raise ValueError("can't merge binary data")
-    m3 = mercurial.simplemerge.Merge3Text(base.data(), this, other.data())
-    return b''.join(m3.merge_lines(start_marker='<<<<<<< local',
-                                  mid_marker='=======',
-                                  end_marker='>>>>>>> other',
-                                  base_marker=None))
-
 
 def _get_datetime(filectx):
     """
@@ -95,7 +81,7 @@ def _get_datetime(filectx):
     return date
 
 
-class WikiStorage(object):
+class WikiStorage(BaseWikiStorage):
     """
     Provides means of storing wiki pages and keeping track of their
     change history, using Mercurial repository as the storage method.
@@ -109,11 +95,7 @@ class WikiStorage(object):
         a Mercurial repository, that repository will be used, otherwise
         a new repository will be created in it.
         """
-
-        self._ = _
-        self.charset = charset or 'utf-8'
-        self.unix_eol = unix_eol
-        self.extension = extension
+        super(WikiStorage, self).__init__(charset=charset, _=_, unix_eol=unix_eol, extension=extension)
         self.path = os.path.abspath(path)
         if not os.path.exists(self.path):
             os.makedirs(self.path)
@@ -297,7 +279,7 @@ class WikiStorage(object):
     def repo_revision(self):
         """Give the latest revision of the repository."""
 
-        return self._changectx().rev()
+        return str(self._changectx().rev())
 
     def _changectx(self):
         """Get the changectx of the tip."""
@@ -340,7 +322,14 @@ class WikiStorage(object):
             author = str(filectx.user(), "utf-8",
                              'replace').split('<')[0].strip()
             comment = str(filectx.description(), "utf-8", 'replace')
-            yield rev, date, author, comment
+            yield {
+                'title': title,
+                'rev': str(rev),
+                'parent': str(rev - 1) if rev else None,
+                'date': date,
+                'author': author,
+                'comment': comment
+            }
 
     def page_revision(self, title, rev):
         """Get binary content of the specified revision of the page."""
@@ -349,7 +338,7 @@ class WikiStorage(object):
         if filectx_tip is None:
             raise error.NotFoundErr()
         try:
-            data = filectx_tip.filectx(rev).data()
+            data = filectx_tip.filectx(int(rev)).data()
         except LookupError:
             raise error.NotFoundErr()
         return data
@@ -381,7 +370,14 @@ class WikiStorage(object):
                         rev = change[repo_file].filerev()
                     except mercurial.error.LookupError:
                         rev = -1
-                    yield title, rev, date, author, comment
+                    yield {
+                        'title': title,
+                        'rev': str(rev),
+                        'date': date,
+                        'author': author,
+                        'comment': comment,
+                        'parent': str(rev - 1) if rev else None,
+                    }
 
     def all_pages(self):
         """Iterate over the titles of all pages in the wiki."""
@@ -401,7 +397,7 @@ class WikiStorage(object):
         """
 
         try:
-            last = self.repo.lookup(str(rev).encode('utf8'))
+            last = self.repo.lookup(str(rev or 0).encode('utf8'))
         except IndexError:
             for page in self.all_pages():
                 yield page

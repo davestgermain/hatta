@@ -72,7 +72,7 @@ class Wiki(object):
     The main class of the wiki, handling initialization of the whole
     application and most of the logic.
     """
-    storage_class = hatta.storage.WikiStorage
+    storage_class = hatta.storage.hg.WikiStorage
     index_class = hatta.search.WikiSearch
     filename_map = hatta.page.filename_map
     mime_map = hatta.page.mime_map
@@ -116,11 +116,11 @@ class Wiki(object):
             self.storage_class = hatta.storage.WikiSubdirectoryStorage
         self.storage = self.storage_class(
             self.path,
-            self.page_charset,
-            self.gettext,
-            self.unix_eol,
-            self.extension,
-            self.repo_path,
+            charset=self.page_charset,
+            _=self.gettext,
+            unix_eol=self.unix_eol,
+            extension=self.extension,
+            repo_path=self.repo_path,
         )
         self.repo_path = self.storage.repo_path
         self.cache = os.path.abspath(
@@ -167,8 +167,7 @@ class Wiki(object):
 
     def refresh(self):
         """Make sure we have the latest revision of storage."""
-
         storage_rev = self.storage.repo_revision()
         index_rev = self.index.get_last_revision()
-        if storage_rev < index_rev:
+        if storage_rev != index_rev:
             self.storage.reopen()

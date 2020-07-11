@@ -4,7 +4,8 @@ import os, os.path
 import mimetypes
 import mercurial.simplemerge
 
-from .. import error
+from .. import error, page
+from werkzeug.urls import url_quote, url_unquote
 
 
 class StorageError(Exception):
@@ -147,3 +148,26 @@ class BaseWikiStorage(object):
     def __iter__(self):
         return self.all_pages()
 
+    def _title_to_file(self, title):
+        title = str(title).strip()
+        filename = url_quote(title, safe='', unsafe='~')
+        # Escape special windows filenames and dot files
+        _windows_device_files = ('CON', 'AUX', 'COM1', 'COM2', 'COM3',
+                                 'COM4', 'LPT1', 'LPT2', 'LPT3', 'PRN',
+                                 'NUL')
+        if (filename.split('.')[0].upper() in _windows_device_files or
+            filename.startswith('_') or filename.startswith('.')):
+            filename = '_' + filename
+        if page.page_mime(title) == 'text/x-wiki' and self.extension:
+            filename += self.extension
+        return filename
+
+    def _file_to_title(self, filepath):
+        sep = os.path.sep
+        name = filepath[len(self.repo_prefix):].strip(sep)
+        # Un-escape special windows filenames and dot files
+        if name.startswith('_') and len(name) > 1:
+            name = name[1:]
+        if self.extension and name.endswith(self.extension):
+            name = name[:-len(self.extension)]
+        return url_unquote(name)

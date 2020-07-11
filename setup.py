@@ -15,6 +15,7 @@ setuptools.setup(
     install_requires=[
         'werkzeug >=1.0',
         'mercurial >=5.4',
+        'dulwich',
         'jinja2',
     ],
     tests_require=['pytest', 'lxml', 'pygments'],

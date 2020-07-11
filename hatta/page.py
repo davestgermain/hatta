@@ -286,7 +286,7 @@ class WikiPage(object):
         for title in [self.wiki.menu_page]:
             if title in self.storage:
                 rev, date, author, comment = self.storage.page_meta(title)
-                etag = '%s/%d-%s' % (url_quote(title), rev, date.isoformat())
+                etag = '%s/%s-%s' % (url_quote(title), rev, date.isoformat())
                 dependencies.add(etag)
         return dependencies
 
@@ -548,7 +548,7 @@ class WikiPageWiki(WikiPageColorText):
         for title in [self.wiki.icon_page, self.wiki.alias_page]:
             if title in self.storage:
                 rev, date, author, comment = self.storage.page_meta(title)
-                etag = '%s/%d-%s' % (url_quote(title), rev, date.isoformat())
+                etag = '%s/%s-%s' % (url_quote(title), rev, date.isoformat())
                 dependencies.add(etag)
         for link in self.index.page_links(self.title):
             if link not in self.storage:

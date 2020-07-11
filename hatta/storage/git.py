@@ -1,6 +1,7 @@
 import datetime
 import os.path
 import io
+import re
 import time
 from hatta import error
 from .base import BaseWikiStorage
@@ -19,6 +20,7 @@ class WikiStorage(BaseWikiStorage):
             self.repo = porcelain.open_repo(repo_dir)
         self.object_store = self.repo.object_store
         self.control_dir = self.repo.controldir()
+        self.repo_prefix = self.repo_path[len(self.repo_path):].strip('/')
 
     def get_cache_path(self):
         return os.path.join(self.repo_path, '.git', 'hatta', 'cache')
@@ -33,7 +35,7 @@ class WikiStorage(BaseWikiStorage):
         return path.encode('utf8')
 
     def open_page(self, title, rev=None, meta_only=False):
-        title = title.encode('utf8')
+        title = self._title_to_file(title).encode('utf8')
         try:
             entry = self.index[title]
         except KeyError:
@@ -53,7 +55,7 @@ class WikiStorage(BaseWikiStorage):
         return io.BytesIO(blob.data)
 
     def page_meta(self, title):
-        title = title.encode('utf8')
+        title = self._title_to_file(title).encode('utf8')
         try:
             entry = self.index[title]
         except KeyError:
@@ -105,7 +107,7 @@ class WikiStorage(BaseWikiStorage):
             obj = Blob.from_string(data)
             self.object_store.add_object(obj)
             index = self.index
-            index[title.encode('utf8')] = IndexEntry(
+            index[self._title_to_file(title).encode('utf8')] = IndexEntry(
                 ctime, mtime, 0,
                 0, 0o100644, 1,
                 1, len(data), obj.id, 0)
@@ -114,7 +116,7 @@ class WikiStorage(BaseWikiStorage):
     def delete_page(self, title, author, comment, ts=None):
         ts = ts or datetime.datetime.utcnow()
         index = self.index
-        del index[title.encode('utf8')]
+        del index[self._title_to_file(title).encode('utf8')]
         self._do_commit(index, author, comment, int(ts.timestamp()))
         return None, author, comment, ts
 
@@ -124,7 +126,7 @@ class WikiStorage(BaseWikiStorage):
 
     def __contains__(self, title):
         if title:
-            return title.encode('utf8') in self.index
+            return self._title_to_file(title).encode('utf8') in self.index
 
     def repo_revision(self):
         try:
@@ -138,7 +140,7 @@ class WikiStorage(BaseWikiStorage):
         except IndexError:
             return {'title': '', 'rev': '', 'parent': '', 'date': None, 'author': None, 'comment': None}
         creation_date = datetime.datetime.utcfromtimestamp(item.commit.commit_time)
-        owner = item.commit.author.decode('utf8')[:-2]
+        owner = re.sub(' <.*>', '', item.commit.author.decode('utf8'))
         comment = item.commit.message.decode('utf8')
         if change.new.sha:
             rev = change.new.sha.decode('ascii')
@@ -152,7 +154,7 @@ class WikiStorage(BaseWikiStorage):
         else:
             parent = None
         return {
-            'title': title,
+            'title': self._file_to_title(title),
             'rev': rev,
             'parent': parent,
             'date': creation_date,

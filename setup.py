@@ -17,6 +17,7 @@ setuptools.setup(
         'mercurial >=5.4',
         'dulwich',
         'jinja2',
+        'whoosh',
     ],
     tests_require=['pytest', 'lxml', 'pygments'],
     data_files=[

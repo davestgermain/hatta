@@ -23,7 +23,7 @@ class WikiStorage(BaseWikiStorage):
         self.repo_prefix = self.repo_path[len(self.repo_path):].strip('/')
 
     def get_cache_path(self):
-        return os.path.join(self.repo_path, '.git', 'hatta', 'cache')
+        return os.path.join(self.control_dir, 'cache')
 
     @property
     def index(self):
@@ -122,7 +122,7 @@ class WikiStorage(BaseWikiStorage):
 
     def all_pages(self):
         for path in self.index:
-            yield path.decode('utf8')
+            yield self._file_to_title(path.decode('utf8'))
 
     def __contains__(self, title):
         if title:
@@ -179,9 +179,13 @@ class WikiStorage(BaseWikiStorage):
                 yield self._log_item(item)
 
     def changed_since(self, rev):
-        if rev is None or 'HEAD':
+        if rev in (None, 'HEAD'):
             return self.all_pages()
         else:
+            seen = set()
             for item in self.repo.get_walker(exclude=[rev.encode('utf8')]):
                 item = self._log_item(item)
-                yield item['title']
+                if item['title'] not in seen:
+                    yield item['title']
+                    seen.add(item['title'])
+

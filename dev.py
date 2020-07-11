@@ -12,8 +12,6 @@ if __name__=="__main__":
     config = hatta.WikiConfig()
     config.parse_args()
 #    config.parse_files()
-    import hatta.storage.git
-    # hatta.Wiki.storage_class = hatta.storage.git.WikiStorage
     wiki = hatta.Wiki(config)
 
 

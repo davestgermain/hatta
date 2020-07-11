@@ -177,7 +177,7 @@ def save(request, title):
         author = request.get_author()
         text = request.form.get("text")
         try:
-            parent = int(request.form.get("parent"))
+            parent = request.form.get("parent")
         except (ValueError, TypeError):
             parent = None
         page = hatta.page.get_page(request, title)

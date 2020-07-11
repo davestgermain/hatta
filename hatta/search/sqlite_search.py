@@ -33,14 +33,14 @@ r"""┠┯┨┷┿┝┰┥┸╂"""
 r"""ｦ-ﾟぁ-ん～ーァ-ヶ"""
 r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
 
-    def __init__(self, cache_path, lang, storage):
+    def __init__(self, storage, lang):
         self._con = {}
-        self.path = cache_path
+        self.path = storage.get_cache_path()
         self.storage = storage
         self.lang = lang
         if lang == "ja":
             self.split_text = self.split_japanese_text
-        self.filename = os.path.join(cache_path, 'index.sqlite3')
+        self.filename = os.path.join(self.path, 'index.sqlite3')
         if not os.path.isdir(self.path):
             self.empty = True
             os.makedirs(self.path)

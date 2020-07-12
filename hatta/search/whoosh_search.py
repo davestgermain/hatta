@@ -5,6 +5,8 @@ from collections import defaultdict
 import re
 import os.path, os
 import time
+import threading
+
 from whoosh import index, fields, query
 from whoosh.filedb.filestore import FileStorage
 
@@ -110,6 +112,7 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         if lang == "ja":
             self.split_text = self.split_japanese_text
         self.index = IndexManager(os.path.join(storage.get_cache_path(), 'search'))
+        self._index_thread = None
         self.initialize_index()
 
     def initialize_index(self):
@@ -171,7 +174,6 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         self.empty = False
         rev = self.storage.repo_revision()
         self.set_last_revision(rev)
-        # self.INDEX_THREAD = None
 
     def reindex_page(self, page, title, writer, text=None):
         """Updates the content of the database, needs locks around."""
@@ -232,13 +234,13 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
             changed = self.storage.changed_since(last_rev)
         changed = list(changed)
         if changed:
-            self.reindex(wiki, changed)
-            # if self.INDEX_THREAD and self.INDEX_THREAD.is_alive:
-            #     print 'alreading reindexing'
-            # else:
-            #     self.INDEX_THREAD = threading.Thread(target=self.reindex, args=(wiki, changed))
-            #     self.INDEX_THREAD.daemon = True
-            #     self.INDEX_THREAD.start()
+            # self.reindex(wiki, changed)
+            if self._index_thread and self._index_thread.is_alive:
+                print('alreading reindexing')
+            else:
+                self._index_thread = threading.Thread(target=self.reindex, args=(wiki, changed))
+                self._index_thread.daemon = True
+                self._index_thread.start()
 
     def update_page(self, page, title, data=None, text=None):
         """Updates the index with new page content, for a single page."""

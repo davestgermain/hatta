@@ -699,7 +699,7 @@ def hgweb(request, path=None):
     if not request.wiki.config.get_bool('hgweb', False):
         raise hatta.error.ForbiddenErr(_('Repository access disabled.'))
     app = mercurial.hgweb.request.wsgiapplication(
-        lambda: mercurial.hgweb.hgweb(request.wiki.storage.repo, request.wiki.site_name))
+        lambda: mercurial.hgweb.hgweb(request.wiki.storage.repo, request.wiki.site_name.encode('utf8')))
 
     def hg_app(env, start):
         env = request.environ

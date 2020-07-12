@@ -6,6 +6,8 @@ import setuptools
 
 setuptools.setup(
     name='Hatta',
+    use_scm_version=True,
+    setup_requires=['setuptools_scm'],
     version='2.0',
     license='GNU General Public License (GPL)',
     author='Radomir Dopieralski',

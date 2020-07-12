@@ -264,6 +264,7 @@ class WikiPage(object):
             'request': self.request,
             'wiki': self.wiki,
             'title': self.title,
+            'title_quoted': url_quote(self.title, safe=''),
             'mime': self.mime,
             'url': self.get_url,
             'download_url': self.get_download_url,

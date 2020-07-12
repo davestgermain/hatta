@@ -386,10 +386,11 @@ def history(request, title):
     max_rev = '0' * 40
     history = []
     request.wiki.refresh()
+    title = urls.url_unquote(title)
     page = hatta.page.get_page(request, title)
 
     if title not in request.wiki.storage:
-        raise error.NotFoundErr("Page not found.")
+        raise hatta.error.NotFoundErr(_("Page not found."))
 
     for item in request.wiki.storage.page_history(title):
         parent = item['parent']

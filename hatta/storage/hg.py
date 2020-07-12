@@ -174,6 +174,7 @@ class WikiStorage(BaseWikiStorage):
     def _get_parents(self, filename, parent_rev):
         if parent_rev is None:
             return b'tip', None
+        parent_rev = int(parent_rev)
         try:
             filetip = self._changectx()[filename]
         except mercurial.error.ManifestLookupError:

@@ -147,15 +147,17 @@ class WikiConfig(object):
         parser = mercurial.config.config()
         for path in files:
             try:
-                parser.read(path)
+                parser.read(path.encode('utf8'))
             except IOError:
-                pass
-        section = 'hatta'
+                raise
+
+        section = b'hatta'
         try:
             options = parser.items(section)
         except KeyError:
             return
         for option, value in options:
+            option, value = option.decode('utf8'), value.decode('utf8')
             if option not in self.valid_names:
                 raise ValueError('Invalid option name "%s".' % option)
             self.config[option] = value

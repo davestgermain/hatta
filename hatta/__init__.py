@@ -19,7 +19,6 @@ See hatta.py --help for usage.
 
 # Exposed API
 from hatta.config import WikiConfig, read_config
-from hatta.__main__ import main
 from hatta.page import WikiPageColorText, WikiPageFile, WikiPageImage
 from hatta.page import WikiPage, WikiPageText, WikiPageWiki
 from hatta.parser import WikiParser, WikiWikiParser
@@ -27,19 +26,17 @@ from hatta.parser import WikiParser, WikiWikiParser
 from hatta.request import WikiRequest
 from hatta.response import WikiResponse
 from hatta.wiki import Wiki
-from hatta.hg_integration import cmdtable
+# from hatta.hg_integration import cmdtable
 
 
 __all__ = [
     'WikiConfig', 'read_config',
-    'main',
     'WikiPageColorText', 'WikiPageFile', 'WikiPageImage',
     'WikiPage', 'WikiPageText', 'WikiPageWiki',
     'WikiParser', 'WikiWikiParser',
     'WikiStorage', 'WikiSubdirectoryStorage',
     'Wiki', 'WikiResponse', 'WikiRequest',
     '__version__', 'project_name', 'project_url', 'project_description',
-    'cmdtable',
 ]
 
 # Project's metainformation

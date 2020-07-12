@@ -11,7 +11,7 @@ setuptools.setup(
     author='Radomir Dopieralski',
     author_email='hatta@sheep.art.pl',
     keywords='wiki wsgi web mercurial repository',
-    packages=['hatta'],
+    packages=setuptools.find_packages('.'),
     install_requires=[
         'werkzeug >=1.0',
         'mercurial >=5.4',

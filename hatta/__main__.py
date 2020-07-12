@@ -38,20 +38,19 @@ def main(config=None, wiki=None):
     try:
         from cheroot import wsgi
     except ImportError:
-        import wsgiref.simple_server
-        server = wsgiref.simple_server.make_server(host, port, app)
+        import werkzeug
         try:
-            server.serve_forever()
+            werkzeug.run_simple(host, port, app, use_reloader=False)
         except KeyboardInterrupt:
             pass
-        return
-    name = wiki.site_name
-    server = wsgi.Server((host, port), app,
-                                       server_name=name)
-    try:
-        server.start()
-    except KeyboardInterrupt:
-        server.stop()
+    else:
+        name = wiki.site_name
+        server = wsgi.Server((host, port), app,
+                                           server_name=name)
+        try:
+            server.start()
+        except KeyboardInterrupt:
+            server.stop()
 
 if __name__ == "__main__":
     main()

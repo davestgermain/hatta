@@ -31,7 +31,7 @@ def pytest_funcarg__wiki(request):
     return hatta.Wiki(config)
 
 
-class MemorySearch(hatta.search.WikiSearch):
+class MemorySearch(hatta.search.sqlite_search.WikiSearch):
     @property
     def filename(self):
         return ":memory:"

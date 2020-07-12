@@ -2,7 +2,7 @@ install:
 	python setup.py install
 
 test:
-	py.test tests/
+	pytest tests/
 
 locale-extract:
 	pybabel extract --mapping=babel.ini --project='Hatta Wiki' --copyright-holder='Radomir Dopieralski' --msgid-bugs-address='hatta@sheep.art.pl' --output=locale/hatta.pot hatta/

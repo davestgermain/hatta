@@ -14,14 +14,17 @@ class WikiStorage(BaseWikiStorage):
     def __init__(self, repo_dir, **kwargs):
         super(WikiStorage, self).__init__(**kwargs)
         self.repo_path = repo_dir
+        self.repo_prefix = self.repo_path[len(self.repo_path):].strip('/')
+        self.reopen()
+
+    def reopen(self):
         try:
-            self.repo = porcelain.init(repo_dir)
+            self.repo = porcelain.init(self.repo_path)
         except FileExistsError:
-            self.repo = porcelain.open_repo(repo_dir)
+            self.repo = porcelain.open_repo(self.repo_path)
         self.object_store = self.repo.object_store
         self.control_dir = self.repo.controldir()
-        self.repo_prefix = self.repo_path[len(self.repo_path):].strip('/')
-
+ 
     def get_cache_path(self):
         return os.path.join(self.control_dir, 'cache')
 
@@ -165,13 +168,14 @@ class WikiStorage(BaseWikiStorage):
     def page_history(self, title):
         last_item = None
         count = 0
-        for item in self.repo.get_walker(paths=[title.encode('utf8')]):
+        for item in self.repo.get_walker(paths=[self._title_to_file(title).encode('utf8')]):
             if last_item:
                 last_item['parent'] = item.commit.id.decode('ascii')
                 yield last_item
                 count += 1
             last_item = self._log_item(item)
-        yield last_item
+        if last_item:
+            yield last_item
 
     def history(self):
         if self.repo_revision():

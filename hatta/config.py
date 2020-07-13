@@ -148,6 +148,8 @@ class WikiConfig(object):
         for path in files:
             try:
                 parser.read(path.encode('utf8'))
+            except FileNotFoundError:
+                pass
             except IOError:
                 raise
 

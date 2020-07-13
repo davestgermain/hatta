@@ -5,7 +5,7 @@ from collections import defaultdict
 import re
 import os.path, os
 import time
-import threading
+from concurrent.futures.thread import ThreadPoolExecutor
 
 from whoosh import index, fields, query
 from whoosh.filedb.filestore import FileStorage
@@ -112,7 +112,7 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         if lang == "ja":
             self.split_text = self.split_japanese_text
         self.index = IndexManager(os.path.join(storage.get_cache_path(), 'search'))
-        self._index_thread = None
+        self._executor = ThreadPoolExecutor(max_workers=1)
         self.initialize_index()
 
     def initialize_index(self):
@@ -235,12 +235,7 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         changed = list(changed)
         if changed:
             # self.reindex(wiki, changed)
-            if self._index_thread and self._index_thread.is_alive:
-                print('alreading reindexing')
-            else:
-                self._index_thread = threading.Thread(target=self.reindex, args=(wiki, changed))
-                self._index_thread.daemon = True
-                self._index_thread.start()
+            self._executor.submit(self.reindex, wiki, changed)
 
     def update_page(self, page, title, data=None, text=None):
         """Updates the index with new page content, for a single page."""

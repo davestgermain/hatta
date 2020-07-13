@@ -12,6 +12,8 @@ from whoosh.filedb.filestore import FileStorage
 
 from .. import error, page
 
+POOL = ThreadPoolExecutor(max_workers=1)
+
 
 class IndexManager:
     def __init__(self, index_dir):
@@ -112,7 +114,6 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         if lang == "ja":
             self.split_text = self.split_japanese_text
         self.index = IndexManager(os.path.join(storage.get_cache_path(), 'search'))
-        self._executor = ThreadPoolExecutor(max_workers=1)
         self.initialize_index()
 
     def initialize_index(self):
@@ -235,7 +236,7 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         changed = list(changed)
         if changed:
             # self.reindex(wiki, changed)
-            self._executor.submit(self.reindex, wiki, changed)
+            POOL.submit(self.reindex, wiki, changed)
 
     def update_page(self, page, title, data=None, text=None):
         """Updates the index with new page content, for a single page."""

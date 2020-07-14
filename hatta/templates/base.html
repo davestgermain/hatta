@@ -18,8 +18,7 @@
 {% endblock %}
 
 {% block scripts %}
-    <script type="text/javascript"
-            src="{{ url(None, 'scripts_js') }}" defer></script>
+    <script src="{{ url(None, 'scripts_js') }}" defer></script>
     {% if wiki.math_url == 'mathjax' %}
     <script type="text/x-mathjax-config" defer>
         MathJax.Hub.Config({
@@ -34,7 +33,7 @@
             showMathMenuMSIE: false
         });
     </script>
-    <script type="text/javascript"
+    <script
         src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
     defer></script>
     {% endif %}

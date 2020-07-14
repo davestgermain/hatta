@@ -6,9 +6,9 @@
 
 {% block links %}
     <link rel="stylesheet" type="text/css"
-          href="{{ url(None, 'style_css') }}" async>
+          href="{{ url(None, 'style_css') }}">
     <link rel="stylesheet" type="text/css"
-          href="{{ url(None, 'pygments_css') }}" async>
+          href="{{ url(None, 'pygments_css') }}" media="print" onload="this.media='all'">
     <link rel="shortcut icon" type="image/x-icon"
           href="{{ url(None, 'favicon_ico') }}">
     {% if edit_url %}
@@ -19,9 +19,9 @@
 
 {% block scripts %}
     <script type="text/javascript"
-            src="{{ url(None, 'scripts_js') }}" async></script>
+            src="{{ url(None, 'scripts_js') }}" defer></script>
     {% if wiki.math_url == 'mathjax' %}
-    <script type="text/x-mathjax-config">
+    <script type="text/x-mathjax-config" defer>
         MathJax.Hub.Config({
             tex2jax: {
                 inlineMath: [['$','$']],
@@ -36,7 +36,7 @@
     </script>
     <script type="text/javascript"
         src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
-    async></script>
+    defer></script>
     {% endif %}
 {% endblock %}
 

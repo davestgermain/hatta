@@ -21,11 +21,15 @@ import mercurial.simplemerge
 from hatta import error
 from hatta import page
 
-from .base import BaseWikiStorage
+from .base import BaseWikiStorage, Revision
 
 
 class StorageError(Exception):
     """Thrown when there are problems with configuration of storage."""
+
+
+class HgRevision(Revision):
+    pass
 
 
 def locked_repo(func):
@@ -123,6 +127,9 @@ class WikiStorage(BaseWikiStorage):
 
     def get_cache_path(self):
         return os.path.join(self.repo_path, '.hg', 'hatta', 'cache')
+
+    def get_index_path(self):
+        return os.path.join(self.repo_path, '.hg', 'hatta', 'search')
 
     @property
     def repo(self):
@@ -246,39 +253,23 @@ class WikiStorage(BaseWikiStorage):
             data = data.replace('\r\n', '\n')
         self.save_data(title, data, author, comment, parent)
 
-    def page_text(self, title):
-        """Read unicode text of a page."""
-
-        data = self.page_data(title)
-        text = str(data, self.charset, 'replace')
-        return text
-
-    def open_page(self, title):
-        """Open the page and return a file-like object with its contents."""
-        return io.BytesIO(self.page_data(title))
-
-    def page_data(self, title):
-        repo_file = self._title_to_file(title)
-        try:
-            filetip = self._changectx()[repo_file]
-        except Exception:
-            raise error.NotFoundErr()
-        return filetip.data()
-
-    def page_meta(self, title):
-        """Get page's revision, date, last editor and his edit comment."""
-
+    def get_revision(self, title, rev=None):
         filectx_tip = self._find_filectx(title)
         if filectx_tip is None:
             raise error.NotFoundErr()
-            #return -1, None, u'', u''
-        rev = filectx_tip.filerev()
+        if rev is None:
+            rev = filectx_tip.filerev()
+        else:
+            rev = int(rev)
         filectx = filectx_tip.filectx(rev)
+        data = filectx.data()
         date = _get_datetime(filectx)
         author = str(filectx.user(), "utf-8",
                          'replace').split('<')[0].strip()
         comment = str(filectx.description(), "utf-8", 'replace')
-        return rev, date, author, comment
+
+        revision = HgRevision(self, rev=rev, data=data, date=date, author=author, comment=comment, charset=self.charset)
+        return revision
 
     def repo_revision(self):
         """Give the latest revision of the repository."""
@@ -334,25 +325,6 @@ class WikiStorage(BaseWikiStorage):
                 'author': author,
                 'comment': comment
             }
-
-    def page_revision(self, title, rev):
-        """Get binary content of the specified revision of the page."""
-
-        filectx_tip = self._find_filectx(title)
-        if filectx_tip is None:
-            raise error.NotFoundErr()
-        try:
-            data = filectx_tip.filectx(int(rev)).data()
-        except LookupError:
-            raise error.NotFoundErr()
-        return data
-
-    def revision_text(self, title, rev):
-        """Get unicode text of the specified revision of the page."""
-
-        data = self.page_revision(title, rev)
-        text = str(data, self.charset, 'replace')
-        return text
 
     def history(self):
         """Iterate over the history of entire wiki."""

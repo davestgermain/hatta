@@ -18,6 +18,12 @@ import hatta.views
 import hatta.request
 import hatta.response
 
+try:
+    from cachelib.file import FileSystemCache
+except ImportError:
+    FileSystemCache = None
+
+
 
 class WikiTitleConverter(werkzeug.routing.PathConverter):
     """Behaves like the path converter, but doesn't match the "+ pages"."""
@@ -127,12 +133,15 @@ class Wiki(object):
             repo_path=self.repo_path,
         )
         self.repo_path = self.storage.repo_path
-        self.cache = os.path.abspath(
-            config.get(
-                'cache_path',
-                self.storage.get_cache_path()
-            )
-        )
+        if FileSystemCache:
+            self.cache = FileSystemCache(os.path.abspath(
+                config.get(
+                    'cache_path',
+                    self.storage.get_cache_path()
+                )
+            ))
+        else:
+            self.cache = None
         self.index = self.index_class(self.storage, self.language)
         self.index.update(self)
         self.url_rules = hatta.views.URL.get_rules()

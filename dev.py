@@ -7,6 +7,7 @@ An auto-reloading standalone wiki server, useful for development.
 
 import hatta
 import werkzeug
+from werkzeug.middleware.profiler import ProfilerMiddleware
 
 if __name__=="__main__":
     config = hatta.WikiConfig()
@@ -16,6 +17,8 @@ if __name__=="__main__":
 
 
     application = wiki.application
+
+    # application = ProfilerMiddleware(application)
 
     host = config.get('interface', 'localhost')
     port = int(config.get('port', 8080))

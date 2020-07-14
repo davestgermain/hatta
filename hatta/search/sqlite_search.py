@@ -35,7 +35,7 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
 
     def __init__(self, storage, lang):
         self._con = {}
-        self.path = storage.get_cache_path()
+        self.path = storage.get_index_path()
         self.storage = storage
         self.lang = lang
         if lang == "ja":

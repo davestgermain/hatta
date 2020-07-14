@@ -107,14 +107,14 @@ def view(request, title=None):
     phtml = page.template("page.html", content=content)
     dependencies = page.dependencies()
     etag = '/(%s)' % ','.join(dependencies)
-    return response(request, title, phtml, etag=etag)
+    return response(request, title, phtml, etag=etag, rev=page.revision.rev, date=page.revision.date)
 
 
 @URL('/+history/<title:title>/<title:rev>')
 def revision(request, title, rev):
     _ = request.wiki.gettext
     request.wiki.refresh()
-    text = request.wiki.storage.revision_text(title, rev)
+    text = request.wiki.storage.get_revision(title, rev).text
     link = html.a(html(title),
                            href=request.get_url(title))
     content = [
@@ -271,9 +271,9 @@ def download(request, title):
     mime = hatta.page.page_mime(title)
     if mime == 'text/x-wiki':
         mime = 'text/plain'
-    data = request.wiki.storage.page_data(title)
+    data = request.wiki.storage.get_revision(title).file
     resp = response(request, title, data,
-                             '/download', mime, size=len(data))
+                             '/download', mime)
     resp.direct_passthrough = True
     return resp
 
@@ -314,32 +314,23 @@ def render(request, title):
     request.wiki.refresh()
     page = hatta.page.get_page(request, title)
     try:
+        if request.wiki.cache is None:
+            raise NotImplementedError()
         cache_filename, cache_mime = page.render_mime()
         render = page.render_cache
     except (AttributeError, NotImplementedError):
         return download(request, title)
 
-    cache_dir = os.path.join(request.wiki.cache, 'render',
-                              urls.url_quote(title, safe=''))
-    cache_file = os.path.join(cache_dir, cache_filename)
-    rev, date, author, comment = request.wiki.storage.page_meta(title)
-    cache_mtime, cache_size = file_time_and_size(cache_file)
-    if date > datetime.datetime.fromtimestamp(cache_mtime):
-        if not os.path.exists(cache_dir):
-            os.makedirs(cache_dir)
+    cache_key = 'render:%s:%s' % (title, page.revision.rev)
+    data = request.wiki.cache.get(cache_key)
+    if data is None:
         try:
-            temp_dir = tempfile.mkdtemp(dir=cache_dir)
-            result_file = render(temp_dir)
-            mercurial.util.rename(result_file, cache_file)
+            data = render()
         except hatta.error.UnsupportedMediaTypeErr:
             return download(request, title)
-        finally:
-            rm_temp_dir(temp_dir)
+        request.wiki.cache.set(cache_key, data, timeout=86400)
 
-    f = werkzeug.wsgi.wrap_file(request.environ, open(cache_file, 'rb'))
-    resp = response(request, title, f, '/render', cache_mime,
-                             size=cache_size)
-    resp.direct_passthrough = True
+    resp = response(request, title, data, '/render', cache_mime)
     return resp
 
 
@@ -359,7 +350,7 @@ def undo(request, title):
     author = request.get_author()
     if rev is not None:
         try:
-            parent = int(request.form.get("parent"))
+            parent = request.form.get("parent")
         except (ValueError, TypeError):
             parent = None
         request.wiki.storage.reopen()
@@ -371,7 +362,7 @@ def undo(request, title):
         else:
             comment = _('Undo of change %(rev)d of page %(title)s') % {
                 'rev': rev, 'title': title}
-            data = request.wiki.storage.page_revision(title, rev - 1)
+            data = request.wiki.storage.get_revision(title, rev - 1).data
             request.wiki.storage.save_data(title, data, author, comment, parent)
         page = hatta.page.get_page(request, title)
         request.wiki.index.update_page(page, title, data=data)
@@ -484,8 +475,8 @@ def diff(request, title, from_rev, to_rev):
         'of page %(link)s.')) % links
     diff_content = getattr(page, 'diff_content', None)
     if diff_content:
-        from_text = request.wiki.storage.revision_text(page.title, from_rev)
-        to_text = request.wiki.storage.revision_text(page.title, to_rev)
+        from_text = request.wiki.storage.get_revision(page.title, from_rev).text
+        to_text = request.wiki.storage.get_revision(page.title, to_rev).text
         content = page.diff_content(from_text, to_text, message)
     else:
         content = [html.p(html(
@@ -583,7 +574,7 @@ def search(request):
         """Extract a snippet of text for search results."""
 
         try:
-            text = request.wiki.storage.page_text(title)
+            text = request.wiki.storage.get_revision(title).text
         except hatta.error.NotFoundErr:
             return ''
         regexp = re.compile("|".join(re.escape(w) for w in words),

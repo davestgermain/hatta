@@ -4,10 +4,37 @@ import io
 import re
 import time
 from hatta import error
-from .base import BaseWikiStorage
+from .base import BaseWikiStorage, Revision
 from dulwich.objects import Blob, Tree, Commit
 from dulwich.index import IndexEntry
 from dulwich import porcelain
+
+
+class GitRevision(Revision):
+    def __init__(self, repo, **kwargs):
+        super().__init__(**kwargs)
+        self._repo = repo
+        self._author = None
+        self._comment = None
+
+    def _load_change(self):
+        if self._author is None:
+            for item in self._repo.get_walker(paths=[self.title]):
+                change = item.changes()[0]
+                if change.new.sha == self.rev:
+                    self._author = item.commit.author.decode('utf8')
+                    self._comment = item.commit.message.decode('utf8')
+                    break
+
+    @property
+    def author(self):
+        self._load_change()
+        return self._author
+
+    @property
+    def comment(self):
+        self._load_change()
+        return self._comment
 
 
 class WikiStorage(BaseWikiStorage):
@@ -15,9 +42,6 @@ class WikiStorage(BaseWikiStorage):
         super(WikiStorage, self).__init__(**kwargs)
         self.repo_path = repo_dir
         self.repo_prefix = self.repo_path[len(self.repo_path):].strip('/')
-        self.reopen()
-
-    def reopen(self):
         try:
             self.repo = porcelain.init(self.repo_path)
         except FileExistsError:
@@ -26,7 +50,10 @@ class WikiStorage(BaseWikiStorage):
         self.control_dir = self.repo.controldir()
  
     def get_cache_path(self):
-        return os.path.join(self.control_dir, 'cache')
+        return os.path.join(self.control_dir, 'hatta', 'cache')
+
+    def get_index_path(self):
+        return os.path.join(self.control_dir, 'hatta', 'search')
 
     @property
     def index(self):
@@ -37,13 +64,12 @@ class WikiStorage(BaseWikiStorage):
         assert path.startswith(self.repo.path)
         return path.encode('utf8')
 
-    def open_page(self, title, rev=None, meta_only=False):
+    def get_revision(self, title, rev=None):
         title = self._title_to_file(title).encode('utf8')
         try:
             entry = self.index[title]
         except KeyError:
             raise error.NotFoundErr()
-
         if not rev:
             rev = entry.sha
         else:
@@ -55,29 +81,14 @@ class WikiStorage(BaseWikiStorage):
                 blob_id = item.changes()[0].new.sha
                 blob = self.object_store[blob_id]
                 break
-        return io.BytesIO(blob.data)
-
-    def page_meta(self, title):
-        title = self._title_to_file(title).encode('utf8')
-        try:
-            entry = self.index[title]
-        except KeyError:
-            raise error.NotFoundErr()
-        rev = entry.sha
         if isinstance(entry.ctime, tuple):
             ctime = entry.ctime[0]
         else:
             ctime = entry.ctime
         ts = datetime.datetime.utcfromtimestamp(ctime)
-        owner = comment = b''
 
-        for item in self.repo.get_walker(paths=[title]):
-            change = item.changes()[0]
-            if change.new.sha == rev:
-                owner = item.commit.author.decode('utf8')
-                comment = item.commit.message.decode('utf8')
-                break
-        return rev.decode('ascii'), ts, owner, comment
+        revision = GitRevision(self.repo, rev=rev.decode('ascii'), data=blob.data, date=ts, title=title)
+        return revision
 
     def _do_commit(self, index, author, message, ctime, parent_rev=None):
         index.write()

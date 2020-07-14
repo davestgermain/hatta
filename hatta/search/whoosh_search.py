@@ -113,7 +113,7 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         self.lang = lang
         if lang == "ja":
             self.split_text = self.split_japanese_text
-        self.index = IndexManager(os.path.join(storage.get_cache_path(), 'search'))
+        self.index = IndexManager(storage.get_index_path())
         self.initialize_index()
 
     def initialize_index(self):

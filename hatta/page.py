@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import difflib
+import io
 import mimetypes
 import os
 import re
@@ -142,6 +143,13 @@ class WikiPage(object):
                 self.index.page_links_and_labels(self.wiki.alias_page))
         else:
             self.aliases = {}
+        self._revision = None
+
+    @property
+    def revision(self):
+        if self._revision is None:
+            self._revision = self.storage.get_revision(self.title)
+        return self._revision
 
     def link_alias(self, addr):
         """Find a target address for an alias."""
@@ -286,8 +294,8 @@ class WikiPage(object):
                 dependencies.add(url_quote(title))
         for title in [self.wiki.menu_page]:
             if title in self.storage:
-                rev, date, author, comment = self.storage.page_meta(title)
-                etag = '%s/%s-%s' % (url_quote(title), rev, date.isoformat())
+                nrev = self.storage.get_revision(title)
+                etag = '%s/%s-%s' % (url_quote(title), nrev.rev, nrev.date.isoformat())
                 dependencies.add(etag)
         return dependencies
 
@@ -303,8 +311,9 @@ class WikiPage(object):
         author = self.request.get_author()
         if self.title in self.storage:
             comment = _('changed')
-            (rev, old_date, old_author,
-                old_comment) = self.storage.page_meta(self.title)
+            rev = self.revision.rev
+            old_author = self.revision.author
+            old_comment = self.revision.comment
             if old_author == author:
                 comment = old_comment
         else:
@@ -344,7 +353,7 @@ class WikiPageText(WikiPage):
         indexing.
         """
 
-        return self.storage.page_text(self.title)
+        return self.revision.text
 
     def view_content(self, lines=None):
         """
@@ -352,7 +361,7 @@ class WikiPageText(WikiPage):
         """
 
         if lines is None:
-            lines = self.storage.page_text(self.title).splitlines(True)
+            lines = self.revision.text.splitlines(True)
         return self.content_iter(lines)
 
     def render_editor(self, preview=None, captcha_error=None):
@@ -362,9 +371,10 @@ class WikiPageText(WikiPage):
         author = self.request.get_author()
         lines = []
         try:
-            lines = self.storage.page_text(self.title).splitlines(True)
-            (rev, old_date, old_author,
-                old_comment) = self.storage.page_meta(self.title)
+            lines = self.revision.text.splitlines(True)
+            rev = self.revision.rev
+            old_author = self.revision.author
+            old_comment = self.revision.comment
             comment = _('modified')
             if old_author == author:
                 comment = old_comment
@@ -451,7 +461,7 @@ class WikiPageColorText(WikiPageText):
         """Generate HTML for the content."""
 
         if lines is None:
-            text = self.storage.page_text(self.title)
+            text = self.revision.text
         else:
             text = ''.join(lines)
         return self.highlight(text, mime=self.mime)
@@ -490,6 +500,7 @@ class WikiPageColorText(WikiPageText):
             return
         yield pygments.highlight(text, lexer, formatter)
 
+CACHE = {}
 
 class WikiPageWiki(WikiPageColorText):
     """Pages of with wiki markup use this for display."""
@@ -511,22 +522,34 @@ class WikiPageWiki(WikiPageColorText):
 
         if text is None:
             try:
-                text = self.storage.page_text(self.title)
+                text = self.revision.text
             except hatta.error.NotFoundErr:
                 text = ''
         return self.parser.extract_links(text)
 
     def view_content(self, lines=None):
-        if lines is None:
-            lines = self.storage.page_text(self.title).splitlines(True)
-        if self.wiki.icon_page and self.wiki.icon_page in self.storage:
-            icons = self.index.page_links_and_labels(self.wiki.icon_page)
-            smilies = dict((emo, link) for (link, emo) in icons)
+        if self.wiki.cache and self.revision:
+            cache_key = '%s:%s' % (self.title, self.revision.rev)
+            cached = self.wiki.cache.get(cache_key)
         else:
-            smilies = None
-        content = self.parser(lines, self.wiki_link, self.wiki_image,
-                             self.highlight, self.wiki_math, smilies)
-        return content
+            cache_key = None
+            cached = None
+        if not cached:
+            if lines is None:
+                if self.revision is None:
+                    raise hatta.error.NotFoundErr()
+                lines = self.revision.text.splitlines(True)
+            if self.wiki.icon_page and self.wiki.icon_page in self.storage:
+                icons = self.index.page_links_and_labels(self.wiki.icon_page)
+                smilies = dict((emo, link) for (link, emo) in icons)
+            else:
+                smilies = None
+            content = self.parser(lines, self.wiki_link, self.wiki_image,
+                                 self.highlight, self.wiki_math, smilies)
+            cached = list(content)
+            if cache_key:
+                self.wiki.cache.set(cache_key, cached, timeout=86400)
+        return cached
 
     def wiki_math(self, math_text, display=False):
         math_url = self.wiki.math_url
@@ -548,8 +571,8 @@ class WikiPageWiki(WikiPageColorText):
         dependencies = WikiPage.dependencies(self)
         for title in [self.wiki.icon_page, self.wiki.alias_page]:
             if title in self.storage:
-                rev, date, author, comment = self.storage.page_meta(title)
-                etag = '%s/%s-%s' % (url_quote(title), rev, date.isoformat())
+                trev = self.storage.get_revision(title)
+                etag = '%s/%s-%s' % (url_quote(title), trev.rev, trev.date.isoformat())
                 dependencies.add(etag)
         for link in self.index.page_links(self.title):
             if link not in self.storage:
@@ -583,6 +606,19 @@ class WikiPageImage(WikiPageFile):
                       escape(self.title))]
         return content
 
+    @property
+    def render_size(self):
+        try:
+            width = min(int(self.request.values.get('w', '128').strip()), 2048)
+            height = min(int(self.request.values.get('h', '128').strip()), 2048)
+        except ValueError:
+            width = height = 128
+        return width, height
+
+    @property
+    def render_file(self):
+        return '%sx%x.png' % self.render_size
+
     def render_mime(self):
         """Give the filename and mime type of the rendered thumbnail."""
 
@@ -590,23 +626,22 @@ class WikiPageImage(WikiPageFile):
             raise NotImplementedError('No Image library available')
         return  self.render_file, 'image/png'
 
-    def render_cache(self, cache_dir):
-        """Render the thumbnail and save in the cache."""
+    def render_cache(self):
+        """Render the thumbnail and return the date."""
 
         if not Image:
             raise NotImplementedError('No Image library available')
-        page_file = self.storage.open_page(self.title)
-        cache_path = os.path.join(cache_dir, self.render_file)
-        with open(cache_path, 'wb') as cache_file:
+        page_file = self.revision.file
+        cache_file = io.BytesIO()
+        with self.revision.file as page_file:
             try:
                 im = Image.open(page_file)
                 im = im.convert('RGBA')
-                im.thumbnail((128, 128), Image.ANTIALIAS)
+                im.thumbnail(self.render_size, Image.ANTIALIAS)
                 im.save(cache_file, 'PNG')
             except IOError:
                 raise hatta.error.UnsupportedMediaTypeErr('Image corrupted')
-        page_file.close()
-        return cache_path
+        return cache_file.getvalue()
 
 
 class WikiPageCSV(WikiPageFile):
@@ -616,11 +651,10 @@ class WikiPageCSV(WikiPageFile):
         import csv
         _ = self.wiki.gettext
         # XXX Add preview support
-        csv_file = self.storage.open_page(self.title)
         reader = csv.reader(csv_file)
         html_title = escape(self.title)
         yield '<table id="%s" class="csvfile">' % html_title
-        with self.storage.open_page(self.title) as csv_file:
+        with self.revision.file as csv_file:
             try:
                 for row in reader:
                     yield '<tr>%s</tr>' % (''.join('<td>%s</td>' % cell
@@ -631,7 +665,6 @@ class WikiPageCSV(WikiPageFile):
                     _('Error parsing CSV file %{file}s on '
                       'line %{line}d: %{error}s') %
                     {'file': html_title, 'line': reader.line_num, 'error': e}))
-        csv_file.close()
         yield '</table>'
 
     def view_content(self, lines=None):

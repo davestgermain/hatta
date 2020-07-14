@@ -8,20 +8,18 @@ OLD_DATE = datetime.datetime(2018, 1, 1, 0, 0, 0)
 
 
 def response(request, title, content, etag='', mime='text/html',
-             rev=None, size=None):
+             rev=None, size=None, date=None):
     """Create a hatta.request.WikiResponse for a page."""
 
     response = WikiResponse(content, mimetype=mime)
-    if rev is None:
-        rev, date, author, comment = request.wiki.storage.page_meta(title)
-        response.set_etag('%s/%s/%s-%s' % (etag,
-                                            url_quote(title),
-                                            rev, date.isoformat()))
+    etag = '%s/%s/' % (etag, url_quote(title))
+    if rev:
+        etag += '%s/' % rev
+    if date:
         # add a modified date for better conditional requests
+        etag += date.isoformat()
         response.last_modified = date
-    else:
-        response.set_etag('%s/%s/%s' % (etag, url_quote(title),
-                                         rev))
+    response.set_etag(etag)
     if size:
         response.content_length = size
     response.make_conditional(request)

@@ -1,4 +1,5 @@
 import datetime
+import io
 import time
 import os, os.path
 import mimetypes
@@ -24,6 +25,25 @@ def merge_func(base, other, this):
                                   end_marker='>>>>>>> other',
                                   base_marker=None))
 
+class Revision:
+    """
+    Encapsulates page data and metadata
+    """
+
+    def __init__(self, *args, charset='utf8', **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        self.charset = charset
+
+    @property
+    def file(self):
+        return io.BytesIO(self.data)
+
+    @property
+    def text(self):
+        text = str(self.data, self.charset, 'replace')
+        return text
+
 
 class BaseWikiStorage(object):
     """
@@ -47,13 +67,21 @@ class BaseWikiStorage(object):
     def reopen(self):
         pass
 
+    def get_cache_path(self):
+        raise NotImplementedError()
+
+    def get_index_path(self):
+        raise NotImplementedError()
+
     def __contains__(self, title):
         raise NotImplementedError()
 
-    def open_page(self, title, rev=None, owner='*', meta_only=False):
+    def get_revision(self, title, rev=None):
+        raise NotImplementedError()
+
+    def open_page(self, title, rev=None):
         """Open the page and return a file-like object with its contents.
-        Returns file object, unless meta_only=True, then it returns
-        rev, creation_date, owner, comment
+        Returns file object
         """
         raise NotImplementedError()
 
@@ -112,28 +140,10 @@ class BaseWikiStorage(object):
             data = data.replace(b'\r\n', b'\n')
         self.save_data(title, data, author, comment, parent)
 
-    def page_text(self, title):
-        """Read unicode text of a page."""
-        data = self.page_data(title)
-        text = str(data, self.charset, 'replace')
-        return text
-
-    def page_data(self, title):
-        with self.open_page(title) as fp:
-            data = fp.read()
-            return data
-
     def page_meta(self, title):
         """Get page's revision, date, last editor and his edit comment."""
-        return self.open_page(title, meta_only=True)
-
-    def page_revision(self, title, rev):
-        """Get binary content of the specified revision of the page."""
-        try:
-            with self.open_page(title, rev=rev) as fp:
-                return fp.read()
-        except FileNotFoundError:
-            return b''
+        revision = self.get_revision(title)
+        return revision.rev, revision.date, revision.author, revision.comment
 
     def revision_text(self, title, rev):
         """Get unicode text of the specified revision of the page."""

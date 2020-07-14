@@ -350,13 +350,12 @@ def undo(request, title):
     _ = request.wiki.gettext
     request.wiki.refresh()
     hatta.page.check_lock(request.wiki, title)
+    author = request.get_author()
     rev = None
     for key in request.form:
-        try:
-            rev = int(key)
-        except ValueError:
-            pass
-    author = request.get_author()
+        if key != 'parent':
+            rev = key
+            break
     if rev is not None:
         try:
             parent = request.form.get("parent")
@@ -364,20 +363,20 @@ def undo(request, title):
             parent = None
         request.wiki.storage.reopen()
         request.wiki.index.update(request.wiki)
-        if rev == 0:
+        if rev == parent:
             comment = _('Delete page %(title)s') % {'title': title}
             data = ''
             request.wiki.storage.delete_page(title, author, comment)
         else:
-            comment = _('Undo of change %(rev)d of page %(title)s') % {
+            comment = _('Undo of change %(rev)s of page %(title)s') % {
                 'rev': rev, 'title': title}
-            data = request.wiki.storage.get_revision(title, rev - 1).data
-            request.wiki.storage.save_data(title, data, author, comment, parent)
+            data = request.wiki.storage.get_previous_revision(title, rev).data
+            request.wiki.storage.save_data(title, data, author, comment)
         page = hatta.page.get_page(request, title)
         request.wiki.index.update_page(page, title, data=data)
     url = request.adapter.build('history', {'title': title},
                                 method='GET', force_external=True)
-    return werkzeug.redirect(url, 303)
+    return werkzeug.routing.redirect(url, 303)
 
 @URL('/+history/<title:title>')
 def history(request, title):
@@ -390,6 +389,7 @@ def history(request, title):
     page = hatta.page.get_page(request, title)
 
     if title not in request.wiki.storage:
+        _ = request.wiki.gettext
         raise hatta.error.NotFoundErr(_("Page not found."))
 
     for item in request.wiki.storage.page_history(title):
@@ -405,7 +405,8 @@ def history(request, title):
                 'title': title,
                 'rev': item['rev'],
             })
-        history.append((item['date'], date_url, item['rev'], item['parent'], item['author'], item['comment']))
+        item['date_url'] = date_url
+        history.append(item)
         if item['rev']:
             max_rev = item['rev']
 

@@ -79,6 +79,15 @@ class BaseWikiStorage(object):
     def get_revision(self, title, rev=None):
         raise NotImplementedError()
 
+    def get_previous_revision(self, title, current_rev):
+        """
+        Get the revision earlier than this one.
+        """
+        if current_rev.isdigit():
+            return self.get_revision(title, int(current_rev) - 1)
+        else:
+            raise NotImplementedError()
+
     def open_page(self, title, rev=None):
         """Open the page and return a file-like object with its contents.
         Returns file object

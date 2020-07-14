@@ -185,8 +185,6 @@ class WikiStorage(BaseWikiStorage):
         try:
             filetip = self._changectx()[filename]
         except mercurial.error.ManifestLookupError:
-            if parent_rev != -1:
-                raise IndexError("no such parent revision %r" % parent_rev)
             return (b'tip', None)
         last_rev = filetip.filerev()
         if parent_rev > last_rev:
@@ -262,7 +260,10 @@ class WikiStorage(BaseWikiStorage):
         else:
             rev = int(rev)
         filectx = filectx_tip.filectx(rev)
-        data = filectx.data()
+        try:
+            data = filectx.data()
+        except mercurial.error.LookupError:
+            raise error.NotFoundErr()
         date = _get_datetime(filectx)
         author = str(filectx.user(), "utf-8",
                          'replace').split('<')[0].strip()

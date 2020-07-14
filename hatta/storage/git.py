@@ -74,21 +74,33 @@ class WikiStorage(BaseWikiStorage):
             rev = entry.sha
         else:
             rev = rev.encode('ascii')
+        data = b''
         blob = self.object_store[rev]
 
         if not hasattr(blob, 'data'):
             for item in self.repo.get_walker(paths=[title], include=[rev]):
                 blob_id = item.changes()[0].new.sha
-                blob = self.object_store[blob_id]
+                if blob_id:
+                    data = self.object_store[blob_id].data
                 break
+        else:
+            data = blob.data
         if isinstance(entry.ctime, tuple):
             ctime = entry.ctime[0]
         else:
             ctime = entry.ctime
         ts = datetime.datetime.utcfromtimestamp(ctime)
 
-        revision = GitRevision(self.repo, rev=rev.decode('ascii'), data=blob.data, date=ts, title=title)
+        revision = GitRevision(self.repo, rev=rev.decode('ascii'), data=data, date=ts, title=title)
         return revision
+
+    def get_previous_revision(self, title, current_rev):
+        current_rev = current_rev.encode('ascii')
+        # walk the graph, starting with this rev
+        for item in self.repo.get_walker(paths=[self._title_to_file(title).encode('utf8')], include=[current_rev]):
+            if item.commit.id != current_rev:
+                return self.get_revision(title, rev=item.commit.id.decode('ascii'))
+        raise error.NotFoundErr()
 
     def _do_commit(self, index, author, message, ctime, parent_rev=None):
         index.write()
@@ -156,11 +168,10 @@ class WikiStorage(BaseWikiStorage):
         creation_date = datetime.datetime.utcfromtimestamp(item.commit.commit_time)
         owner = re.sub(' <.*>', '', item.commit.author.decode('utf8'))
         comment = item.commit.message.decode('utf8')
+        rev = item.commit.id.decode('ascii')
         if change.new.sha:
-            rev = change.new.sha.decode('ascii')
             title = change.new.path.decode('utf8')
         else:
-            rev = change.old.sha.decode('ascii')
             title = change.old.path.decode('utf8')
 
         if change.type != 'add':

@@ -6,14 +6,11 @@
 
 {% block links %}
     <link rel="stylesheet" type="text/css"
-          href="{{ url(None, 'style_css') }}">
+          href="{{ url(None, 'style_css') }}" async>
     <link rel="stylesheet" type="text/css"
-          href="{{ url(None, 'pygments_css') }}">
+          href="{{ url(None, 'pygments_css') }}" async>
     <link rel="shortcut icon" type="image/x-icon"
           href="{{ url(None, 'favicon_ico') }}">
-    <link rel="alternate" type="application/rss+xml"
-          title="{{ wiki.site_name }} (ATOM)"
-          href="{{ url(None, 'atom') }}">
     {% if edit_url %}
         <link rel="alternate" type="application/wiki"
               href="{{ edit_url }}">
@@ -22,7 +19,7 @@
 
 {% block scripts %}
     <script type="text/javascript"
-            src="{{ url(None, 'scripts_js') }}"></script>
+            src="{{ url(None, 'scripts_js') }}" async></script>
     {% if wiki.math_url == 'mathjax' %}
     <script type="text/x-mathjax-config">
         MathJax.Hub.Config({
@@ -39,7 +36,7 @@
     </script>
     <script type="text/javascript"
         src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
-    ></script>
+    async></script>
     {% endif %}
 {% endblock %}
 

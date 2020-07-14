@@ -77,6 +77,7 @@ def _serve_default(request, title, content=None, mime=None):
     )
     resp.set_etag('/%s/-1' % title)
     resp.make_conditional(request)
+    resp.headers.add('Cache-Control', 'max-age=31536000')
     return resp
 
 
@@ -271,9 +272,17 @@ def download(request, title):
     mime = hatta.page.page_mime(title)
     if mime == 'text/x-wiki':
         mime = 'text/plain'
-    data = request.wiki.storage.get_revision(title).file
-    resp = response(request, title, data,
-                             '/download', mime)
+    revision = request.wiki.storage.get_revision(title)
+    data = revision.file
+    resp = response(request,
+        title,
+        data,
+         '/download',
+        mime,
+        rev=revision.rev,
+        date=revision.date
+    )
+    resp.headers.add('Cache-Control', 'no-cache')
     resp.direct_passthrough = True
     return resp
 

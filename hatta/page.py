@@ -242,7 +242,7 @@ class WikiPage(object):
         else:
             items = [
                 (self.wiki.front_page, self.wiki.front_page),
-                ('+history', _('Recent changes')),
+                ('+history/', _('Recent changes')),
             ]
         for link, label in items:
             if link == self.title:

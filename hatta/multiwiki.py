@@ -39,7 +39,7 @@ for conf_file in glob.glob(os.path.join(config_dir, '*.conf')):
         pprint.pprint(config.config)
 
     if len(splitname) == 2:
-        APPS.setdefault(domain_name, DispatcherMiddleware(default_application, None)).mounts['/' + splitname[1]] = wsgi_app
+        APPS.setdefault(domain_name, DispatcherMiddleware(default_application, None)).mounts['/' + splitname[1].replace('_', '/')] = wsgi_app
     else:
         APPS[domain_name] = wsgi_app
 

@@ -528,7 +528,7 @@ class WikiPageWiki(WikiPageColorText):
         return self.parser.extract_links(text)
 
     def view_content(self, lines=None):
-        if self.wiki.cache and self.revision:
+        if self.wiki.cache and not lines and self.revision:
             cache_key = '%s:%s' % (self.title, self.revision.rev)
             cached = self.wiki.cache.get(cache_key)
         else:

@@ -14,7 +14,6 @@ from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 config_dir = os.environ['HATTA_CONFIG_DIR']
 DEBUG = os.environ.get('DEBUG', '').lower() in ('true', 'on', 'yes')
-DEFAULT_HOST = 'localhost'
 APPS = {}
 
 
@@ -45,7 +44,7 @@ for conf_file in glob.glob(os.path.join(config_dir, '*.conf')):
 
 
 def application(env, start):
-    host = env.get('HTTP_HOST', DEFAULT_HOST).split(':')[0].lower()
+    host = env.get('HTTP_HOST').split(':')[0].lower()
     app = APPS.get(host, default_application)
     return app(env, start)
 

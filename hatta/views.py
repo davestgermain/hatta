@@ -416,51 +416,61 @@ def history(request, title):
     return resp
 
 
+def _changes_list(request):
+    last = {}
+    lastrev = {}
+    count = 0
+    for item in request.wiki.storage.history():
+        title = item['title']
+        rev = item['rev']
+        parent = item['parent']
+        date = item['date']
+        author = item['author']
+        comment = item['comment']
+
+        if (author, comment) == last.get(title, (None, None)):
+            continue
+        count += 1
+        if count > 100:
+            break
+        if parent:
+            date_url = request.adapter.build('diff', {
+                'title': title,
+                'from_rev': parent,
+                'to_rev': lastrev.get(title, rev),
+            })
+        elif rev == 0:
+            date_url = request.adapter.build('revision', {
+                'title': title,
+                'rev': rev,
+            })
+        else:
+            date_url = request.adapter.build('history', {'title': title})
+        last[title] = author, comment
+        lastrev[title] = rev
+
+        yield date, date_url, title, author, comment
+
+
 @URL('/+history/')
 def recent_changes(request):
     """Serve the recent changes page."""
 
-    def _changes_list():
-        last = {}
-        lastrev = {}
-        count = 0
-        for item in request.wiki.storage.history():
-            title = item['title']
-            rev = item['rev']
-            parent = item['parent']
-            date = item['date']
-            author = item['author']
-            comment = item['comment']
-
-            if (author, comment) == last.get(title, (None, None)):
-                continue
-            count += 1
-            if count > 100:
-                break
-            if parent:
-                date_url = request.adapter.build('diff', {
-                    'title': title,
-                    'from_rev': parent,
-                    'to_rev': lastrev.get(title, rev),
-                })
-            elif rev == 0:
-                date_url = request.adapter.build('revision', {
-                    'title': title,
-                    'rev': rev,
-                })
-            else:
-                date_url = request.adapter.build('history', {'title': title})
-            last[title] = author, comment
-            lastrev[title] = rev
-
-            yield date, date_url, title, author, comment
-
     request.wiki.refresh()
+    rev = request.wiki.storage.repo_revision()
+    if request.wiki.cache:
+        cache_key = '+history:%s' % rev
+        changes = request.wiki.cache.get(cache_key)
+        if changes is None:
+            changes = list(_changes_list(request))
+            request.wiki.cache.set(cache_key, changes, 0)
+    else:
+        changes = _changes_list(request)
     page = hatta.page.get_page(request, '')
-    phtml = page.template('changes.html', changes=_changes_list(),
+    phtml = page.template('changes.html', changes=changes,
                          date_html=hatta.page.date_html)
     resp = WikiResponse(phtml, mimetype='text/html')
-    resp.set_etag('/history/%s' % request.wiki.storage.repo_revision())
+    resp.set_etag('/history/%s' % rev)
     resp.make_conditional(request)
     return resp
 

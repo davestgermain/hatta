@@ -153,7 +153,7 @@ class Wiki(object):
         no cache will be available.
         """
         cache = None
-        cache_url = config.get('cache_path')
+        cache_url = self.config.get('cache_path')
         if cache_url:
             # cache_url could be memcached://127.0....
             # or file:///some/path or /some/path

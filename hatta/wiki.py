@@ -18,12 +18,6 @@ import hatta.views
 import hatta.request
 import hatta.response
 
-try:
-    from cachelib.file import FileSystemCache
-except ImportError:
-    FileSystemCache = None
-
-
 
 class WikiTitleConverter(werkzeug.routing.PathConverter):
     """Behaves like the path converter, but doesn't match the "+ pages"."""
@@ -133,15 +127,7 @@ class Wiki(object):
             repo_path=self.repo_path,
         )
         self.repo_path = self.storage.repo_path
-        if FileSystemCache:
-            self.cache = FileSystemCache(os.path.abspath(
-                config.get(
-                    'cache_path',
-                    self.storage.get_cache_path()
-                )
-            ))
-        else:
-            self.cache = None
+        self.cache = self.setup_cache()
         self.index = self.index_class(self.storage, self.language)
         self.index.update(self)
         self.url_rules = hatta.views.URL.get_rules()
@@ -154,6 +140,41 @@ class Wiki(object):
             self.url_rules,
             converters=self.url_converters,
         )
+
+    def setup_cache(self):
+        """
+        Setup the cache from configuration.
+        If cache_path is set in the config,
+        it can be set to file:///some/cache/path
+        or memcached://127.0.0.1:port for memcached
+
+        Otherwise, try to use storage.get_cache_path()
+        as a cache directory. If cachelib can't be imported,
+        no cache will be available.
+        """
+        cache = None
+        cache_url = config.get('cache_path')
+        if cache_url:
+            # cache_url could be memcached://127.0....
+            # or file:///some/path or /some/path
+            split_url = cache_url.split('://', 1)
+            if len(split_url) == 1:
+                split_url = ('file://', split_url)
+            proto, path = split_url
+            if proto == 'memcached':
+                from cachelib import MemcachedCache
+                cache = MemcachedCache(path.split(','), key_prefix=self.site_name)
+            elif proto == 'file':
+                from cachelib import FileSystemCache
+                cache = FileSystemCache(os.path.abspath(path))
+        else:
+            try:
+                from cachelib import FileSystemCache
+            except ImportError:
+                pass
+            else:
+                cache = FileSystemCache(os.path.abspath(self.storage.get_cache_path()))
+        return cache
 
     def add_url_rule(self, rule, name, func):
         """Let plugins add additional url rules."""

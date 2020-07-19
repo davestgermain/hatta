@@ -163,7 +163,11 @@ class Wiki(object):
             proto, path = split_url
             if proto == 'memcached':
                 from cachelib import MemcachedCache
-                cache = MemcachedCache(path.split(','), key_prefix=self.site_name)
+                from hashlib import sha1
+                cache = MemcachedCache(
+                    path.split(','),
+                    key_prefix=sha1(self.site_name.encode('utf8')).hexdigest()[:8]
+                )
             elif proto == 'file':
                 from cachelib import FileSystemCache
                 cache = FileSystemCache(os.path.abspath(path))

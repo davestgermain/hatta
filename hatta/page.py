@@ -529,7 +529,7 @@ class WikiPageWiki(WikiPageColorText):
 
     def view_content(self, lines=None):
         if self.wiki.cache and not lines and self.revision:
-            cache_key = '%s:%s' % (self.title, self.revision.rev)
+            cache_key = '%s:%s' % (self.title.replace(' ', '_'), self.revision.rev)
             cached = self.wiki.cache.get(cache_key)
         else:
             cache_key = None

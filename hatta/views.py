@@ -232,38 +232,6 @@ def edit(request, title, preview=None, captcha_error=None):
     resp.headers.add('Cache-Control', 'no-cache')
     return resp
 
-@URL('/+feed/atom')
-@URL('/+feed/rss')
-def atom(request):
-    _ = request.wiki.gettext
-    feed = werkzeug.contrib.atom.AtomFeed(request.wiki.site_name,
-        feed_url=request.url,
-        url=request.adapter.build('view', force_external=True),
-        subtitle=_('Track the most recent changes to the wiki '
-                   'in this feed.'))
-    history = itertools.islice(request.wiki.storage.history(), None, 10, None)
-    unique_titles = set()
-    for title, rev, date, author, comment in history:
-        if title in unique_titles:
-            continue
-        unique_titles.add(title)
-        if rev > 0:
-            url = request.adapter.build('diff', {
-                'title': title,
-                'from_rev': rev - 1,
-                'to_rev': rev,
-            }, force_external=True)
-        else:
-            url = request.adapter.build('view', {
-                'title': title,
-            }, force_external=True)
-        feed.add(title, comment, content_type="text", author=author,
-                 url=url, updated=date)
-    rev = request.wiki.storage.repo_revision()
-    resp = response(request, 'atom', feed.generate(),
-                       '/+feed', 'application/xml', rev)
-    return resp
-
 
 @URL('/+download/<title:title>/<title:rev>')
 def download_rev(request, title, rev):

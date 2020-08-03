@@ -3,6 +3,7 @@
 import itertools
 import re
 import datetime
+import hashlib
 import os
 import tempfile
 import pkgutil
@@ -330,7 +331,7 @@ def render(request, title):
     except (AttributeError, NotImplementedError):
         return download(request, title)
 
-    cache_key = 'render:%s:%s' % (title, page.revision.rev)
+    cache_key = 'render:%s:%s' % (hashlib.md5(title.encode('utf8')).hexdigest(), page.revision.rev)
     data = request.wiki.cache.get(cache_key)
     if data is None:
         try:

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import difflib
+import hashlib
 import io
 import mimetypes
 import os
@@ -500,7 +501,6 @@ class WikiPageColorText(WikiPageText):
             return
         yield pygments.highlight(text, lexer, formatter)
 
-CACHE = {}
 
 class WikiPageWiki(WikiPageColorText):
     """Pages of with wiki markup use this for display."""
@@ -529,7 +529,7 @@ class WikiPageWiki(WikiPageColorText):
 
     def view_content(self, lines=None):
         if self.wiki.cache and not lines and self.revision:
-            cache_key = '%s:%s' % (self.title.replace(' ', '_'), self.revision.rev)
+            cache_key = '%s:%s' % (hashlib.md5(self.title.encode('utf8')).hexdigest(), self.revision.rev)
             cached = self.wiki.cache.get(cache_key)
         else:
             cache_key = None

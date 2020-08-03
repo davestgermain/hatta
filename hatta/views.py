@@ -265,15 +265,15 @@ def atom(request):
     return resp
 
 
-@URL('/+download/<title:title>')
-def download(request, title):
+@URL('/+download/<title:title>/<title:rev>')
+def download_rev(request, title, rev):
     """Serve the raw content of a page directly from disk."""
 
     request.wiki.refresh()
     mime = hatta.page.page_mime(title)
     if mime == 'text/x-wiki':
         mime = 'text/plain'
-    revision = request.wiki.storage.get_revision(title)
+    revision = request.wiki.storage.get_revision(title, rev)
     data = revision.file
     resp = response(request,
         title,
@@ -286,6 +286,13 @@ def download(request, title):
     resp.headers.add('Cache-Control', 'no-cache')
     resp.direct_passthrough = True
     return resp
+
+
+@URL('/+download/<title:title>')
+def download(request, title):
+    """Serve the raw content of a page directly from disk."""
+    return download_rev(request, title, None)
+
 
 @URL('/+render/<title:title>')
 def render(request, title):
@@ -388,6 +395,8 @@ def history(request, title):
     request.wiki.refresh()
     title = urls.url_unquote(title)
     page = hatta.page.get_page(request, title)
+    # only text pages should show a link for diffs
+    can_diff = not page.mime.startswith(('image/', 'application/pdf'))
 
     if title not in request.wiki.storage:
         _ = request.wiki.gettext
@@ -395,24 +404,32 @@ def history(request, title):
 
     for item in request.wiki.storage.page_history(title):
         parent = item['parent']
-        if parent:
-            date_url = request.adapter.build('diff', {
-                'title': title,
-                'from_rev': parent,
-                'to_rev': item['rev'],
-            })
+        if can_diff:
+            if parent:
+                date_url = request.adapter.build('diff', {
+                    'title': title,
+                    'from_rev': parent,
+                    'to_rev': item['rev'],
+                })
+            else:
+                date_url = request.adapter.build('revision', {
+                    'title': title,
+                    'rev': item['rev'],
+                })
         else:
-            date_url = request.adapter.build('revision', {
-                'title': title,
-                'rev': item['rev'],
-            })
+            date_url = request.adapter.build('download_rev', {
+                    'title': title,
+                    'rev': item['rev']
+                })
         item['date_url'] = date_url
         history.append(item)
         if item['rev']:
             max_rev = item['rev']
 
-    phtml = page.template('history.html', history=history,
-                         date_html=hatta.page.date_html, parent_rev=max_rev)
+    phtml = page.template('history.html',
+                         history=history,
+                         date_html=hatta.page.date_html,
+                         parent_rev=max_rev)
     resp = response(request, title, phtml, '/history')
     return resp
 

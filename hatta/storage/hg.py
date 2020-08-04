@@ -12,11 +12,8 @@ import io
 os.environ['HGENCODING'] = 'utf-8'
 
 import mercurial.hg
-import mercurial.merge
 import mercurial.node
-import mercurial.revlog
 import mercurial.ui
-import mercurial.simplemerge
 
 from hatta import error
 from hatta import page

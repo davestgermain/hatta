@@ -8,7 +8,7 @@ import os
 import tempfile
 import pkgutil
 
-from werkzeug import urls
+from werkzeug import urls, wsgi
 from werkzeug.utils import html, escape
 import werkzeug
 
@@ -27,8 +27,6 @@ import hatta.page
 import hatta.parser
 import hatta.error
 from hatta.response import response, WikiResponse
-
-import mercurial
 
 
 class URL(object):
@@ -242,7 +240,7 @@ def download_rev(request, title, rev):
     if mime == 'text/x-wiki':
         mime = 'text/plain'
     revision = request.wiki.storage.get_revision(title, rev)
-    data = revision.file
+    data = wsgi.wrap_file(request.environ, revision.file)
     resp = response(request,
         title,
         data,
@@ -252,6 +250,12 @@ def download_rev(request, title, rev):
         date=revision.date
     )
     resp.headers.add('Cache-Control', 'no-cache')
+    # give browsers a useful filename hint
+    if rev:
+        filename = '%s-%s' % (rev, title)
+    else:
+        filename = title
+    resp.headers.add('Content-Disposition', 'filename="%s"' % urls.url_quote(filename))
     resp.direct_passthrough = True
     return resp
 
@@ -306,7 +310,9 @@ def render(request, title):
     except (AttributeError, NotImplementedError):
         return download(request, title)
 
-    cache_key = 'render:%s:%s' % (hashlib.md5(title.encode('utf8')).hexdigest(), page.revision.rev)
+    cache_key = hashlib.md5(
+        '{}{}{}'.format(title, page.revision.rev, page.render_size).encode('utf8')
+    ).hexdigest()
     data = request.wiki.cache.get(cache_key)
     if data is None:
         try:
@@ -691,10 +697,11 @@ def hgweb(request, path=None):
     """
     Serve the pages repository on the web like a normal hg repository.
     """
-
     _ = request.wiki.gettext
     if not request.wiki.config.get_bool('hgweb', False):
         raise hatta.error.ForbiddenErr(_('Repository access disabled.'))
+
+    import mercurial
     app = mercurial.hgweb.request.wsgiapplication(
         lambda: mercurial.hgweb.hgweb(request.wiki.storage.repo, request.wiki.site_name.encode('utf8')))
 

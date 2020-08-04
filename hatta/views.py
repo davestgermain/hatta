@@ -364,7 +364,7 @@ def history(request, title):
     title = urls.url_unquote(title)
     page = hatta.page.get_page(request, title)
     # only text pages should show a link for diffs
-    can_diff = not page.mime.startswith(('image/', 'application/pdf'))
+    can_diff = getattr(page, 'diff_content', False)
 
     if title not in request.wiki.storage:
         _ = request.wiki.gettext

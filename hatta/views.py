@@ -231,7 +231,7 @@ def edit(request, title, preview=None, captcha_error=None):
     return resp
 
 
-@URL('/+download/<title:title>/<title:rev>')
+@URL('/+download/<title:title>:<title:rev>')
 def download_rev(request, title, rev):
     """Serve the raw content of a page directly from disk."""
 

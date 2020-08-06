@@ -11,6 +11,9 @@ body {
     line-height: 1.3;
     width: 40em
 }
+img {
+    max-width: 100%;
+}
 a {
     color: #3465a4;
     text-decoration: none;

@@ -100,6 +100,7 @@ class Wiki(object):
         self.locked_page = self.config.get('locked_page', 'Locked')
         self.site_name = self.config.get('site_name', 'Hatta Wiki')
         self.read_only = self.config.get_bool('read_only', False)
+        self.allow_bulk_uploads = self.config.get_bool('allow_bulk_uploads', False)
         self.fallback_url = self.config.get('fallback_url')
         self.icon_page = self.config.get('icon_page')
         self.alias_page = self.config.get('alias_page', 'Alias')

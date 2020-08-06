@@ -193,6 +193,30 @@ def save(request, title):
             else:
                 request.wiki.storage.save_text(title, text, author, comment,
                                        parent)
+        elif page.mime == 'application/hatta+zip' and request.wiki.allow_bulk_uploads:
+            # special case for uploading zip file of multiple pages
+            upload = request.files.get('data')
+            import zipfile, tempfile
+            tfname = tempfile.mktemp()
+            upload.save(tfname)
+            try:
+                with open(tfname, 'rb') as tf, zipfile.ZipFile(tf) as zf:
+                    for name in zf.namelist():
+                        if name[0] in '._/~!+=-#%&':
+                            continue
+                        elif name not in request.wiki.storage:
+                            # can't replace existing pages
+                            hatta.page.check_lock(request.wiki, name)
+                            with zf.open(name) as f:
+                                request.wiki.storage.save_data(
+                                    name,
+                                    f.read(),
+                                    author,
+                                    comment
+                                )
+                            url = request.get_url(name)
+            finally:
+                os.unlink(tfname)
         else:
             text = ''
             upload = request.files.get('data')
@@ -437,7 +461,7 @@ def _changes_list(request):
                 'rev': rev,
             })
         else:
-            date_url = request.adapter.build('history', {'title': title})
+            date_url = request.adapter.build('history', {'title': urls.url_quote(title, safe='')})
         last[title] = author, comment
         lastrev[title] = rev
 

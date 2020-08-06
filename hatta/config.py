@@ -74,6 +74,9 @@ _add('-U', '--unix-eol', dest='unix_eol',
     help='Convert all text pages to UNIX-style CR newlines')
 _add('-v', '--vcs', dest='vcs', default='hg',
     help='Which VCS to use (hg or git)')
+_add('', '--allow-bulk-uploads', dest='allow_bulk_uploads',
+    action="store_true",
+    help="Allow bulk uploads by saving bulk.zip")
 _add('', '--recaptcha-public-key', dest='recaptcha_public_key',
     metavar='KEY',
     help='A public key KEY for ReCAPTCHA service.')

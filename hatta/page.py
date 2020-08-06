@@ -758,6 +758,7 @@ filename_map = {
     'CHANGES': (WikiPageText, 'text/plain'),
     'MANIFEST': (WikiPageText, 'text/plain'),
     'favicon.ico': (WikiPageImage, 'image/x-icon'),
+    'bulk.zip': (WikiPageFile, 'application/hatta+zip'),
 }
 
 mime_map = {

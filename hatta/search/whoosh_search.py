@@ -165,6 +165,7 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
                 yield word.lower()
 
     def reindex(self, wiki, pages):
+        self.storage.reopen()
         with self.index.index_writer(self.name) as writer:
             with self.index.index_searcher(self.name) as searcher:
                 for title in pages:
@@ -173,8 +174,7 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
                 p = page.get_page(None, title, wiki)
                 self.reindex_page(p, title, writer)
         self.empty = False
-        rev = self.storage.repo_revision()
-        self.set_last_revision(rev)
+        self.set_last_revision(self.storage.repo_revision())
 
     def reindex_page(self, page, title, writer, text=None):
         """Updates the content of the database, needs locks around."""

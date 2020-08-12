@@ -7,6 +7,7 @@ from hatta import error
 from .base import BaseWikiStorage, Revision
 from dulwich.objects import Blob, Tree, Commit
 from dulwich.index import IndexEntry
+from dulwich.errors import NotGitRepository
 from dulwich import porcelain
 
 
@@ -42,11 +43,6 @@ class WikiStorage(BaseWikiStorage):
         super(WikiStorage, self).__init__(**kwargs)
         self.repo_path = repo_dir
         self.repo_prefix = self.repo_path[len(self.repo_path):].strip('/')
-        try:
-            self.repo = porcelain.init(self.repo_path)
-        except FileExistsError:
-            self.repo = porcelain.open_repo(self.repo_path)
-        self.object_store = self.repo.object_store
         self.control_dir = self.repo.controldir()
  
     def get_cache_path(self):
@@ -55,8 +51,13 @@ class WikiStorage(BaseWikiStorage):
     def get_index_path(self):
         return os.path.join(self.control_dir, 'hatta', 'search')
 
-    @property
-    def index(self):
+    def open_repo(self):
+        try:
+            return porcelain.open_repo(self.repo_path)
+        except NotGitRepository:
+            return porcelain.init(self.repo_path)
+
+    def get_tip(self):
         return self.repo.open_index()
 
     def _path(self, title):
@@ -67,7 +68,7 @@ class WikiStorage(BaseWikiStorage):
     def get_revision(self, title, rev=None):
         title = self._title_to_file(title).encode('utf8')
         try:
-            entry = self.index[title]
+            entry = self.tip[title]
         except KeyError:
             raise error.NotFoundErr()
         if not rev:
@@ -75,13 +76,14 @@ class WikiStorage(BaseWikiStorage):
         else:
             rev = rev.encode('ascii')
         data = b''
-        blob = self.object_store[rev]
+        obj_store = self.repo.object_store
+        blob = obj_store[rev]
 
         if not hasattr(blob, 'data'):
             for item in self.repo.get_walker(paths=[title], include=[rev]):
                 blob_id = item.changes()[0].new.sha
                 if blob_id:
-                    data = self.object_store[blob_id].data
+                    data = obj_store[blob_id].data
                 break
         else:
             data = blob.data
@@ -106,7 +108,7 @@ class WikiStorage(BaseWikiStorage):
         index.write()
         committer = b'%s <>' % author.encode('utf8')
         commit = Commit()
-        commit.tree = index.commit(self.object_store)
+        commit.tree = index.commit(self.repo.object_store)
         commit.author = commit.committer = committer
         commit.commit_time = commit.author_time = ctime
         commit.encoding = b'UTF-8'
@@ -119,11 +121,12 @@ class WikiStorage(BaseWikiStorage):
             #     commit.parents.append(parent_rev.encode('ascii'))
         except KeyError:
             curr_head = None
-        self.object_store.add_object(commit)
+        self.repo.object_store.add_object(commit)
         self.repo.refs.set_if_equals(
                     b'HEAD', curr_head, commit.id, message=b"commit: " + commit.message,
                     committer=commit.committer, timestamp=ctime,
                     timezone=0)
+        self.tip = None
 
     def save_data(self, title, data, author=None, comment=None, parent_rev=None, ts=None, new=False):
         data, user, text, created  = super(WikiStorage, self).save_data(
@@ -131,8 +134,8 @@ class WikiStorage(BaseWikiStorage):
         ctime = mtime = int(created.timestamp())
         if data is not None:
             obj = Blob.from_string(data)
-            self.object_store.add_object(obj)
-            index = self.index
+            self.repo.object_store.add_object(obj)
+            index = self.tip
             index[self._title_to_file(title).encode('utf8')] = IndexEntry(
                 ctime, mtime, 0,
                 0, 0o100644, 1,
@@ -141,18 +144,18 @@ class WikiStorage(BaseWikiStorage):
 
     def delete_page(self, title, author, comment, ts=None):
         ts = ts or datetime.datetime.utcnow()
-        index = self.index
+        index = self.tip
         del index[self._title_to_file(title).encode('utf8')]
         self._do_commit(index, author, comment, int(ts.timestamp()))
         return None, author, comment, ts
 
     def all_pages(self):
-        for path in self.index:
+        for path in self.tip:
             yield self._file_to_title(path.decode('utf8'))
 
     def __contains__(self, title):
         if title:
-            return self._title_to_file(title).encode('utf8') in self.index
+            return self._title_to_file(title).encode('utf8') in self.tip
 
     def repo_revision(self):
         try:

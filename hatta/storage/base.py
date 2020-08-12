@@ -3,6 +3,7 @@ import io
 import time
 import os, os.path
 import mimetypes
+import threading
 import mercurial.simplemerge
 
 from .. import error, page
@@ -25,6 +26,7 @@ def merge_func(base, other, this):
                                   end_marker='>>>>>>> other',
                                   base_marker=None))
 
+
 class Revision:
     """
     Encapsulates page data and metadata
@@ -45,7 +47,7 @@ class Revision:
         return text
 
 
-class BaseWikiStorage(object):
+class BaseWikiStorage:
     """
     Provides means of storing wiki pages and keeping track of their
     change history, using database repository as the storage method.
@@ -63,9 +65,46 @@ class BaseWikiStorage(object):
         self.extension = extension
 
         self._lastpage = None
+        self._thread_local_storage = threading.local()
+
+    @property
+    def repo(self):
+        try:
+            repo = self._thread_local_storage.repo
+        except AttributeError:
+            repo = None
+        if repo is None:
+            self._thread_local_storage.repo = repo = self.open_repo()
+        return repo
+
+    @repo.setter
+    def repo(self, obj):
+        self._thread_local_storage.repo = obj
+
+    @property
+    def tip(self):
+        try:
+            tip = self._thread_local_storage.tip
+        except AttributeError:
+            tip = None
+        if tip is None:
+            self._thread_local_storage.tip = tip = self.get_tip()
+        return tip
+
+    @tip.setter
+    def tip(self, obj):
+        self._thread_local_storage.tip = obj
 
     def reopen(self):
-        pass
+        self.repo.close()
+        self.repo = None
+        self.tip = None
+
+    def get_tip(self):
+        raise NotImplementedError()
+
+    def open_repo(self):
+        raise NotImplementedError()
 
     def get_cache_path(self):
         raise NotImplementedError()

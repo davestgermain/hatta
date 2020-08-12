@@ -4,7 +4,6 @@
 import datetime
 import os
 import re
-import _thread
 from werkzeug.urls import url_quote, url_unquote
 import io
 
@@ -45,19 +44,6 @@ def locked_repo(func):
     return new_func
 
 
-def _get_ui():
-    try:
-        ui = mercurial.ui.ui(report_untrusted=False,
-                                  interactive=False, quiet=True)
-    except TypeError:
-        # Mercurial 1.3 changed the way we setup the ui object.
-        ui = mercurial.ui.ui()
-        ui.quiet = True
-        ui._report_untrusted = False
-        ui.setconfig(b'ui', b'interactive', False)
-    return ui
-
-
 def _get_memfilectx(repo, path, data, islink=False, isexec=False, copied=None, memctx=None):
     return mercurial.context.memfilectx(
         repo=repo,
@@ -68,7 +54,6 @@ def _get_memfilectx(repo, path, data, islink=False, isexec=False, copied=None, m
         isexec=isexec,
         copysource=copied,
     )
-
 
 
 def _get_datetime(filectx):
@@ -100,7 +85,12 @@ class WikiStorage(BaseWikiStorage):
         self.path = os.path.abspath(path)
         if not os.path.exists(self.path):
             os.makedirs(self.path)
-        self.ui = _get_ui()
+        ui = mercurial.ui.ui()
+        ui.quiet = True
+        ui._report_untrusted = False
+        ui.setconfig(b'ui', b'interactive', False)
+        self.ui = ui
+
         if repo_path is None:
             self.repo_path = self.path
         else:
@@ -113,14 +103,7 @@ class WikiStorage(BaseWikiStorage):
         if not os.path.exists(os.path.join(self.repo_path, '.hg')):
             # Create the repository if needed.
             mercurial.hg.repository(self.ui, self.repo_path.encode('utf8'), create=True)
-        self._repos = {}
-        self._tips = {}
-
-    def reopen(self):
-        """Close and reopen the repo, to make sure we are up to date."""
-
-        self._repos = {}
-        self._tips = {}
+        self.reopen()
 
     def get_cache_path(self):
         return os.path.join(self.repo_path, '.hg', 'hatta', 'cache')
@@ -128,17 +111,12 @@ class WikiStorage(BaseWikiStorage):
     def get_index_path(self):
         return os.path.join(self.repo_path, '.hg', 'hatta', 'search')
 
-    @property
-    def repo(self):
-        """Keep one open repository per thread."""
+    def open_repo(self):
+        return mercurial.hg.repository(self.ui, self.repo_path.encode('utf8'))
 
-        thread_id = _thread.get_ident()
-        try:
-            return self._repos[thread_id]
-        except KeyError:
-            repo = mercurial.hg.repository(self.ui, self.repo_path.encode('utf8'))
-            self._repos[thread_id] = repo
-            return repo
+    def get_tip(self):
+        """Get the changectx of the tip."""
+        return self.repo[b'tip']
 
     def _title_to_file(self, title):
         title = str(title).strip()
@@ -170,7 +148,7 @@ class WikiStorage(BaseWikiStorage):
 
     def __contains__(self, title):
         repo_file = self._title_to_file(title)
-        return repo_file in self._changectx()
+        return repo_file in self.tip
 
     def __iter__(self):
         return self.all_pages()
@@ -180,7 +158,7 @@ class WikiStorage(BaseWikiStorage):
             return b'tip', None
         parent_rev = int(parent_rev)
         try:
-            filetip = self._changectx()[filename]
+            filetip = self.tip[filename]
         except mercurial.error.ManifestLookupError:
             return (b'tip', None)
         last_rev = filetip.filerev()
@@ -191,7 +169,7 @@ class WikiStorage(BaseWikiStorage):
         return parent_rev, last_rev
 
     def _merge(self, repo_file, parent, other, data):
-        filetip = self._changectx()[repo_file]
+        filetip = self.tip[repo_file]
         parent_data = filetip.filectx(parent)
         other_data = filetip.filectx(other)
         return merge_func(parent_data, other_data, data)
@@ -272,24 +250,13 @@ class WikiStorage(BaseWikiStorage):
     def repo_revision(self):
         """Give the latest revision of the repository."""
 
-        return str(self._changectx().rev())
-
-    def _changectx(self):
-        """Get the changectx of the tip."""
-
-        thread_id = _thread.get_ident()
-        try:
-            return self._tips[thread_id]
-        except KeyError:
-            tip = self.repo[b'tip']
-            self._tips[thread_id] = tip
-            return tip
+        return str(self.tip.rev())
 
     def _find_filectx(self, title):
         """Find the last revision in which the file existed."""
 
         repo_file = self._title_to_file(title)
-        stack = [self._changectx()]
+        stack = [self.tip]
         while stack:
             changectx = stack.pop()
             if repo_file in changectx:
@@ -327,7 +294,7 @@ class WikiStorage(BaseWikiStorage):
     def history(self):
         """Iterate over the history of entire wiki."""
 
-        changectx = self._changectx()
+        changectx = self.tip
         maxrev = changectx.rev()
         minrev = 0
         for wiki_rev in range(maxrev, minrev - 1, -1):
@@ -357,7 +324,7 @@ class WikiStorage(BaseWikiStorage):
         """Iterate over the titles of all pages in the wiki."""
 
         sep = os.path.sep
-        for repo_file in self._changectx():
+        for repo_file in self.tip:
             repo_file = repo_file.decode('utf8')
             if (repo_file.startswith(self.repo_prefix) and
                 sep not in repo_file[len(self.repo_prefix):].strip(sep)):
@@ -403,7 +370,7 @@ class WikiSubdirectoryStorage(WikiStorage):
 
         if not repo_path:
             return True
-        return repo_path in self._changectx().dirs()
+        return repo_path in self.tip.dirs()
 
     def _title_to_file(self, title):
         """
@@ -443,10 +410,10 @@ class WikiSubdirectoryStorage(WikiStorage):
             # Move a colliding file out of the way.
             dir_path = os.path.dirname(repo_file)
             while dir_path:
-                if dir_path in self._changectx():
+                if dir_path in self.tip:
                     new_dir_path = os.path.join(dir_path, self.index)
                     files.extend([dir_path, new_dir_path])
-                    dir_data = self._changectx()[dir_path].data()
+                    dir_data = self.tip[dir_path].data()
                     break
                 dir_path = os.path.dirname(dir_path)
 
@@ -467,12 +434,12 @@ class WikiSubdirectoryStorage(WikiStorage):
                 return _get_memfilectx(repo, path, dir_data, memctx=memctx, copied=dir_path)
             return _get_memfilectx(repo, path, data, memctx=memctx)
         self._commit(parent, other, text, files, filectxfn, user)
-        self._tips = {}
+        self.tip = None
 
     def all_pages(self):
         """Iterate over the titles of all pages in the wiki."""
 
-        for repo_file in self._changectx():
+        for repo_file in self.tip:
             if repo_file.startswith(self.repo_prefix):
                 title = self._file_to_title(repo_file)
                 if title in self:

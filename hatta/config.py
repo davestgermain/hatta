@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import mercurial
 
 
 OPTIONS = []
@@ -144,25 +143,18 @@ class WikiConfig(object):
 
     def parse_files(self, files=None):
         """Check the config files for options."""
+        from configparser import ConfigParser, NoSectionError
 
         if files is None:
             files = [self.get('config_file', self.default_filename)]
-        parser = mercurial.config.config()
-        for path in files:
-            try:
-                parser.read(path.encode('utf8'))
-            except FileNotFoundError:
-                pass
-            except IOError:
-                raise
+        parser = ConfigParser()
+        parser.read(files)
 
-        section = b'hatta'
         try:
-            options = parser.items(section)
-        except KeyError:
+            options = parser.items('hatta')
+        except NoSectionError:
             return
         for option, value in options:
-            option, value = option.decode('utf8'), value.decode('utf8')
             if option not in self.valid_names:
                 raise ValueError('Invalid option name "%s".' % option)
             self.config[option] = value

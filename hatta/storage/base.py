@@ -4,7 +4,6 @@ import time
 import os, os.path
 import mimetypes
 import threading
-import mercurial.simplemerge
 
 from .. import error, page
 from werkzeug.urls import url_quote, url_unquote
@@ -16,7 +15,7 @@ class StorageError(Exception):
 
 def merge_func(base, other, this):
     """Used for merging edit conflicts."""
-
+    import mercurial.simplemerge
     if (base.isbinary() or
         other.isbinary()):
         raise ValueError("can't merge binary data")

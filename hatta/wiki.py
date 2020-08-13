@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import gettext
+import importlib
 import os
 import sys
 
@@ -118,7 +119,8 @@ class Wiki(object):
         if self.subdirectories:
             self.storage_class = hatta.storage.WikiSubdirectoryStorage
         vcs = self.config.get('vcs', 'hg')
-        self.storage_class = getattr(getattr(hatta.storage, vcs), 'WikiStorage')
+        module = importlib.import_module('hatta.storage.{}'.format(vcs))
+        self.storage_class = getattr(module, 'WikiStorage')
         self.storage = self.storage_class(
             self.path,
             charset=self.page_charset,

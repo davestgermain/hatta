@@ -5,7 +5,7 @@
 # @license: GNU GPL, see COPYING for details.
 
 """
-Hatta Wiki is a wiki engine designed to be used with Mercurial repositories.
+Hatta Wiki is a wiki engine designed to be used with Mercurial or git repositories.
 It requires Mercurial and Werkzeug python modules.
 
 Hatta's pages are just plain text files (and also images, binaries, etc.) in

@@ -17,7 +17,7 @@ import mercurial.ui
 from hatta import error
 from hatta import page
 
-from .base import BaseWikiStorage, Revision
+from .base import BaseWikiStorage, Revision, merge_func
 
 
 class StorageError(Exception):
@@ -118,20 +118,6 @@ class WikiStorage(BaseWikiStorage):
         """Get the changectx of the tip."""
         return self.repo[b'tip']
 
-    def _title_to_file(self, title):
-        title = str(title).strip()
-        filename = url_quote(title, safe='', unsafe='~')
-        # Escape special windows filenames and dot files
-        _windows_device_files = ('CON', 'AUX', 'COM1', 'COM2', 'COM3',
-                                 'COM4', 'LPT1', 'LPT2', 'LPT3', 'PRN',
-                                 'NUL')
-        if (filename.split('.')[0].upper() in _windows_device_files or
-            filename.startswith('_') or filename.startswith('.')):
-            filename = '_' + filename
-        if page.page_mime(title) == 'text/x-wiki' and self.extension:
-            filename += self.extension
-        return os.path.join(self.repo_prefix, filename).encode('utf8')
-
     def _file_to_title(self, filepath):
         _ = self._
         if not filepath.startswith(self.repo_prefix):
@@ -147,7 +133,7 @@ class WikiStorage(BaseWikiStorage):
         return url_unquote(name)
 
     def __contains__(self, title):
-        repo_file = self._title_to_file(title)
+        repo_file = self._title_to_file(title).encode('utf8')
         return repo_file in self.tip
 
     def __iter__(self):
@@ -195,7 +181,7 @@ class WikiStorage(BaseWikiStorage):
         _ = self._
         user = (author or _('anon')).encode('utf-8')
         text = (comment or _('comment')).encode('utf-8')
-        repo_file = self._title_to_file(title)
+        repo_file = self._title_to_file(title).encode('utf8')
 
         parent, other = self._get_parents(repo_file, parent_rev)
         if data is None:
@@ -255,7 +241,7 @@ class WikiStorage(BaseWikiStorage):
     def _find_filectx(self, title):
         """Find the last revision in which the file existed."""
 
-        repo_file = self._title_to_file(title)
+        repo_file = self._title_to_file(title).encode('utf8')
         stack = [self.tip]
         while stack:
             changectx = stack.pop()
@@ -363,14 +349,14 @@ class WikiSubdirectoryStorage(WikiStorage):
     slashes_re = re.compile(r'^[/]|(?<=/)[/]')
 
     # TODO: make them configurable
-    index = "Index"
+    index = b"Index"
 
     def _is_directory(self, repo_path):
         """Checks whether the path is a directory in the repository."""
 
         if not repo_path:
             return True
-        return repo_path in self.tip.dirs()
+        return repo_path.encode('utf8') in self.tip.dirs()
 
     def _title_to_file(self, title):
         """
@@ -383,8 +369,9 @@ class WikiSubdirectoryStorage(WikiStorage):
         escaped = self.periods_re.sub('%2E', escaped)
         escaped = self.slashes_re.sub('%2F', escaped)
         path = os.path.join(self.repo_prefix, escaped)
+
         if self._is_directory(path):
-            path = os.path.join(path, self.index)
+            path = os.path.join(path, self.index.decode('utf8'))
         if page.page_mime(title) == 'text/x-wiki' and self.extension:
             path += self.extension
         return path
@@ -402,10 +389,12 @@ class WikiSubdirectoryStorage(WikiStorage):
         _ = self._
         user = (author or _('anon')).encode('utf-8')
         text = (comment or _('comment')).encode('utf-8')
-        repo_file = self._title_to_file(title)
+        repo_file = self._title_to_file(title).encode('utf8')
+
         files = [repo_file]
         dir_path = None
         new_dir_path = None
+
         if os.path.basename(repo_file) != self.index:
             # Move a colliding file out of the way.
             dir_path = os.path.dirname(repo_file)

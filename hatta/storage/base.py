@@ -20,9 +20,9 @@ def merge_func(base, other, this):
         other.isbinary()):
         raise ValueError("can't merge binary data")
     m3 = mercurial.simplemerge.Merge3Text(base.data(), this, other.data())
-    return b''.join(m3.merge_lines(start_marker='<<<<<<< local',
-                                  mid_marker='=======',
-                                  end_marker='>>>>>>> other',
+    return b''.join(m3.merge_lines(start_marker=b'<<<<<<< local',
+                                  mid_marker=b'=======',
+                                  end_marker=b'>>>>>>> other',
                                   base_marker=None))
 
 
@@ -62,6 +62,7 @@ class BaseWikiStorage:
         self.charset = charset or 'utf-8'
         self.unix_eol = unix_eol
         self.extension = extension
+        self.repo_prefix = kwargs.get('repo_prefix', '')
 
         self._lastpage = None
         self._thread_local_storage = threading.local()
@@ -125,12 +126,6 @@ class BaseWikiStorage:
             return self.get_revision(title, int(current_rev) - 1)
         else:
             raise NotImplementedError()
-
-    def open_page(self, title, rev=None):
-        """Open the page and return a file-like object with its contents.
-        Returns file object
-        """
-        raise NotImplementedError()
 
     def delete_page(self, title, author, comment, ts=None):
         raise NotImplementedError()
@@ -217,7 +212,7 @@ class BaseWikiStorage:
             filename = '_' + filename
         if page.page_mime(title) == 'text/x-wiki' and self.extension:
             filename += self.extension
-        return filename
+        return os.path.join(self.repo_prefix, filename)
 
     def _file_to_title(self, filepath):
         sep = os.path.sep

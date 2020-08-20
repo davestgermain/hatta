@@ -3,7 +3,8 @@
 
 import werkzeug
 import os
-import py.test
+import time
+import pytest
 import lxml.doctestcompare
 from .test_parser import HTML
 
@@ -11,6 +12,7 @@ import hatta
 
 
 def clear_directory(top):
+    time.sleep(.25)
     for root, dirs, files in os.walk(top, topdown=False):
         for name in files:
             os.remove(os.path.join(root, name))
@@ -21,13 +23,14 @@ def clear_directory(top):
     except OSError:
         pass
 
-def pytest_funcarg__wiki(request):
-    basedir = str(py.test.ensuretemp('repo'))
+
+@pytest.fixture
+def wiki(request, tmp_path):
     config = hatta.WikiConfig(
-        pages_path=os.path.join(basedir, 'pages'),
-        cache_path=os.path.join(basedir, 'cache'),
+        pages_path=os.path.join(tmp_path, 'pages'),
+        cache_path=os.path.join(tmp_path, 'cache'),
     )
-    request.addfinalizer(lambda: clear_directory(basedir))
+    request.addfinalizer(lambda: clear_directory(tmp_path))
     return hatta.Wiki(config)
 
 
@@ -42,8 +45,7 @@ class MemorySearch(hatta.search.sqlite_search.WikiSearch):
 
 
 class TestHattaStandalone(object):
-    docstring = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-"http://www.w3.org/TR/html4/strict.dtd">'''
+    docstring = b'''<!doctype html>\n<html lang="en">'''
 
 
     def test_japanese_splitting(self, wiki):
@@ -57,7 +59,7 @@ class TestHattaStandalone(object):
         """Check that Home page doesn't exist and redirects to editor."""
 
         client = werkzeug.Client(wiki.application, hatta.WikiResponse)
-        response = client.get('')
+        response = client.get('/')
         assert response.status_code == 303
         assert response.headers['Location'] in (
             'http://localhost/+edit/Home',
@@ -73,7 +75,7 @@ class TestHattaStandalone(object):
         data = 'text=test&parent=-1&comment=created&author=test&save=Save'
         response = client.post('/+edit/Home', data=data, content_type='application/x-www-form-urlencoded')
         assert response.status_code == 303
-        response = client.get('')
+        response = client.get('/')
         assert response.status_code == 200
 
     def test_page_docstring(self, wiki):
@@ -84,9 +86,9 @@ class TestHattaStandalone(object):
         response = client.post('/+edit/Home', data=data,
                             content_type='application/x-www-form-urlencoded')
         assert response.status_code == 303
-        response = client.get('')
+        response = client.get('/')
         assert response.status_code == 200
-        data = ''.join(response.data)
+        data = b''.join(response.response)
         assert data.startswith(self.docstring)
 
     def test_editor_docstring(self, wiki):
@@ -94,7 +96,7 @@ class TestHattaStandalone(object):
 
         client = werkzeug.Client(wiki.application, hatta.WikiResponse)
         response = client.get('/+edit/Home')
-        data = ''.join(response.data)
+        data = b''.join(response.response)
         assert data.startswith(self.docstring)
 
     def test_create_slash_page(self, wiki):
@@ -118,10 +120,11 @@ class TestHattaStandalone(object):
         response = client.post('/+edit/searching', data=data,
                             content_type='application/x-www-form-urlencoded')
         assert response.status_code == 303
+        time.sleep(1)
         response = client.get('/+search?q=test')
         assert response.status_code == 200
-        data = ''.join(response.data)
-        assert '>searching</a>' in data
+        data = b''.join(response.response)
+        assert b'>searching</a>' in data
 
     def test_read_only_edit(self, wiki):
         client = werkzeug.Client(wiki.application, hatta.WikiResponse)
@@ -204,12 +207,12 @@ a quote
             assert expect == self.parse_text(text)
 
 
-def pytest_funcarg__req(request):
-    basedir = str(py.test.ensuretemp('repo'))
-    request.addfinalizer(lambda: clear_directory(basedir))
+@pytest.fixture
+def req(request, tmp_path):
+    request.addfinalizer(lambda: clear_directory(tmp_path))
     config = hatta.WikiConfig(
-        pages_path=os.path.join(basedir, 'pages'),
-        cache_path=os.path.join(basedir, 'cache'),
+        pages_path=os.path.join(tmp_path, 'pages'),
+        cache_path=os.path.join(tmp_path, 'cache'),
         default_style="...",
     )
     hatta.Wiki.index_class = MemorySearch
@@ -239,7 +242,7 @@ class TestHTML(object):
         )
         assert request.get_url(None, 'favicon_ico') == '/favicon.ico'
 
-    @py.test.mark.xfail
+    @pytest.mark.xfail
     def test_html_page(self, req):
         wiki, request = req
         content = ["some &lt;content&gt;"]

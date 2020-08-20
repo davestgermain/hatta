@@ -9,7 +9,7 @@ import tempfile
 import pkgutil
 
 from werkzeug import urls, wsgi
-from werkzeug.utils import html, escape
+from werkzeug.utils import html, escape, redirect
 import werkzeug
 
 captcha = None
@@ -98,12 +98,12 @@ def view(request, title=None):
                 url = url % urls.url_quote(title)
             else:
                 url = "%s/%s" % (url, urls.url_quote(title))
-            return werkzeug.routing.redirect(url, code=303)
+            return redirect(url, code=303)
         if request.wiki.read_only:
             raise hatta.error.NotFoundErr(_("Page not found."))
 
         url = request.get_url(title, 'edit', external=True)
-        return werkzeug.routing.redirect(url, code=303)
+        return redirect(url, code=303)
     phtml = page.template("page.html", content=content)
     dependencies = page.dependencies()
     etag = '/(%s)' % ','.join(dependencies)
@@ -228,7 +228,7 @@ def save(request, title):
                 request.wiki.storage.delete_page(title, author, comment)
                 url = request.get_url(request.wiki.front_page)
         request.wiki.index.update(request.wiki)
-    response = werkzeug.routing.redirect(url, code=303)
+    response = redirect(url, code=303)
     response.set_cookie('author',
                         urls.url_quote(request.get_author()),
                         max_age=604800)
@@ -382,7 +382,7 @@ def undo(request, title):
         request.wiki.index.update_page(page, title, data=data)
     url = request.adapter.build('history', {'title': title},
                                 method='GET', force_external=True)
-    return werkzeug.routing.redirect(url, 303)
+    return redirect(url, 303)
 
 @URL('/+history/<title:title>')
 def history(request, title):
@@ -646,7 +646,7 @@ def search(request):
     page = hatta.page.get_page(request, '')
     if not query:
         url = request.get_url(view='all_pages', external=True)
-        return werkzeug.routing.redirect(url, code=303)
+        return redirect(url, code=303)
     words = tuple(request.wiki.index.split_text(query))
     if not words:
         words = (query,)

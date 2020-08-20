@@ -9,8 +9,8 @@ directory.
 
 import os
 
-import hatta
-import py.test
+import hatta.storage.hg
+import pytest
 import mercurial.commands
 
 # Patch for no gettext
@@ -35,27 +35,27 @@ def clear_directory(top):
     except OSError:
         pass
 
-def pytest_funcarg__repo(request):
+@pytest.fixture
+def repo(request, tmp_path):
     """
     This function is executed whenever a test needs a "repo" parameter.
     It creates a new WikiStorage object with Hatta repository in a
     temporary directory.
     """
 
-    repo_path = str(py.test.ensuretemp('repo'))
-    request.addfinalizer(lambda: clear_directory(repo_path))
-    return hatta.storage.WikiStorage(repo_path)
+    request.addfinalizer(lambda: clear_directory(tmp_path))
+    return hatta.storage.hg.WikiStorage(tmp_path)
 
-def pytest_funcarg__subdir_repo(request):
+@pytest.fixture
+def subdir_repo(request, tmp_path):
     """
     This function is executed whenever a test needs a "subdir_repo" parameter.
     It creates a new WikiSubdirectoryStorage object with Hatta repository in a
     temporary directory.
     """
 
-    repo_path = str(py.test.ensuretemp('repo'))
-    request.addfinalizer(lambda: clear_directory(repo_path))
-    return hatta.storage.WikiSubdirectoryStorage(repo_path)
+    request.addfinalizer(lambda: clear_directory(tmp_path))
+    return hatta.storage.hg.WikiSubdirectoryStorage(tmp_path)
 
 
 def update(storage):
@@ -67,7 +67,7 @@ class TestSubdirectoryStorage(object):
     Tests for the WikiSubdirectoryStorage.
     """
 
-    pytestmark = py.test.mark.skip
+    # pytestmark = pytest.mark.skip
 
     author = 'test author'
     text = 'test text'
@@ -148,7 +148,7 @@ class TestSubdirectoryStorage(object):
         title = 'ziew2'
         filepath = os.path.join(subdir_repo.path, 'ziew2')
         assert not os.path.exists(filepath)
-        with py.test.raises(hatta.error.NotFoundErr):
+        with pytest.raises(hatta.error.NotFoundErr):
             subdir_repo.delete_page(title, self.author, self.comment)
         update(subdir_repo)
         assert not os.path.exists(filepath)
@@ -180,7 +180,7 @@ class TestSubdirectoryStorage(object):
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx'))
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx/yyy'))
         assert os.path.exists(os.path.join(subdir_repo.path, 'xxx/Index'))
-        tracked = subdir_repo._changectx()['xxx/Index']
+        tracked = subdir_repo.tip[b'xxx/Index']
         assert tracked
 
     def test_create_subsubpage(self, subdir_repo):
@@ -251,7 +251,7 @@ class TestMercurialStorage(object):
 
         path = os.path.join(repo.path, self.filename)
         os.mkdir(path)
-        py.test.raises(hatta.error.NotFoundErr, repo.open_page,
+        pytest.raises(hatta.error.NotFoundErr, repo.get_revision,
                        self.title)
 
 
@@ -273,7 +273,7 @@ class TestStorage(object):
 
         repo.save_text(self.title, self.text, self.author, self.comment,
                        parent=-1)
-        saved = repo.open_page(self.title).read()
+        saved = repo.get_revision(self.title).text
         assert saved == self.text
 
     def test_save_text_noparent(self, repo):
@@ -283,7 +283,7 @@ class TestStorage(object):
 
         repo.save_text(self.title, self.text, self.author, self.comment,
                        parent=None)
-        saved = repo.open_page(self.title).read()
+        saved = repo.get_revision(self.title).text
         assert saved == self.text
 
     def test_save_merge_no_conflict(self, repo):
@@ -295,7 +295,7 @@ class TestStorage(object):
         text = "test\ntext"
         repo.save_text(self.title, text, self.author, self.comment, parent=-1)
         repo.save_text(self.title, text, self.author, self.comment, parent=-1)
-        saved = repo.open_page(self.title).read()
+        saved = repo.get_revision(self.title).text
         assert saved == text
 
     def test_save_merge_line_conflict(self, repo):
@@ -319,7 +319,7 @@ class TestStorage(object):
         repo.save_text(self.title, text, self.author, self.comment, parent=-1)
         repo.save_text(self.title, text1, self.author, self.comment, parent=0)
         repo.save_text(self.title, text2, self.author, self.comment, parent=0)
-        saved = repo.open_page(self.title).read()
+        saved = repo.get_revision(self.title).text
         assert saved == """\
 123
 <<<<<<< local

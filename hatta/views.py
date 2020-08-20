@@ -208,12 +208,14 @@ def save(request, title):
                             # can't replace existing pages
                             hatta.page.check_lock(request.wiki, name)
                             with zf.open(name) as f:
-                                request.wiki.storage.save_data(
-                                    name,
-                                    f.read(),
-                                    author,
-                                    comment
-                                )
+                                data = f.read()
+                                if data:
+                                    request.wiki.storage.save_data(
+                                        name,
+                                        data,
+                                        author,
+                                        comment
+                                    )
                             url = request.get_url(name)
             finally:
                 os.unlink(tfname)

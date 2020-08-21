@@ -425,3 +425,7 @@ test</p>"""
             </blockquote>
         """
 
+    def test_conflict(self):
+        html = parse('<<<<<<< local\nok=======\ncool\n>>>>>>> other')
+        assert html.text == """<div class="conflict"><pre class="local" id="line_1">ok=======\ncool\n&gt;&gt;&gt;&gt;&gt;&gt;&gt; other</pre><pre class="other" id="line_1"></pre></div>"""
+

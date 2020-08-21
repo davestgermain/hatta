@@ -260,11 +260,13 @@ class WikiParser(object):
 
     def lines_until(self, close_re):
         """Get lines from input until the closing markup is encountered."""
-
-        self.line_no, line = next(self.enumerated_lines)
-        while not close_re.match(line):
-            yield line.rstrip()
-            line_no, line = next(self.enumerated_lines)
+        try:
+            self.line_no, line = next(self.enumerated_lines)
+            while not close_re.match(line):
+                yield line.rstrip()
+                line_no, line = next(self.enumerated_lines)
+        except StopIteration:
+            pass
 
 # methods for the markup inside lines:
 

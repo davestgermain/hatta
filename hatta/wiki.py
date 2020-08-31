@@ -117,10 +117,11 @@ class Wiki(object):
         self.recaptcha_private_key = self.config.get('recaptcha_private_key')
         self.subdirectories = self.config.get_bool('subdirectories', False)
         if self.subdirectories:
-            self.storage_class = hatta.storage.WikiSubdirectoryStorage
-        vcs = self.config.get('vcs', 'hg')
-        module = importlib.import_module('hatta.storage.{}'.format(vcs))
-        self.storage_class = getattr(module, 'WikiStorage')
+            self.storage_class = importlib.import_module('hatta.storage.hg').WikiSubdirectoryStorage
+        else:
+            vcs = self.config.get('vcs', 'hg')
+            module = importlib.import_module('hatta.storage.{}'.format(vcs))
+            self.storage_class = getattr(module, 'WikiStorage')
         self.storage = self.storage_class(
             self.path,
             charset=self.page_charset,

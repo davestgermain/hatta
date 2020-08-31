@@ -349,7 +349,7 @@ class WikiSubdirectoryStorage(WikiStorage):
     slashes_re = re.compile(r'^[/]|(?<=/)[/]')
 
     # TODO: make them configurable
-    index = b"Index"
+    index = "Index"
 
     def _is_directory(self, repo_path):
         """Checks whether the path is a directory in the repository."""
@@ -371,14 +371,13 @@ class WikiSubdirectoryStorage(WikiStorage):
         path = os.path.join(self.repo_prefix, escaped)
 
         if self._is_directory(path):
-            path = os.path.join(path, self.index.decode('utf8'))
+            path = os.path.join(path, self.index)
         if page.page_mime(title) == 'text/x-wiki' and self.extension:
             path += self.extension
         return path
 
     def _file_to_title(self, filepath):
         """If the path points to an index file, use the directory."""
-
         if os.path.basename(filepath) == self.index:
             filepath = os.path.dirname(filepath)
         return super(WikiSubdirectoryStorage, self)._file_to_title(filepath)
@@ -395,12 +394,13 @@ class WikiSubdirectoryStorage(WikiStorage):
         dir_path = None
         new_dir_path = None
 
+        index = self.index.encode('utf8')
         if os.path.basename(repo_file) != self.index:
             # Move a colliding file out of the way.
             dir_path = os.path.dirname(repo_file)
             while dir_path:
                 if dir_path in self.tip:
-                    new_dir_path = os.path.join(dir_path, self.index)
+                    new_dir_path = os.path.join(dir_path, index)
                     files.extend([dir_path, new_dir_path])
                     dir_data = self.tip[dir_path].data()
                     break
@@ -423,12 +423,13 @@ class WikiSubdirectoryStorage(WikiStorage):
                 return _get_memfilectx(repo, path, dir_data, memctx=memctx, copied=dir_path)
             return _get_memfilectx(repo, path, data, memctx=memctx)
         self._commit(parent, other, text, files, filectxfn, user)
-        self.tip = None
+        self.reopen()
 
     def all_pages(self):
         """Iterate over the titles of all pages in the wiki."""
 
         for repo_file in self.tip:
+            repo_file = repo_file.decode('utf8')
             if repo_file.startswith(self.repo_prefix):
                 title = self._file_to_title(repo_file)
                 if title in self:

@@ -128,7 +128,6 @@ class WikiStorage(BaseWikiStorage):
                     timezone=0)
 
     def save_data(self, title, data, author=None, comment=None, parent_rev=None, ts=None, new=False):
-        self.reopen()
         data, user, text, created  = super(WikiStorage, self).save_data(
             title, data, author=author, comment=comment, parent_rev=parent_rev, ts=ts, new=new)
         ctime = mtime = int(created.timestamp())
@@ -141,7 +140,6 @@ class WikiStorage(BaseWikiStorage):
                 0, 0o100644, 1,
                 1, len(data), obj.id, 0)
             self._do_commit(index, user, text, ctime, parent_rev=parent_rev)
-            self.reopen()
 
     def delete_page(self, title, author, comment, ts=None):
         ts = ts or datetime.datetime.utcnow()

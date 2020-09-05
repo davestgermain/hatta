@@ -103,7 +103,6 @@ class WikiStorage(BaseWikiStorage):
         if not os.path.exists(os.path.join(self.repo_path, '.hg')):
             # Create the repository if needed.
             mercurial.hg.repository(self.ui, self.repo_path.encode('utf8'), create=True)
-        self.reopen()
 
     def get_cache_path(self):
         return os.path.join(self.repo_path, '.hg', 'hatta', 'cache')
@@ -177,7 +176,6 @@ class WikiStorage(BaseWikiStorage):
     def save_data(self, title, data, author=None, comment=None, parent_rev=None):
         """Save a new revision of the page. If the data is None, deletes it."""
 
-        self.reopen() # Make sure we are at the tip.
         _ = self._
         user = (author or _('anon')).encode('utf-8')
         text = (comment or _('comment')).encode('utf-8')
@@ -199,7 +197,6 @@ class WikiStorage(BaseWikiStorage):
             return _get_memfilectx(repo, path, data, memctx=memctx)
 
         self._commit(parent, other, text, [repo_file], filectxfn, user)
-        self.reopen()
 
     def delete_page(self, title, author, comment):
         self.save_data(title, None, author, comment)
@@ -423,7 +420,6 @@ class WikiSubdirectoryStorage(WikiStorage):
                 return _get_memfilectx(repo, path, dir_data, memctx=memctx, copied=dir_path)
             return _get_memfilectx(repo, path, data, memctx=memctx)
         self._commit(parent, other, text, files, filectxfn, user)
-        self.reopen()
 
     def all_pages(self):
         """Iterate over the titles of all pages in the wiki."""

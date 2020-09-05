@@ -85,7 +85,6 @@ def _serve_default(request, title, content=None, mime=None):
 @URL('/')
 def view(request, title=None):
     _ = request.wiki.gettext
-    request.wiki.refresh()
     if title is None:
         title = request.wiki.front_page
     page = hatta.page.get_page(request, title)
@@ -113,7 +112,6 @@ def view(request, title=None):
 @URL('/+history/<title:title>/<title:rev>')
 def revision(request, title, rev):
     _ = request.wiki.gettext
-    request.wiki.refresh()
     text = request.wiki.storage.get_revision(title, rev).text
     link = html.a(html(title),
                            href=request.get_url(title))
@@ -147,7 +145,6 @@ def version(request, title=None):
 @URL('/+edit/<title:title>', methods=['POST'])
 def save(request, title):
     _ = request.wiki.gettext
-    request.wiki.refresh()
     hatta.page.check_lock(request.wiki, title)
     url = request.get_url(title)
     if request.form.get('cancel'):
@@ -191,7 +188,8 @@ def save(request, title):
                 request.wiki.storage.delete_page(title, author, comment)
                 url = request.get_url(request.wiki.front_page)
             else:
-                request.wiki.storage.save_text(title, text, author, comment,
+                with request.wiki.storage:
+                    request.wiki.storage.save_text(title, text, author, comment,
                                        parent)
         elif page.mime == 'application/hatta+zip' and request.wiki.allow_bulk_uploads:
             # special case for uploading zip file of multiple pages
@@ -200,7 +198,7 @@ def save(request, title):
             tfname = tempfile.mktemp()
             upload.save(tfname)
             try:
-                with open(tfname, 'rb') as tf, zipfile.ZipFile(tf) as zf:
+                with open(tfname, 'rb') as tf, zipfile.ZipFile(tf) as zf, request.wiki.storage:
                     for name in zf.namelist():
                         if name[0] in '._/~!+=-#%&':
                             continue
@@ -222,13 +220,14 @@ def save(request, title):
         else:
             text = ''
             upload = request.files.get('data')
-            if upload and upload.stream and upload.filename:
-                f = upload.stream
-                request.wiki.storage.save_data(title, f.read(), author,
-                                       comment, parent)
-            else:
-                request.wiki.storage.delete_page(title, author, comment)
-                url = request.get_url(request.wiki.front_page)
+            with request.wiki.storage:
+                if upload and upload.stream and upload.filename:
+                    f = upload.stream
+                    request.wiki.storage.save_data(title, f.read(), author,
+                                           comment, parent)
+                else:
+                    request.wiki.storage.delete_page(title, author, comment)
+                    url = request.get_url(request.wiki.front_page)
         request.wiki.index.update(request.wiki)
     response = redirect(url, code=303)
     response.set_cookie('author',
@@ -239,10 +238,7 @@ def save(request, title):
 @URL('/+edit/<title:title>', methods=['GET'])
 def edit(request, title, preview=None, captcha_error=None):
     hatta.page.check_lock(request.wiki, title)
-    request.wiki.refresh()
     exists = title in request.wiki.storage
-    if exists:
-        request.wiki.storage.reopen()
     page = hatta.page.get_page(request, title)
     phtml = page.render_editor(preview, captcha_error)
     if not exists:
@@ -261,7 +257,6 @@ def edit(request, title, preview=None, captcha_error=None):
 def download_rev(request, title, rev):
     """Serve the raw content of a page directly from disk."""
 
-    request.wiki.refresh()
     mime = hatta.page.page_mime(title)
     if mime == 'text/x-wiki':
         mime = 'text/plain'
@@ -326,7 +321,6 @@ def render(request, title):
         except OSError:
             pass
 
-    request.wiki.refresh()
     page = hatta.page.get_page(request, title)
     try:
         if request.wiki.cache is None:
@@ -356,7 +350,6 @@ def undo(request, title):
     """Revert a change to a page."""
 
     _ = request.wiki.gettext
-    request.wiki.refresh()
     hatta.page.check_lock(request.wiki, title)
     author = request.get_author()
     rev = None
@@ -369,17 +362,17 @@ def undo(request, title):
             parent = request.form.get("parent")
         except (ValueError, TypeError):
             parent = None
-        request.wiki.storage.reopen()
-        request.wiki.index.update(request.wiki)
-        if rev == parent:
-            comment = _('Delete page %(title)s') % {'title': title}
-            data = ''
-            request.wiki.storage.delete_page(title, author, comment)
-        else:
-            comment = _('Undo of change %(rev)s of page %(title)s') % {
-                'rev': rev, 'title': title}
-            data = request.wiki.storage.get_previous_revision(title, rev).data
-            request.wiki.storage.save_data(title, data, author, comment)
+        with request.wiki.storage:
+            request.wiki.index.update(request.wiki)
+            if rev == parent:
+                comment = _('Delete page %(title)s') % {'title': title}
+                data = ''
+                request.wiki.storage.delete_page(title, author, comment)
+            else:
+                comment = _('Undo of change %(rev)s of page %(title)s') % {
+                    'rev': rev, 'title': title}
+                data = request.wiki.storage.get_previous_revision(title, rev).data
+                request.wiki.storage.save_data(title, data, author, comment)
         page = hatta.page.get_page(request, title)
         request.wiki.index.update_page(page, title, data=data)
     url = request.adapter.build('history', {'title': title},
@@ -392,7 +385,6 @@ def history(request, title):
 
     max_rev = '0' * 40
     history = []
-    request.wiki.refresh()
     title = urls.url_unquote(title)
     page = hatta.page.get_page(request, title)
     # only text pages should show a link for diffs
@@ -474,7 +466,6 @@ def _changes_list(request):
 def recent_changes(request):
     """Serve the recent changes page."""
 
-    request.wiki.refresh()
     rev = request.wiki.storage.repo_revision()
     if request.wiki.cache:
         cache_key = '+history:%s' % rev
@@ -497,7 +488,6 @@ def diff(request, title, from_rev, to_rev):
     """Show the differences between specified revisions."""
 
     _ = request.wiki.gettext
-    request.wiki.refresh()
     page = hatta.page.get_page(request, title)
     build = request.adapter.build
     from_url = build('revision', {'title': title, 'rev': from_rev})
@@ -531,7 +521,6 @@ def all_pages(request):
     """Show index of all pages in the request.wiki."""
 
     _ = request.wiki.gettext
-    request.wiki.refresh()
     page = hatta.page.get_page(request, '')
     phtml = page.template('list.html',
                          pages=sorted(request.wiki.storage.all_pages()),
@@ -564,7 +553,6 @@ def orphaned(request):
     """Show all pages that don't have backlinks."""
 
     _ = request.wiki.gettext
-    request.wiki.refresh()
     page = hatta.page.get_page(request, '')
     orphaned = [
         title
@@ -591,7 +579,6 @@ def wanted(request):
                     or title.startswith(':')):
                 yield refs, title
 
-    request.wiki.refresh()
     page = hatta.page.get_page(request, '')
     phtml = page.template('wanted.html', pages=_wanted_pages_list())
     resp = WikiResponse(phtml, mimetype='text/html')
@@ -644,7 +631,6 @@ def search(request):
         yield '</ol>'
 
     query = request.values.get('q', '').strip()
-    request.wiki.refresh()
     page = hatta.page.get_page(request, '')
     if not query:
         url = request.get_url(view='all_pages', external=True)
@@ -662,7 +648,6 @@ def search(request):
 def backlinks(request, title):
     """Serve the page with backlinks."""
 
-    request.wiki.refresh()
     request.wiki.index.update(request.wiki)
     page = hatta.page.get_page(request, title)
     phtml = page.template('backlinks.html',

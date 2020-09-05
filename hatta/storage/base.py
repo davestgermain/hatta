@@ -223,3 +223,10 @@ class BaseWikiStorage:
         if self.extension and name.endswith(self.extension):
             name = name[:-len(self.extension)]
         return url_unquote(name)
+
+    def __enter__(self):
+        self.reopen()
+        return self
+
+    def __exit__(self, type, value, tb):
+        self.reopen()

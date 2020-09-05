@@ -203,6 +203,7 @@ class Wiki(object):
         try:
             endpoint, values = adapter.match()
             view = self.views[endpoint]
+            self.refresh()
             return view(request, **values)
         except HTTPException as err:
             return err

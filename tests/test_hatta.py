@@ -34,16 +34,6 @@ def wiki(request, tmp_path):
     return hatta.Wiki(config)
 
 
-class MemorySearch(hatta.search.sqlite_search.WikiSearch):
-    @property
-    def filename(self):
-        return ":memory:"
-
-    @filename.setter
-    def filename(self, value):
-        pass  # read-only property, ignores setting
-
-
 class TestHattaStandalone(object):
     docstring = b'''<!doctype html>\n<html lang="en">'''
 
@@ -215,7 +205,6 @@ def req(request, tmp_path):
         cache_path=os.path.join(tmp_path, 'cache'),
         default_style="...",
     )
-    hatta.Wiki.index_class = MemorySearch
     wiki = hatta.Wiki(config)
     environ = {
         'SERVER_NAME': 'hatta',

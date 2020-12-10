@@ -108,12 +108,12 @@ r"""┠┯┨┷┿┝┰┥┸╂"""
 r"""ｦ-ﾟぁ-ん～ーァ-ヶ"""
 r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
 
-    def __init__(self, storage, lang):
-        self.storage = storage
+    def __init__(self, index_path, lang, charset='utf8'):
+        self.charset = charset
         self.lang = lang
         if lang == "ja":
             self.split_text = self.split_japanese_text
-        self.index = IndexManager(storage.get_index_path())
+        self.index = IndexManager(index_path)
         self.initialize_index()
 
     def initialize_index(self):
@@ -165,8 +165,9 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
                 yield word.lower()
 
     def reindex(self, wiki, pages):
-        self.storage.reopen()
-        current_rev = self.storage.repo_revision
+        # self.storage.reopen()
+        storage = wiki.storage
+        current_rev = storage.repo_revision
         with self.index.index_writer(self.name) as writer:
             with self.index.index_searcher(self.name) as searcher:
                 for title in pages:
@@ -195,7 +196,7 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
                 qlink = link.replace(u' ', u'%20')
                 label = label.replace(u' ', u'%20')
                 links.append('%s:%s' % (qlink, label))
-                if link[0] != '+' and link not in wanted and link not in self.storage:
+                if link[0] != '+' and link not in wanted and link not in page.storage:
                     wanted.append(qlink)
         else:
             links = []
@@ -231,9 +232,9 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         """Reindex al pages that changed since last indexing."""
         last_rev = self.get_last_revision()
         if last_rev == -1:
-            changed = self.storage.all_pages()
+            changed = wiki.storage.all_pages()
         else:
-            changed = self.storage.changed_since(last_rev)
+            changed = wiki.storage.changed_since(last_rev)
         changed = list(changed)
         if changed:
             # self.reindex(wiki, changed)
@@ -243,32 +244,34 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         """Updates the index with new page content, for a single page."""
         if text is None and data is not None:
             if not isinstance(data, str):
-                text = str(data, self.storage.charset, 'replace')
+                text = str(data, self.charset, 'replace')
             else:
                 text = ''
         with self.index.index_writer(self.name) as writer:
             with self.index.index_searcher(self.name) as s:
                 writer.delete_by_term('title', title, searcher=s)
             self.reindex_page(page, title, writer, text=text)
-        self.set_last_revision(self.storage.repo_revision)
+        self.set_last_revision(page.revision.rev)
 
-    def orphaned_pages(self):
+    def orphaned_pages(self, wiki):
         """Gives all pages with no links to them."""
         linked = set()
-        total = {p for p in self.storage}
+        total = {p for p in wiki.storage}
         for doc in self.index.run_query(self.name, query.Every('has_links'), limit=10000):
             for link in doc['links'].split():
                 link = link.split(':', 1)[0]
                 linked.add(link.replace('%20', ' '))
         return sorted(total - linked)
 
-    def wanted_pages(self):
+    def wanted_pages(self, wiki):
         """Gives all pages that are linked to, but don't exist, together with
         the number of links."""
         wanted = defaultdict(int)
         for doc in self.index.run_query(self.name, query.Every('wanted'), limit=8000):
             for link in doc['wanted'].split(' '):
-                wanted[link.replace('%20', ' ')] += 1
+                title = link.replace('%20', ' ')
+                if title not in wiki.storage:
+                    wanted[title] += 1
         items = [(count, link) for link, count in wanted.items()]
         items.sort(reverse=True)
         return items

@@ -554,11 +554,7 @@ def orphaned(request):
 
     _ = request.wiki.gettext
     page = hatta.page.get_page(request, '')
-    orphaned = [
-        title
-        for title in request.wiki.index.orphaned_pages()
-        if title in request.wiki.storage
-    ]
+    orphaned = request.wiki.index.orphaned_pages(request.wiki)
     phtml = page.template('list.html',
                          pages=orphaned,
                          class_='orphaned',
@@ -574,7 +570,7 @@ def wanted(request):
     """Show all pages that don't exist yet, but are linked."""
 
     def _wanted_pages_list():
-        for refs, title in request.wiki.index.wanted_pages():
+        for refs, title in request.wiki.index.wanted_pages(request.wiki):
             if not (hatta.parser.external_link(title) or title.startswith('+')
                     or title.startswith(':')):
                 yield refs, title

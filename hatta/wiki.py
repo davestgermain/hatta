@@ -75,7 +75,6 @@ class Wiki(object):
     application and most of the logic.
     """
     storage_class = None
-    # index_class = hatta.search.WikiSearch
     index_class = hatta.search.whoosh_search.WikiSearch
     filename_map = hatta.page.filename_map
     mime_map = hatta.page.mime_map
@@ -132,7 +131,7 @@ class Wiki(object):
         )
         self.repo_path = self.storage.repo_path
         self.cache = self.setup_cache()
-        self.index = self.index_class(self.storage, self.language)
+        self.index = self.index_class(self.storage.get_index_path(), self.language, self.page_charset)
         self.index.update(self)
         self.url_rules = hatta.views.URL.get_rules()
         self.views = hatta.views.URL.get_views()

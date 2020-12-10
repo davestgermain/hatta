@@ -268,7 +268,7 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
             text = str(data, self.storage.charset, 'replace')
         cursor = self.con.cursor()
         try:
-            self.set_last_revision(self.storage.repo_revision())
+            self.set_last_revision(self.storage.repo_revision)
             self.reindex_page(page, title, cursor, text)
             self.con.commit()
         except:
@@ -317,5 +317,5 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         else:
             changed = self.storage.changed_since(last_rev)
         self.reindex(wiki, changed)
-        rev = self.storage.repo_revision()
+        rev = self.storage.repo_revision
         self.set_last_revision(rev)

@@ -133,7 +133,7 @@ def revision(request, title, rev):
 @URL('/+version/<title:title>')
 def version(request, title=None):
     if title is None:
-        version = request.wiki.storage.repo_revision()
+        version = request.wiki.storage.repo_revision
     else:
         try:
             version, x, x, x = next(request.wiki.storage.page_history(title))
@@ -248,7 +248,7 @@ def edit(request, title, preview=None, captcha_error=None):
     elif preview:
         resp = WikiResponse(phtml, mimetype="text/html")
     else:
-        resp = response(request, title, phtml, '/edit')
+        resp = response(request, title, phtml, etag='/edit', rev=page.revision.rev, date=page.revision.date)
     resp.headers.add('Cache-Control', 'no-cache')
     return resp
 
@@ -466,7 +466,7 @@ def _changes_list(request):
 def recent_changes(request):
     """Serve the recent changes page."""
 
-    rev = request.wiki.storage.repo_revision()
+    rev = request.wiki.storage.repo_revision
     if request.wiki.cache:
         cache_key = '+history:%s' % rev
         changes = request.wiki.cache.get(cache_key)
@@ -528,7 +528,7 @@ def all_pages(request):
                          message=_('Index of all pages'),
                          special_title=_('Page Index'))
     resp = WikiResponse(phtml, mimetype='text/html')
-    resp.set_etag('/+index/%s' % request.wiki.storage.repo_revision())
+    resp.set_etag('/+index/%s' % request.wiki.storage.repo_revision)
     resp.make_conditional(request)
     return resp
 
@@ -543,7 +543,7 @@ def sister_pages(request):
     ]
     text.sort()
     resp = WikiResponse(text, mimetype='text/plain')
-    resp.set_etag('/+sister-index/%s' % request.wiki.storage.repo_revision())
+    resp.set_etag('/+sister-index/%s' % request.wiki.storage.repo_revision)
     resp.make_conditional(request)
     return resp
 
@@ -565,7 +565,7 @@ def orphaned(request):
                          message=_('List of pages with no links to them'),
                          special_title=_('Orphaned pages'))
     resp = WikiResponse(phtml, mimetype='text/html')
-    resp.set_etag('/+orphaned/%s' % request.wiki.storage.repo_revision())
+    resp.set_etag('/+orphaned/%s' % request.wiki.storage.repo_revision)
     resp.make_conditional(request)
     return resp
 
@@ -582,7 +582,7 @@ def wanted(request):
     page = hatta.page.get_page(request, '')
     phtml = page.template('wanted.html', pages=_wanted_pages_list())
     resp = WikiResponse(phtml, mimetype='text/html')
-    resp.set_etag('/+wanted/%s' % request.wiki.storage.repo_revision())
+    resp.set_etag('/+wanted/%s' % request.wiki.storage.repo_revision)
     resp.make_conditional(request)
     return resp
 
@@ -653,7 +653,7 @@ def backlinks(request, title):
     phtml = page.template('backlinks.html',
                          pages=request.wiki.index.page_backlinks(title))
     resp = WikiResponse(phtml, mimetype='text/html')
-    resp.set_etag('/+search/%s' % request.wiki.storage.repo_revision())
+    resp.set_etag('/+search/%s' % request.wiki.storage.repo_revision)
     resp.make_conditional(request)
     return resp
 

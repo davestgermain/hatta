@@ -46,7 +46,7 @@ class Revision:
         return text
 
 
-class BaseWikiStorage:
+class BaseWikiStorage(threading.local):
     """
     Provides means of storing wiki pages and keeping track of their
     change history, using database repository as the storage method.
@@ -57,7 +57,7 @@ class BaseWikiStorage:
         """
 
         """
-
+        threading.local.__init__(self)
         self._ = _
         self.charset = charset or 'utf-8'
         self.unix_eol = unix_eol
@@ -65,40 +65,46 @@ class BaseWikiStorage:
         self.repo_prefix = kwargs.get('repo_prefix', '')
 
         self._lastpage = None
-        self._thread_local_storage = threading.local()
+        self._repo = self._tip = self._current_rev = None
 
     @property
     def repo(self):
-        try:
-            repo = self._thread_local_storage.repo
-        except AttributeError:
-            repo = None
-        if repo is None:
-            self._thread_local_storage.repo = repo = self.open_repo()
-        return repo
+        if self._repo is None:
+            self._repo = self.open_repo()
+        return self._repo
 
     @repo.setter
     def repo(self, obj):
-        self._thread_local_storage.repo = obj
+        self._repo = obj
 
     @property
     def tip(self):
-        try:
-            tip = self._thread_local_storage.tip
-        except AttributeError:
-            tip = None
-        if tip is None:
-            self._thread_local_storage.tip = tip = self.get_tip()
-        return tip
+        if self._tip is None:
+            self._tip = self.get_tip()
+        return self._tip
 
     @tip.setter
     def tip(self, obj):
-        self._thread_local_storage.tip = obj
+        self._tip = obj
+
+    @property
+    def repo_revision(self):
+        """
+        Return current repository revision
+        """
+        if self._current_rev is None or self._repo is None:
+            self._current_rev = self.get_repo_rev()
+        return self._current_rev
+
+    @repo_revision.setter
+    def repo_revision(self, rev):
+        self._current_rev = rev
 
     def reopen(self):
         self.repo.close()
-        self.repo = None
         self.tip = None
+        self.repo = None
+        self.current_rev = None
 
     def get_tip(self):
         raise NotImplementedError()
@@ -128,10 +134,6 @@ class BaseWikiStorage:
             raise NotImplementedError()
 
     def delete_page(self, title, author, comment, ts=None):
-        raise NotImplementedError()
-
-    def repo_revision(self):
-        """Give the latest revision of the repository."""
         raise NotImplementedError()
 
     def page_history(self, title):

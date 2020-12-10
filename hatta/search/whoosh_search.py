@@ -166,6 +166,7 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
 
     def reindex(self, wiki, pages):
         self.storage.reopen()
+        current_rev = self.storage.repo_revision
         with self.index.index_writer(self.name) as writer:
             with self.index.index_searcher(self.name) as searcher:
                 for title in pages:
@@ -174,7 +175,7 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
                 p = page.get_page(None, title, wiki)
                 self.reindex_page(p, title, writer)
         self.empty = False
-        self.set_last_revision(self.storage.repo_revision())
+        self.set_last_revision(current_rev)
 
     def reindex_page(self, page, title, writer, text=None):
         """Updates the content of the database, needs locks around."""
@@ -249,7 +250,7 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
             with self.index.index_searcher(self.name) as s:
                 writer.delete_by_term('title', title, searcher=s)
             self.reindex_page(page, title, writer, text=text)
-        self.set_last_revision(self.storage.repo_revision())
+        self.set_last_revision(self.storage.repo_revision)
 
     def orphaned_pages(self):
         """Gives all pages with no links to them."""

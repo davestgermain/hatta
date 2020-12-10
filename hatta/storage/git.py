@@ -60,6 +60,12 @@ class WikiStorage(BaseWikiStorage):
     def get_tip(self):
         return self.repo.open_index()
 
+    def get_repo_rev(self):
+        try:
+            return self.repo.head().decode('ascii')
+        except KeyError:
+            return None
+
     def _path(self, title):
         path = os.path.abspath(os.path.join(self.repo.path, title))
         assert path.startswith(self.repo.path)
@@ -105,7 +111,6 @@ class WikiStorage(BaseWikiStorage):
         raise error.NotFoundErr()
 
     def _do_commit(self, index, author, message, ctime, parent_rev=None):
-        index.write()
         committer = b'%s <>' % author.encode('utf8')
         commit = Commit()
         commit.tree = index.commit(self.repo.object_store)
@@ -126,6 +131,7 @@ class WikiStorage(BaseWikiStorage):
                     b'HEAD', curr_head, commit.id, message=b"commit: " + commit.message,
                     committer=commit.committer, timestamp=ctime,
                     timezone=0)
+        index.write()
 
     def save_data(self, title, data, author=None, comment=None, parent_rev=None, ts=None, new=False):
         data, user, text, created  = super(WikiStorage, self).save_data(
@@ -155,12 +161,6 @@ class WikiStorage(BaseWikiStorage):
     def __contains__(self, title):
         if title:
             return self._title_to_file(title).encode('utf8') in self.tip
-
-    def repo_revision(self):
-        try:
-            return self.repo.head().decode('ascii')
-        except KeyError:
-            return None
 
     def _log_item(self, item):
         try:
@@ -202,7 +202,7 @@ class WikiStorage(BaseWikiStorage):
             yield last_item
 
     def history(self):
-        if self.repo_revision():
+        if self.repo_revision:
             for item in self.repo.get_walker():
                 yield self._log_item(item)
 

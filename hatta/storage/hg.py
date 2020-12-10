@@ -230,9 +230,8 @@ class WikiStorage(BaseWikiStorage):
         revision = HgRevision(self, rev=rev, data=data, date=date, author=author, comment=comment, charset=self.charset)
         return revision
 
-    def repo_revision(self):
+    def get_repo_rev(self):
         """Give the latest revision of the repository."""
-
         return str(self.tip.rev())
 
     def _find_filectx(self, title):

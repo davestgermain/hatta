@@ -104,7 +104,7 @@ class BaseWikiStorage(threading.local):
         self.repo.close()
         self.tip = None
         self.repo = None
-        self.current_rev = None
+        self.repo_revision = None
 
     def get_tip(self):
         raise NotImplementedError()

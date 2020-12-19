@@ -83,7 +83,6 @@ class Wiki(object):
         if config.get_bool('show_version', False):
             sys.stdout.write("Hatta %s\n" % hatta.__version__)
             sys.exit()
-        self.dead = False
         self.config = config
 
         self.language = config.get('language')

@@ -721,17 +721,3 @@ def hgweb(request, path=None):
         return app(env, start)
     return hg_app
 
-
-@URL('/off-with-his-head', methods=['GET'])
-def die(request):
-    """Terminate the standalone server if invoked from localhost."""
-
-    _ = request.wiki.gettext
-    if not request.remote_addr.startswith('127.'):
-        raise hatta.error.ForbiddenErr(
-            _('This URL can only be called locally.'))
-
-    def agony():
-        yield 'Oh dear!'
-        request.wiki.dead = True
-    return WikiResponse(agony(), mimetype='text/plain')

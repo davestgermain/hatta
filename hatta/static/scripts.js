@@ -43,9 +43,9 @@ var hatta = function () {
 
         hatta._foreach_tag(['abbr'], function (tag) {
             if (tag.className === 'date') {
-                var d = _parse_date(node.getAttribute('title'));
+                var d = hatta._parse_date(tag.getAttribute('title'));
                 if (d) {
-                    tag.textContent = _format_date(d);
+                    tag.textContent = hatta._format_date(d);
                 }
             }
         });

@@ -50,11 +50,12 @@
 {% endblock %}
 
 {% block search %}
-    <form action="{{ url(None, 'search') }}" id="hatta-search" method="GET"
-      ><div><input
-        id="hatta-search-q" name="q"><input
-        class="button" type="submit" value="{{ _("Search") }}"
-    ></div></form>
+    <form action="{{ url(None, 'search') }}" id="hatta-search" method="GET">
+        <div>
+            <input id="hatta-search-q" name="q" type="search">
+            <input class="button" type="submit" value="{{ _("Search") }}">
+        </div>
+    </form>
 {% endblock %}
 
 {% block menu %}

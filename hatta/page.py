@@ -610,7 +610,7 @@ class WikiPageImage(WikiPageFile):
             width = min(int(self.request.values.get('w', '512').strip()), 2048)
             height = min(int(self.request.values.get('h', '512').strip()), 2048)
         except ValueError:
-            width = height = 128
+            width = height = 512
         return width, height
 
     @property

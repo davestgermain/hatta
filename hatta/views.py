@@ -291,36 +291,6 @@ def download(request, title):
 def render(request, title):
     """Serve a thumbnail or otherwise rendered content."""
 
-    def file_time_and_size(file_path):
-        """Get file's modification timestamp and its size."""
-
-        try:
-            (st_mode, st_ino, st_dev, st_nlink, st_uid, st_gid, st_size,
-             st_atime, st_mtime, st_ctime) = os.stat(file_path)
-        except OSError:
-            st_mtime = 0
-            st_size = None
-        return st_mtime, st_size
-
-    def rm_temp_dir(dir_path):
-        """Delete the directory with subdirectories."""
-
-        for root, dirs, files in os.walk(dir_path, topdown=False):
-            for name in files:
-                try:
-                    os.remove(os.path.join(root, name))
-                except OSError:
-                    pass
-            for name in dirs:
-                try:
-                    os.rmdir(os.path.join(root, name))
-                except OSError:
-                    pass
-        try:
-            os.rmdir(dir_path)
-        except OSError:
-            pass
-
     page = hatta.page.get_page(request, title)
     try:
         if request.wiki.cache is None:

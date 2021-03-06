@@ -595,8 +595,6 @@ class WikiPageFile(WikiPage):
 class WikiPageImage(WikiPageFile):
     """Pages of mime type image/* use this for display."""
 
-    render_file = '128x128.png'
-
     def view_content(self, lines=None):
         if self.title not in self.storage:
             raise hatta.error.NotFoundErr()
@@ -609,8 +607,8 @@ class WikiPageImage(WikiPageFile):
     @property
     def render_size(self):
         try:
-            width = min(int(self.request.values.get('w', '128').strip()), 2048)
-            height = min(int(self.request.values.get('h', '128').strip()), 2048)
+            width = min(int(self.request.values.get('w', '512').strip()), 2048)
+            height = min(int(self.request.values.get('h', '512').strip()), 2048)
         except ValueError:
             width = height = 128
         return width, height
@@ -637,7 +635,11 @@ class WikiPageImage(WikiPageFile):
             try:
                 im = Image.open(page_file)
                 im = im.convert('RGBA')
-                im.thumbnail(self.render_size, Image.ANTIALIAS)
+                ow, oh = im.size
+                nw, nh = self.render_size
+                nw = min(nw, ow)
+                nh = min(nh, oh)
+                im.thumbnail((nw, nh), Image.ANTIALIAS)
                 im.save(cache_file, 'PNG')
             except IOError:
                 raise hatta.error.UnsupportedMediaTypeErr('Image corrupted')

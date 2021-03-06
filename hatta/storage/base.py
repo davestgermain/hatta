@@ -64,7 +64,6 @@ class BaseWikiStorage(threading.local):
         self.extension = extension
         self.repo_prefix = kwargs.get('repo_prefix', '')
 
-        self._lastpage = None
         self._repo = self._tip = self._current_rev = None
 
     @property

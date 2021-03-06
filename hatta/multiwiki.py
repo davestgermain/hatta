@@ -26,6 +26,8 @@ for conf_file in glob.glob(os.path.join(config_dir, '*.conf')):
     config = hatta.WikiConfig()
     config.parse_files([conf_file])
     config.sanitize()
+    wiki = hatta.Wiki(config)
+    wiki.site_id = conf_file
     wsgi_app = hatta.Wiki(config).application
 
     # file name is the domain name _path

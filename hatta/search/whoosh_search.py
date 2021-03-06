@@ -165,16 +165,16 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
                 yield word.lower()
 
     def reindex(self, wiki, pages):
-        # self.storage.reopen()
         storage = wiki.storage
-        current_rev = storage.repo_revision
-        with self.index.index_writer(self.name) as writer:
-            with self.index.index_searcher(self.name) as searcher:
+        with storage:
+            current_rev = storage.repo_revision
+            with self.index.index_writer(self.name) as writer:
+                with self.index.index_searcher(self.name) as searcher:
+                    for title in pages:
+                        writer.delete_by_term('title', title, searcher=searcher)
                 for title in pages:
-                    writer.delete_by_term('title', title, searcher=searcher)
-            for title in pages:
-                p = page.get_page(None, title, wiki)
-                self.reindex_page(p, title, writer)
+                    p = page.get_page(None, title, wiki)
+                    self.reindex_page(p, title, writer)
         self.empty = False
         self.set_last_revision(current_rev)
 

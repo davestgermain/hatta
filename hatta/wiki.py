@@ -83,6 +83,7 @@ class Wiki(object):
         if config.get_bool('show_version', False):
             sys.stdout.write("Hatta %s\n" % hatta.__version__)
             sys.exit()
+        self.site_id = 'default'
         self.config = config
 
         self.language = config.get('language')
@@ -168,7 +169,7 @@ class Wiki(object):
                 from hashlib import sha1
                 cache = MemcachedCache(
                     path.split(','),
-                    key_prefix=sha1(self.site_name.encode('utf8')).hexdigest()[:8]
+                    key_prefix=sha1(self.site_id.encode('utf8')).hexdigest()[:8]
                 )
             elif proto == 'file':
                 from cachelib import FileSystemCache

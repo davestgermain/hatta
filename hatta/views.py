@@ -178,6 +178,7 @@ def save(request, title):
         except (ValueError, TypeError):
             parent = None
         page = hatta.page.get_page(request, title)
+        saved_titles = [title]
         if text is not None:
             if title == request.wiki.locked_page:
                 for link, label in page.extract_links(text):
@@ -215,6 +216,7 @@ def save(request, title):
                                         comment
                                     )
                             url = request.get_url(name)
+                            saved_titles.append(name)
             finally:
                 os.unlink(tfname)
         else:
@@ -228,7 +230,7 @@ def save(request, title):
                 else:
                     request.wiki.storage.delete_page(title, author, comment)
                     url = request.get_url(request.wiki.front_page)
-        request.wiki.index.update(request.wiki)
+        request.wiki.index.reindex(request.wiki, saved_titles)
     response = redirect(url, code=303)
     response.set_cookie('author',
                         urls.url_quote(request.get_author()),
@@ -311,7 +313,7 @@ def render(request, title):
             return download(request, title)
         request.wiki.cache.set(cache_key, data, timeout=86400)
 
-    resp = response(request, title, data, '/render', cache_mime)
+    resp = response(request, title, data, '/render', cache_mime, rev=page.revision.rev, date=page.revision.date)
     return resp
 
 

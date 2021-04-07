@@ -69,7 +69,7 @@ def init_template(translation, template_path):
     return template_env
 
 
-class Wiki(object):
+class Wiki:
     """
     The main class of the wiki, handling initialization of the whole
     application and most of the logic.
@@ -79,11 +79,10 @@ class Wiki(object):
     filename_map = hatta.page.filename_map
     mime_map = hatta.page.mime_map
 
-    def __init__(self, config):
+    def __init__(self, config, site_id=None):
         if config.get_bool('show_version', False):
             sys.stdout.write("Hatta %s\n" % hatta.__version__)
             sys.exit()
-        self.site_id = 'default'
         self.config = config
 
         self.language = config.get('language')
@@ -99,6 +98,7 @@ class Wiki(object):
         self.logo_page = self.config.get('logo_page', 'logo.png')
         self.locked_page = self.config.get('locked_page', 'Locked')
         self.site_name = self.config.get('site_name', 'Hatta Wiki')
+        self.site_id = site_id or config.get('site_name')
         self.read_only = self.config.get_bool('read_only', False)
         self.allow_bulk_uploads = self.config.get_bool('allow_bulk_uploads', False)
         self.fallback_url = self.config.get('fallback_url')

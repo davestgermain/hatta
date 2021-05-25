@@ -144,7 +144,7 @@ class WikiStorage(BaseWikiStorage):
             index[self._title_to_file(title).encode('utf8')] = IndexEntry(
                 ctime, mtime, 0,
                 0, 0o100644, 1,
-                1, len(data), obj.id, 0)
+                1, len(data), obj.id, 0, 0)
             self._do_commit(index, user, text, ctime, parent_rev=parent_rev)
 
     def delete_page(self, title, author, comment, ts=None):

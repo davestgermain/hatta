@@ -17,7 +17,7 @@ setuptools.setup(
     install_requires=[
         'werkzeug >=1.0',
         'mercurial >=5.4',
-        'dulwich',
+        'dulwich>=0.20.23',
         'jinja2',
         'whoosh',
     ],

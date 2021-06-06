@@ -179,7 +179,7 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
         self.set_last_revision(current_rev)
         if wiki.cache:
             for title in pages:
-                wiki.cache.delete('links.%s' % title)
+                wiki.cache.delete('links.%s' % title.replace(' ', '%20'))
 
     def reindex_page(self, page, title, writer, text=None):
         """Updates the content of the database, needs locks around."""
@@ -294,7 +294,7 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
 
     def page_links_and_labels(self, title, wiki=None):
         if wiki and wiki.cache:
-            cache_key = 'links.%s' % title
+            cache_key = 'links.%s' % title.replace(' ', '%20')
             cached = wiki.cache.get(cache_key)
             if cached is not None:
                 return cached

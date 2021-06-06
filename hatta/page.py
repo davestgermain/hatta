@@ -48,7 +48,7 @@ def check_lock(wiki, title):
     if title in restricted_pages:
         raise hatta.error.ForbiddenErr(_("""Can't edit this page.
 It can only be edited by the site admin directly on the disk."""))
-    if title in wiki.index.page_links(wiki.locked_page):
+    if title in wiki.index.page_links(wiki.locked_page, wiki):
         raise hatta.error.ForbiddenErr(_("This page is locked."))
 
 
@@ -141,7 +141,7 @@ class WikiPage(object):
         self.config = self.wiki.config
         if self.wiki.alias_page and self.wiki.alias_page in self.storage:
             self.aliases = dict(
-                self.index.page_links_and_labels(self.wiki.alias_page))
+                self.index.page_links_and_labels(self.wiki.alias_page, wiki=self.wiki))
         else:
             self.aliases = {}
         self._revision = None
@@ -247,7 +247,7 @@ class WikiPage(object):
         """Generate the menu items"""
         _ = self.wiki.gettext
         if self.wiki.menu_page in self.storage:
-            items = self.index.page_links_and_labels(self.wiki.menu_page)
+            items = self.index.page_links_and_labels(self.wiki.menu_page, wiki=self.wiki)
         else:
             items = [
                 (self.wiki.front_page, self.wiki.front_page),
@@ -540,7 +540,7 @@ class WikiPageWiki(WikiPageColorText):
                     raise hatta.error.NotFoundErr()
                 lines = self.revision.text.splitlines(True)
             if self.wiki.icon_page and self.wiki.icon_page in self.storage:
-                icons = self.index.page_links_and_labels(self.wiki.icon_page)
+                icons = self.index.page_links_and_labels(self.wiki.icon_page, wiki=self.wiki)
                 smilies = dict((emo, link) for (link, emo) in icons)
             else:
                 smilies = None
@@ -574,7 +574,7 @@ class WikiPageWiki(WikiPageColorText):
                 trev = self.storage.get_revision(title)
                 etag = '%s/%s-%s' % (url_quote(title), trev.rev, trev.date.isoformat())
                 dependencies.add(etag)
-        for link in self.index.page_links(self.title):
+        for link in self.index.page_links(self.title, wiki=self.wiki):
             if link not in self.storage:
                 dependencies.add(url_quote(link))
         return dependencies

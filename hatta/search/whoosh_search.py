@@ -177,6 +177,9 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
                     self.reindex_page(p, title, writer)
         self.empty = False
         self.set_last_revision(current_rev)
+        if wiki.cache:
+            for title in pages:
+                wiki.cache.delete('links.%s' % title)
 
     def reindex_page(self, page, title, writer, text=None):
         """Updates the content of the database, needs locks around."""
@@ -285,15 +288,26 @@ r"""0-9A-Za-z０-９Ａ-Ｚａ-ｚΑ-Ωα-ωА-я]+""", re.UNICODE)
             results.add(doc['title'])
         return results
 
-    def page_links(self, title):
+    def page_links(self, title, wiki=None):
         """Gives a list of links on specified page."""
-        return [l[0] for l in self.page_links_and_labels(title)]
+        return [l[0] for l in self.page_links_and_labels(title, wiki=wiki)]
 
-    def page_links_and_labels(self, title):
+    def page_links_and_labels(self, title, wiki=None):
+        if wiki and wiki.cache:
+            cache_key = 'links.%s' % title
+            cached = wiki.cache.get(cache_key)
+            if cached is not None:
+                return cached
+        else:
+            cache_key = None
         with self.index.index_searcher(self.name) as searcher:
             doc = searcher.document(title=title)
+            linkitems = []
             if doc:
                 links = doc.get('links', '')
                 for l in links.split():
                     link, label = l.split(':', 1)
-                    yield link.replace('%20', ' '), label.replace('%20', ' ')
+                    linkitems.append((link.replace('%20', ' '), label.replace('%20', ' ')))
+                if cache_key:
+                    wiki.cache.set(cache_key, linkitems, timeout=86400)
+            return linkitems

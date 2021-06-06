@@ -7,7 +7,7 @@ import werkzeug.exceptions
 class WikiError(werkzeug.exceptions.HTTPException):
     """Base class for all error pages."""
 
-    def get_body(self, environ):
+    def get_body(self, environ, scope=None):
         request = environ.get('werkzeug.request')
         wiki = request.wiki
         context = {

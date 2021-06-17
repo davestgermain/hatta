@@ -272,7 +272,6 @@ def download_rev(request, title, rev):
         rev=revision.rev,
         date=revision.date
     )
-    resp.headers.add('Cache-Control', 'no-cache')
     # give browsers a useful filename hint
     if rev:
         filename = '%s-%s' % (rev, title)

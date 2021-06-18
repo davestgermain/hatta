@@ -154,6 +154,9 @@ class WikiConfig(object):
             options = parser.items('hatta')
         except NoSectionError:
             return
+        self.parse_options(options)
+
+    def parse_options(self, options):
         for option, value in options:
             if option not in self.valid_names:
                 raise ValueError('Invalid option name "%s".' % option)

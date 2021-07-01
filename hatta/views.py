@@ -269,24 +269,24 @@ def atom(request):
             last_date = date
         unique_titles.add(title)
         if url.count('/') <= 2:
-            url = request.get_url(title)
+            url = request.get_url(title, external=True)
         entries.append({
             'title': title,
             'comment': comment,
             'author': author,
             'url': url,
-            'updated': date,
+            'updated': date.astimezone(datetime.timezone.utc),
         })
 
     if not last_date:
-        last_date = datetime.datetime.utcnow()
+        last_date = datetime.datetime.now(datetime.timezone.utc)
 
     page = hatta.page.get_page(request, '')
 
     phtml = page.template('atom.xml',
          url=request.adapter.build('view', force_external=True),
          wiki=request.wiki,
-         last_date=last_date,
+         last_date=last_date.astimezone(datetime.timezone.utc),
          feed_url=urls.url_unquote(request.url),
          subtitle=_('Track the most recent changes to the wiki in this feed.'),
          entries=entries,
@@ -467,7 +467,7 @@ def _changes_list(request):
                 'title': title,
                 'from_rev': parent,
                 'to_rev': lastrev.get(title, rev),
-            })
+            }, force_external=True)
         elif rev == 0:
             date_url = request.adapter.build('revision', {
                 'title': title,

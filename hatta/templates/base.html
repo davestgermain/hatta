@@ -11,6 +11,9 @@
           href="{{ url(None, 'pygments_css') }}" media="print" onload="this.media='all'">
     <link rel="shortcut icon" type="image/x-icon"
           href="{{ url(None, 'favicon_ico') }}">
+    <link rel="alternate" type="application/rss+xml"
+          title="{{ wiki.site_name }} (ATOM)"
+          href="{{ url(None, 'atom') }}">
     {% if edit_url %}
         <link rel="alternate" type="application/wiki"
               href="{{ edit_url }}">

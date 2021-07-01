@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title type="text">{{ wiki.site_name }}</title>
-  <id>http://localhost:8080/+feed/atom</id>
+  <id>{{feed_url}}</id>
   <updated>{{last_date.isoformat()}}</updated>
   <link href="{{url}}" />
   <link href="{{feed_url}}" rel="self" />

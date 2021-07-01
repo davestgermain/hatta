@@ -254,6 +254,54 @@ def edit(request, title, preview=None, captcha_error=None):
     resp.headers.add('Cache-Control', 'no-cache')
     return resp
 
+@URL('/+feed/atom')
+@URL('/+feed/rss')
+def atom(request):
+    _ = request.wiki.gettext
+    history = itertools.islice(_changes_list(request), None, 10, None)
+    unique_titles = set()
+    entries = []
+    last_date = None
+    for date, url, title, author, comment in history:
+        if title in unique_titles:
+            continue
+        if last_date is None:
+            last_date = date
+        unique_titles.add(title)
+        if url.count('/') <= 2:
+            url = request.get_url(title)
+        entries.append({
+            'title': title,
+            'comment': comment,
+            'author': author,
+            'url': url,
+            'updated': date,
+        })
+
+    if not last_date:
+        last_date = datetime.datetime.utcnow()
+
+    page = hatta.page.get_page(request, '')
+
+    phtml = page.template('atom.xml',
+         url=request.adapter.build('view', force_external=True),
+         wiki=request.wiki,
+         last_date=last_date,
+         feed_url=urls.url_unquote(request.url),
+         subtitle=_('Track the most recent changes to the wiki in this feed.'),
+         entries=entries,
+    )
+    resp = response(
+        request,
+        'atom',
+        phtml,
+        '/+feed',
+        'application/xml',
+        rev=request.wiki.storage.repo_revision,
+        date=last_date,
+    )
+    return resp
+
 
 @URL('/+download/<title:title>:<title:rev>')
 def download_rev(request, title, rev):

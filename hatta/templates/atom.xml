@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title type="text">{{ wiki.site_name }}</title>
+  <id>http://localhost:8080/+feed/atom</id>
+  <updated>{{last_date.isoformat()}}</updated>
+  <link href="{{url}}" />
+  <link href="{{feed_url}}" rel="self" />
+  <subtitle type="text">{{subtitle}}</subtitle>
+  <generator>Hatta</generator>
+  {% for entry in entries %}<entry xml:base="{{feed_url}}">
+    <title type="text">{{entry.title}}</title>
+    <id>{{entry.url}}</id>
+    <updated>{{entry.updated.isoformat()}}</updated>
+    <link href="{{entry.url}}" />
+    <author>
+      <name>{{entry.author}}</name>
+    </author>
+    <content type="text">{{entry.comment}}</content>
+  </entry>{% endfor %}
+</feed>

@@ -155,12 +155,27 @@ var hatta = function () {
         console.log(tags);
     };
 
+    hatta._macros = {};
+
+    hatta.register_macro = function(macroName, callback) {
+        hatta._macros[macroName] = callback;
+    };
+
+    hatta.run_macros = function() {
+        for (let macro in hatta._macros) {
+            for (let elt of document.getElementsByClassName(macro)) {
+                hatta._macros[macro](elt);
+            }
+        }
+    };
+
     return hatta;
 }();
 
 window.onload = function () {
     /* Initialize our scripts when the document loads. */
 
+    hatta.run_macros();
     hatta.localize_dates();
     hatta.js_editor();
     hatta.purple_numbers();

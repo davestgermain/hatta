@@ -79,6 +79,8 @@ class WikiStorage(BaseWikiStorage):
             raise error.NotFoundErr()
         if not rev:
             rev = entry.sha
+        elif len(rev) < 40:
+            raise error.NotFoundErr()
         else:
             rev = rev.encode('ascii')
         data = b''

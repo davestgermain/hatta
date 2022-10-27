@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 from werkzeug.urls import url_unquote
-from werkzeug.wrappers import Request, ETagRequestMixin
+from werkzeug.wrappers import Request
 import hatta.views
 
 
-class WikiRequest(Request, ETagRequestMixin):
+class WikiRequest(Request):
     """
     A Werkzeug's request with additional functions for handling file
     uploads and wiki-specific link generation.

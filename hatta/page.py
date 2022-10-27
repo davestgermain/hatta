@@ -9,15 +9,30 @@ import os
 import re
 
 from werkzeug.urls import url_quote, url_fix
-from werkzeug.utils import escape, html
+from markupsafe import escape, Markup
+from dominate import tags
+
+
+tags.html_tag.__html__ = tags.html_tag.render
 
 pygments = None
 try:
     import pygments
     import pygments.formatters
     import pygments.lexers
-    import pygments.styles
-    import pygments.util
+
+    class WikiWrapFormatter(pygments.formatters.HtmlFormatter):
+        def wrapper(self, source, *args):
+            """Wrap each line of formatted output."""
+
+            yield 0, '<div class="highlight"><pre>'
+            for lineno, line in source:
+                yield (lineno,
+                       Markup(tags.span(line, id_="line_%d" %
+                                         formatter.line_no)))
+                formatter.line_no += 1
+            yield 0, '</pre></div>'
+
 except ImportError:
     pass
 
@@ -210,10 +225,8 @@ class WikiPage(object):
                 if addr not in self.storage:
                     classes.append('nonexistent')
         class_ = escape(' '.join(classes) or '')
-        # We need to output HTML on our own to prevent escaping of href
-        return '<a href="%s" class="%s" title="%s">%s</a>' % (
-                href, class_, escape(addr + chunk),
-                image or text)
+        link = Markup(tags.a(image or text, href=href, _class=class_, title=escape(addr + chunk)))
+        return link
 
     def wiki_image(self, addr, alt, class_='wiki', lineno=0):
         """Create HTML for a wiki image."""
@@ -221,27 +234,27 @@ class WikiPage(object):
         addr = addr.strip()
         chunk = ''
         if hatta.parser.external_link(addr):
-            return html.img(src=url_fix(addr), class_="external",
+            return tags.img(src=url_fix(addr), class_="external",
                             alt=alt)
         if '#' in addr:
             addr, chunk = addr.split('#', 1)
         if addr == '':
-            return html.a(name=chunk)
+            return tags.a(name=chunk)
         elif addr.startswith(':'):
             if chunk:
                 chunk = '#' + chunk
             alias = self.link_alias(addr[1:])
             href = url_fix(alias + chunk)
-            return html.img(src=href, class_="external alias", alt=alt)
+            return tags.img(src=href, class_="external alias", alt=alt)
         elif addr in self.storage:
             mime = page_mime(addr)
             if mime.startswith('image/'):
-                return html.img(src=self.get_download_url(addr), class_=class_,
+                return tags.img(src=self.get_download_url(addr), class_=class_,
                                 alt=alt)
             else:
-                return html.img(href=self.get_download_url(addr), alt=alt)
+                return tags.img(href=self.get_download_url(addr), alt=alt)
         else:
-            return html.a(html(alt), href=self.get_url(addr))
+            return tags.a(Markup(alt), href=self.get_url(addr))
 
     def menu(self):
         """Generate the menu items"""
@@ -345,7 +358,7 @@ class WikiPageText(WikiPage):
     def content_iter(self, lines):
         yield '<pre>'
         for line in lines:
-            yield html(line)
+            yield Markup(line)
         yield '</pre>'
 
     def plain_text(self):
@@ -383,7 +396,7 @@ class WikiPageText(WikiPage):
             comment = _('created')
             rev = -1
         except hatta.error.ForbiddenErr as e:
-            return html.p(html(str(e)))
+            return tags.p(Markup(str(e)))
         if preview:
             lines = preview
             comment = self.request.form.get('comment', comment)
@@ -471,24 +484,13 @@ class WikiPageColorText(WikiPageText):
         """Colorize the source code."""
 
         if pygments is None:
-            yield html.pre(html(text))
+            yield Markup(tags.pre(text))
             return
 
-        formatter = pygments.formatters.HtmlFormatter()
+        formatter = WikiWrapFormatter()
         formatter.line_no = line_no
 
-        def wrapper(source, unused_outfile):
-            """Wrap each line of formatted output."""
 
-            yield 0, '<div class="highlight"><pre>'
-            for lineno, line in source:
-                yield (lineno,
-                       html.span(line, id_="line_%d" %
-                                         formatter.line_no))
-                formatter.line_no += 1
-            yield 0, '</pre></div>'
-
-        formatter.wrap = wrapper
         try:
             if mime:
                 lexer = pygments.lexers.get_lexer_for_mimetype(mime)
@@ -497,9 +499,9 @@ class WikiPageColorText(WikiPageText):
             else:
                 lexer = pygments.lexers.guess_lexer(text)
         except:
-            yield html.pre(html(text))
+            yield tags.pre(Markup(text))
             return
-        yield pygments.highlight(text, lexer, formatter)
+        yield pygments.highlight(text, lexer, formatter, outfile=None)
 
 
 class WikiPageWiki(WikiPageColorText):
@@ -565,7 +567,7 @@ class WikiPageWiki(WikiPageColorText):
         else:
             url = '%s%s' % (math_url, url_quote(math_text))
         label = escape(math_text)
-        return html.img(src=url, alt=label, class_="math")
+        return tags.img(src=url, alt=label, class_="math")
 
     def dependencies(self):
         dependencies = WikiPage.dependencies(self)
@@ -663,7 +665,7 @@ class WikiPageCSV(WikiPageFile):
                                                      for cell in row))
             except csv.Error as e:
                 yield '</table>'
-                yield html.p(html(
+                yield tags.p(Markup(
                     _('Error parsing CSV file %{file}s on '
                       'line %{line}d: %{error}s') %
                     {'file': html_title, 'line': reader.line_num, 'error': e}))
@@ -723,31 +725,31 @@ class WikiPageBugs(WikiPageText):
                     yield '<div id="line_%d">' % (line_no)
                     in_bug = True
                     if title:
-                        yield html.h2(html(title))
+                        yield tags.h2(Markup(title))
                     if attributes:
                         yield '<dl>'
                         for attribute, value in attributes.items():
-                            yield html.dt(html(attribute))
-                            yield html.dd(html(value))
+                            yield tags.dt(Markup(attribute))
+                            yield tags.dd(Markup(value))
                         yield '</dl>'
                     in_header = False
                 if not line.strip():
                     if last_lines:
                         if last_lines[0][0] in ' \t':
-                            yield html.pre(html(
+                            yield tags.pre(Markup(
                                             ''.join(last_lines)))
                         else:
-                            yield html.p(html(
+                            yield tags.p(Markup(
                                             ''.join(last_lines)))
                         last_lines = []
                 else:
                     last_lines.append(line)
         if last_lines:
             if last_lines[0][0] in ' \t':
-                yield html.pre(html(
+                yield tags.pre(Markup(
                                 ''.join(last_lines)))
             else:
-                yield html.p(html(
+                yield tags.p(Markup(
                                 ''.join(last_lines)))
         if in_bug:
             yield '</div>'

@@ -5,7 +5,8 @@ import itertools
 import re
 import sys
 import unicodedata
-from werkzeug.utils import escape, html
+from markupsafe import escape, Markup
+from dominate import tags
 
 
 EXTERNAL_URL_RE = re.compile(r'^[a-z]+://|^mailto:', re.I | re.U)
@@ -233,7 +234,7 @@ class WikiParser(object):
         for kind, block in itertools.groupby(enumerated_lines, key):
             func = getattr(self, kind)
             for part in func(block):
-                yield part
+                yield Markup(part)
 
     def parse_line(self, line):
         """
@@ -241,7 +242,7 @@ class WikiParser(object):
 
         """
         for part in self.markup_rules.parse(line, self):
-            yield part
+            yield Markup(part)
 
     def pop_to(self, stop):
         """
@@ -330,7 +331,7 @@ class WikiParser(object):
             math_text = self.wiki_math(math_text, False)
         else:
             math_text = escape(math_text)
-        return html.var(math_text, class_="inline-math")
+        return tags.var(math_text, class_="inline-math")
 
     @markup_rules(r"[{][{][{](?P<code_text>([^}]|[^}][}]|[^}][}][}])"
                   r"*[}]*)[}][}][}]", 20)
@@ -390,7 +391,7 @@ class WikiParser(object):
                 math_text = self.wiki_math(math_text, True)
             else:
                 math_text = escape(math_text)
-            yield html.div(
+            yield tags.div(
                 math_text,
                 class_="display-math",
                 id="line_%d" % self.line_no,
@@ -400,7 +401,7 @@ class WikiParser(object):
     def _block_code(self, block):
         for self.line_no, part in block:
             inside = "\n".join(self.lines_until(self.code_close_re))
-            yield html.pre(html(inside), class_="code",
+            yield tags.pre(Markup(inside), class_="code",
                                     id="line_%d" % self.line_no)
 
     @block_rules(r"^\{\{\{\#![\w+#.-]+\s*$", 100)
@@ -412,8 +413,8 @@ class WikiParser(object):
                 return self.wiki_syntax(inside, syntax=syntax,
                                         line_no=self.line_no)
             else:
-                return [html.div(html.pre(
-                    html(inside), id="line_%d" % self.line_no),
+                return [tags.div(tags.pre(
+                    Markup(inside), id="line_%d" % self.line_no),
                     class_="highlight")]
 
     @block_rules(r"^<<\w+\s*$", 70)
@@ -432,8 +433,12 @@ class WikiParser(object):
             if first_line is None:
                 first_line = self.line_no
             parts.append(part)
-        text = "".join(self.parse_line("".join(parts)))
-        yield html.p(text, self.pop_to(""), id="line_%d" % first_line)
+        p = tags.p(id="line_%d" % first_line)
+        with tags.p():
+            for part in parts:
+                p.add(self.parse_line(part))
+        self.pop_to("")
+        yield p
 
     @block_rules(r"^[ \t]+", 60)
     def _block_indent(self, block):
@@ -444,7 +449,7 @@ class WikiParser(object):
                 first_line = self.line_no
             parts.append(part.rstrip())
         text = "\n".join(parts)
-        yield html.pre(html(text), id="line_%d" % first_line)
+        yield tags.pre(Markup(text), id="line_%d" % first_line)
 
     @block_rules(r"^\|", 110)
     def _block_table(self, block):
@@ -501,7 +506,7 @@ class WikiParser(object):
     @block_rules(r"^\s*---+\s*$", 90)
     def _block_rule(self, block):
         for self.line_no, line in block:
-            yield html.hr()
+            yield tags.hr()
 
     @block_rules(heading_pat, 50)
     def _block_heading(self, block):
@@ -510,7 +515,7 @@ class WikiParser(object):
             self.headings[level - 1] = self.headings.get(level - 1, 0) + 1
             label = "-".join(str(self.headings.get(i, 0))
                               for i in range(level))
-            yield html.a(name="head-%s" % label)
+            yield tags.a(name="head-%s" % label)
             yield '<h%d id="line_%d">%s</h%d>' % (level, self.line_no,
                 escape(line.strip("= \t\n\r\v")), level)
 
@@ -565,11 +570,11 @@ class WikiParser(object):
         for self.line_no, part in block:
             yield '<div class="conflict">'
             local = "\n".join(self.lines_until(self.conflict_sep_re))
-            yield html.pre(html(local),
+            yield tags.pre(Markup(local),
                                     class_="local",
                                     id="line_%d" % self.line_no)
             other = "\n".join(self.lines_until(self.conflict_close_re))
-            yield html.pre(html(other),
+            yield tags.pre(Markup(other),
                                     class_="other",
                                     id="line_%d" % self.line_no)
             yield '</div>'

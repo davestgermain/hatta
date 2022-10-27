@@ -9,7 +9,9 @@ import tempfile
 import pkgutil
 
 from werkzeug import urls, wsgi
-from werkzeug.utils import html, escape, redirect
+from markupsafe import escape, Markup
+from werkzeug.utils import redirect
+from dominate import tags
 import werkzeug
 
 captcha = None
@@ -109,19 +111,18 @@ def view(request, title=None):
     return response(request, title, phtml, etag=etag, rev=page.revision.rev, date=page.revision.date)
 
 
-@URL('/+history/<title:title>/<title:rev>')
+@URL('/+history/<title:title>/<rev>')
 def revision(request, title, rev):
     _ = request.wiki.gettext
+
     text = request.wiki.storage.get_revision(title, rev).text
-    link = html.a(html(title),
-                           href=request.get_url(title))
-    content = [
-        html.p(
-            html(
-                _('Content of revision %(rev)s of page %(title)s:'))
-            % {'rev': rev[:8], 'title': link}),
-        html.pre(html(text)),
-    ]
+    link = Markup(tags.a(Markup(title), href=request.get_url(title)))
+
+    content = tags.div()
+    with content:
+        tags.p(Markup(_('Content of revision %(rev)s of page %(title)s:') % {'rev': rev[:8], 'title': link}))
+        tags.pre(Markup(text))
+
     special_title = _('Revision of "%(title)s"') % {'title': title}
     page = hatta.page.get_page(request, title)
     resp = page.template('page_special.html', content=content,
@@ -155,7 +156,7 @@ def save(request, title):
         if text is not None:
             lines = text.split('\n')
         else:
-            lines = [html.p(html(
+            lines = [tags.p(Markup(
                 _('No preview for binaries.')))]
         return edit(request, title, preview=lines)
     elif request.form.get('save'):
@@ -502,7 +503,7 @@ def recent_changes(request):
     resp.make_conditional(request)
     return resp
 
-@URL('/+history/<title:title>/<title:from_rev>:<title:to_rev>')
+@URL('/+history/<title:title>/<from_rev>:<to_rev>')
 def diff(request, title, from_rev, to_rev):
     """Show the differences between specified revisions."""
 
@@ -511,13 +512,14 @@ def diff(request, title, from_rev, to_rev):
     build = request.adapter.build
     from_url = build('revision', {'title': title, 'rev': from_rev})
     to_url = build('revision', {'title': title, 'rev': to_rev})
-    a = html.a
+    a = tags.a
     links = {
-        'link1': a(str(from_rev)[:8], href=from_url),
-        'link2': a(str(to_rev)[:8], href=to_url),
-        'link': a(html(title), href=request.get_url(title)),
+        'link1': Markup(a(str(from_rev)[:8], href=from_url)),
+        'link2': Markup(a(str(to_rev)[:8], href=to_url)),
+        'link': Markup(a(Markup(title), href=request.get_url(title))),
     }
-    message = html(_(
+
+    message = Markup(_(
         'Differences between revisions %(link1)s and %(link2)s '
         'of page %(link)s.')) % links
     diff_content = getattr(page, 'diff_content', None)
@@ -526,7 +528,7 @@ def diff(request, title, from_rev, to_rev):
         to_text = request.wiki.storage.get_revision(page.title, to_rev).text
         content = page.diff_content(from_text, to_text, message)
     else:
-        content = [html.p(html(
+        content = [tags.p(Markup(
             _("Diff not available for this kind of pages.")))]
     special_title = _('Diff for "%(title)s"') % {'title': title}
     phtml = page.template('page_special.html', content=content,
@@ -557,7 +559,7 @@ def sister_pages(request):
     """Show index of all pages in a format suitable for SisterPages."""
 
     text = [
-        '%s%s %s\n' % (request.base_url, request.get_url(title), title)
+        '%s %s\n' % (request.get_url(title, external=True), title)
         for title in request.wiki.storage.all_pages()
     ]
     text.sort()
@@ -608,7 +610,7 @@ def search(request):
     _ = request.wiki.gettext
 
     def highlight_html(m):
-        return html.b(m.group(0), class_="highlight")
+        return Markup(tags.b(m.group(0), class_="highlight"))
 
     def search_snippet(title, words):
         """Extract a snippet of text for search results."""
@@ -627,23 +629,27 @@ def search(request):
         max_pos = min(position + 60, len(text))
         snippet = escape(text[min_pos:max_pos])
         phtml = regexp.sub(highlight_html, snippet)
-        return phtml
+        return Markup(phtml)
 
     def page_search(words, page, request):
         """Display the search results."""
 
-        h = html
         request.wiki.index.update(request.wiki)
         result = sorted(request.wiki.index.find(words), key=lambda x: -x[0])
-        yield html.p(h(_('%d page(s) containing all words:')
+        yield tags.p(Markup(_('%d page(s) containing all words:')
                               % len(result)))
-        yield '<ol id="hatta-search-results">'
-        for number, (score, title) in enumerate(result):
-            yield h.li(h.b(page.wiki_link(title)), ' ', h.i(str(score)),
-                       h.div(search_snippet(title, words),
-                             class_="hatta-snippet"),
-                       id_="search-%d" % (number + 1))
-        yield '</ol>'
+        ol = tags.ol(id="hatta-search-results")
+        with ol:
+            for number, (score, title) in enumerate(result):
+                with tags.li():
+                    with tags.b():
+                        page.wiki_link(title)
+                    tags.i(str(score))
+                    tags.div(search_snippet(
+                        title,
+                        words,
+                    ), class_="hatta-snippet", id="search-%d" % (number + 1))
+        yield ol
 
     query = request.values.get('q', '').strip()
     page = hatta.page.get_page(request, '')

@@ -26,13 +26,14 @@ class WikiTitleConverter(werkzeug.routing.PathConverter):
     def to_url(self, value):
         return werkzeug.urls.url_quote(value.strip(), self.map.charset, safe="/")
 
-    regex = '([^+%]|%[^2]|%2[^Bb]).*'
+    # regex = '([^+%]|%[^2]|%2[^Bb]).*?'
+    regex = "[^/|+].*?"
 
 
 class WikiAllConverter(werkzeug.routing.BaseConverter):
     """Matches everything."""
 
-    regex = '.*'
+    regex = '.*?'
 
 
 def init_gettext(language):

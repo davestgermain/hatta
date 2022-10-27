@@ -38,6 +38,9 @@ def main(config=None, wiki=None):
     try:
         from cheroot import wsgi
     except ImportError:
+        wsgi = None
+
+    if wsgi is None:
         import werkzeug
         try:
             werkzeug.run_simple(host, port, app, use_reloader=False)

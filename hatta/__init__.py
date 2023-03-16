@@ -40,7 +40,7 @@ __all__ = [
 ]
 
 # Project's metainformation
-__version__ = '2.0'
+__version__ = '2.3'
 project_name = 'Hatta'
 project_url = 'http://hatta-wiki.org/'
 project_description = 'Wiki engine that lives in Mercurial repository.'

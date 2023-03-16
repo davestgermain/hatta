@@ -234,7 +234,7 @@ class WikiParser(object):
         for kind, block in itertools.groupby(enumerated_lines, key):
             func = getattr(self, kind)
             for part in func(block):
-                yield Markup(part)
+                yield part
 
     def parse_line(self, line):
         """
@@ -242,7 +242,7 @@ class WikiParser(object):
 
         """
         for part in self.markup_rules.parse(line, self):
-            yield Markup(part)
+            yield Markup(part).unescape()
 
     def pop_to(self, stop):
         """
@@ -433,8 +433,7 @@ class WikiParser(object):
             if first_line is None:
                 first_line = self.line_no
             parts.append(part)
-        p = tags.p(id="line_%d" % first_line)
-        with tags.p():
+        with tags.p(id="line_%d" % first_line) as p:
             for part in parts:
                 p.add(self.parse_line(part))
         self.pop_to("")

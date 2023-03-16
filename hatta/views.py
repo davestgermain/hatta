@@ -140,7 +140,7 @@ def version(request, title=None):
             version, x, x, x = next(request.wiki.storage.page_history(title))
         except StopIteration:
             version = 0
-    return WikiResponse('%d' % version, mimetype="text/plain")
+    return WikiResponse('%s' % version, mimetype="text/plain")
 
 
 @URL('/+edit/<title:title>', methods=['POST'])

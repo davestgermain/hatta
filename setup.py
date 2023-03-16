@@ -8,7 +8,7 @@ setuptools.setup(
     name='Hatta',
     use_scm_version=True,
     setup_requires=['setuptools_scm'],
-    version='2.2',
+    version='2.3',
     license='GNU General Public License (GPL)',
     author='Dave St.Germain',
     author_email='dave@st.germa.in',

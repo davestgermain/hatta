@@ -103,6 +103,7 @@ class RuleSet(object):
                 function = getattr(bind_to, function.__name__)
             params = dict((str(k), v) for (k, v) in params.items()
                           if v is not None and k not in self.rules)
+
             yield function(**params)
 
 
@@ -233,6 +234,7 @@ class WikiParser(object):
 
         for kind, block in itertools.groupby(enumerated_lines, key):
             func = getattr(self, kind)
+
             for part in func(block):
                 yield Markup(part)
 
@@ -257,7 +259,7 @@ class WikiParser(object):
                 tags.append(tag)
         except IndexError:
             pass
-        return "".join("</%s>" % tag for tag in tags)
+        return Markup("".join("</%s>" % tag for tag in tags))
 
     def lines_until(self, close_re):
         """Get lines from input until the closing markup is encountered."""
@@ -293,7 +295,7 @@ class WikiParser(object):
             return self.pop_to('b')
         else:
             self.stack.append('b')
-            return "<b>"
+            return Markup("<b>")
 
     @markup_rules(r"//", 40)
     def _line_italic(self):
@@ -301,7 +303,7 @@ class WikiParser(object):
             return self.pop_to('i')
         else:
             self.stack.append('i')
-            return "<i>"
+            return Markup("<i>")
 
     @markup_rules(r"##", 110)
     def _line_mono(self):
@@ -309,7 +311,7 @@ class WikiParser(object):
             return self.pop_to('tt')
         else:
             self.stack.append('tt')
-            return "<tt>"
+            return Markup("<tt>")
 
     @markup_rules(r'(?P<punct>'
                   r'(^|\b|(?<=\s))(%s)((?=[\s.,:;!?)/&=+"\'—-])|\b|$))' %
@@ -428,11 +430,11 @@ class WikiParser(object):
 
     def _block_paragraph(self, block):
         first_line = None
-        with tags.p() as para:
-            for self.line_no, part in block:
-                if first_line is None:
-                    first_line = self.line_no
-                para.children.append("".join(self.parse_line(part)))
+        para = tags.p()
+        for self.line_no, part in block:
+            if first_line is None:
+                first_line = self.line_no
+            para.children.append("".join(self.parse_line(part)))
         para.set_attribute("id", "line_%d" % first_line)
         self.pop_to("")
         yield para

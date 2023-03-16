@@ -242,7 +242,7 @@ class WikiParser(object):
 
         """
         for part in self.markup_rules.parse(line, self):
-            yield Markup(part).unescape()
+            yield Markup(part)
 
     def pop_to(self, stop):
         """
@@ -427,17 +427,15 @@ class WikiParser(object):
                 escape(inside))
 
     def _block_paragraph(self, block):
-        parts = []
         first_line = None
-        for self.line_no, part in block:
-            if first_line is None:
-                first_line = self.line_no
-            parts.append(part)
-        with tags.p(id="line_%d" % first_line) as p:
-            for part in parts:
-                p.add(self.parse_line(part))
+        with tags.p() as para:
+            for self.line_no, part in block:
+                if first_line is None:
+                    first_line = self.line_no
+                para.children.append("".join(self.parse_line(part)))
+        para.set_attribute("id", "line_%d" % first_line)
         self.pop_to("")
-        yield p
+        yield para
 
     @block_rules(r"^[ \t]+", 60)
     def _block_indent(self, block):

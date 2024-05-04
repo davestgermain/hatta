@@ -6,6 +6,8 @@ import importlib
 import os
 import sys
 
+from urllib.parse import quote
+
 import werkzeug
 import werkzeug.routing
 from werkzeug.exceptions import HTTPException
@@ -24,7 +26,7 @@ class WikiTitleConverter(werkzeug.routing.PathConverter):
     """Behaves like the path converter, but doesn't match the "+ pages"."""
 
     def to_url(self, value):
-        return werkzeug.urls.url_quote(value.strip(), self.map.charset, safe="/")
+        return quote(value.strip(), safe="/")
 
     # regex = '([^+%]|%[^2]|%2[^Bb]).*?'
     regex = "[^/|+].*?"
@@ -33,36 +35,36 @@ class WikiTitleConverter(werkzeug.routing.PathConverter):
 class WikiAllConverter(werkzeug.routing.BaseConverter):
     """Matches everything."""
 
-    regex = '.*?'
+    regex = ".*?"
 
 
 def init_gettext(language):
     if language is not None:
         try:
             translation = gettext.translation(
-                'hatta',
-                'locale',
+                "hatta",
+                "locale",
                 languages=[language],
             )
         except IOError:
             translation = gettext.translation(
-                'hatta',
+                "hatta",
                 fallback=True,
                 languages=[language],
             )
     else:
-        translation = gettext.translation('hatta', fallback=True)
+        translation = gettext.translation("hatta", fallback=True)
     return translation
 
 
 def init_template(translation, template_path):
-    loaders = [jinja2.PackageLoader('hatta', 'templates')]
+    loaders = [jinja2.PackageLoader("hatta", "templates")]
 
     if template_path is not None:
         loaders.insert(0, jinja2.FileSystemLoader(os.path.abspath(template_path)))
 
     template_env = jinja2.Environment(
-        extensions=['jinja2.ext.i18n'],
+        extensions=["jinja2.ext.i18n"],
         loader=jinja2.ChoiceLoader(loaders),
     )
     template_env.autoescape = True
@@ -75,53 +77,56 @@ class Wiki:
     The main class of the wiki, handling initialization of the whole
     application and most of the logic.
     """
+
     storage_class = None
     index_class = hatta.search.whoosh_search.WikiSearch
     filename_map = hatta.page.filename_map
     mime_map = hatta.page.mime_map
 
     def __init__(self, config, site_id=None):
-        if config.get_bool('show_version', False):
+        if config.get_bool("show_version", False):
             sys.stdout.write("Hatta %s\n" % hatta.__version__)
             sys.exit()
         self.config = config
 
-        self.language = config.get('language')
+        self.language = config.get("language")
         translation = init_gettext(self.language)
         self.gettext = translation.gettext
-        self.template_path = config.get('template_path')
+        self.template_path = config.get("template_path")
         self.template_env = init_template(translation, self.template_path)
-        self.path = os.path.abspath(config.get('pages_path', 'docs'))
-        self.repo_path = config.get('repo_path')
-        self.page_charset = config.get('page_charset', 'utf-8')
-        self.menu_page = self.config.get('menu_page', 'Menu')
-        self.front_page = self.config.get('front_page', 'Home')
-        self.logo_page = self.config.get('logo_page', 'logo.png')
-        self.locked_page = self.config.get('locked_page', 'Locked')
-        self.site_name = self.config.get('site_name', 'Hatta Wiki')
-        self.site_id = site_id or config.get('site_name')
-        self.read_only = self.config.get_bool('read_only', False)
-        self.allow_bulk_uploads = self.config.get_bool('allow_bulk_uploads', False)
-        self.fallback_url = self.config.get('fallback_url')
-        self.icon_page = self.config.get('icon_page')
-        self.alias_page = self.config.get('alias_page', 'Alias')
-        self.help_page = self.config.get('help_page', 'Help')
+        self.path = os.path.abspath(config.get("pages_path", "docs"))
+        self.repo_path = config.get("repo_path")
+        self.page_charset = config.get("page_charset", "utf-8")
+        self.menu_page = self.config.get("menu_page", "Menu")
+        self.front_page = self.config.get("front_page", "Home")
+        self.logo_page = self.config.get("logo_page", "logo.png")
+        self.locked_page = self.config.get("locked_page", "Locked")
+        self.site_name = self.config.get("site_name", "Hatta Wiki")
+        self.site_id = site_id or config.get("site_name")
+        self.read_only = self.config.get_bool("read_only", False)
+        self.allow_bulk_uploads = self.config.get_bool("allow_bulk_uploads", False)
+        self.fallback_url = self.config.get("fallback_url")
+        self.icon_page = self.config.get("icon_page")
+        self.alias_page = self.config.get("alias_page", "Alias")
+        self.help_page = self.config.get("help_page", "Help")
         self.math_url = self.config.get(
-            'math_url',
-            'mathjax',
+            "math_url",
+            "mathjax",
         )
-        self.pygments_style = self.config.get('pygments_style', 'tango')
-        self.extension = self.config.get('extension')
-        self.unix_eol = self.config.get_bool('unix_eol', False)
-        self.recaptcha_public_key = self.config.get('recaptcha_public_key')
-        self.recaptcha_private_key = self.config.get('recaptcha_private_key')
-        self.subdirectories = self.config.get_bool('subdirectories', False)
+        self.pygments_style = self.config.get("pygments_style", "tango")
+        self.extension = self.config.get("extension")
+        self.unix_eol = self.config.get_bool("unix_eol", False)
+        self.recaptcha_public_key = self.config.get("recaptcha_public_key")
+        self.recaptcha_private_key = self.config.get("recaptcha_private_key")
+        self.subdirectories = self.config.get_bool("subdirectories", False)
         if self.subdirectories:
-            self.storage_class = importlib.import_module('hatta.storage.hg').WikiSubdirectoryStorage
+            self.storage_class = importlib.import_module(
+                "hatta.storage.hg"
+            ).WikiSubdirectoryStorage
         else:
-            vcs = self.config.get('vcs', 'hg')
-            module = importlib.import_module('hatta.storage.{}'.format(vcs))
-            self.storage_class = getattr(module, 'WikiStorage')
+            vcs = self.config.get("vcs", "hg")
+            module = importlib.import_module("hatta.storage.{}".format(vcs))
+            self.storage_class = getattr(module, "WikiStorage")
         self.storage = self.storage_class(
             self.path,
             charset=self.page_charset,
@@ -132,13 +137,15 @@ class Wiki:
         )
         self.repo_path = self.storage.repo_path
         self.cache = self.setup_cache()
-        self.index = self.index_class(self.storage.get_index_path(), self.language, self.page_charset)
+        self.index = self.index_class(
+            self.storage.get_index_path(), self.language, self.page_charset
+        )
         self.index.update(self)
         self.url_rules = hatta.views.URL.get_rules()
         self.views = hatta.views.URL.get_views()
         self.url_converters = {
-            'title': WikiTitleConverter,
-            'all': WikiAllConverter,
+            "title": WikiTitleConverter,
+            "all": WikiAllConverter,
         }
         self.url_map = werkzeug.routing.Map(
             self.url_rules,
@@ -157,23 +164,25 @@ class Wiki:
         no cache will be available.
         """
         cache = None
-        cache_url = self.config.get('cache_path')
+        cache_url = self.config.get("cache_path")
         if cache_url:
             # cache_url could be memcached://127.0....
             # or file:///some/path or /some/path
-            split_url = cache_url.split('://', 1)
+            split_url = cache_url.split("://", 1)
             if len(split_url) == 1:
-                split_url = ('file://', split_url)
+                split_url = ("file://", split_url)
             proto, path = split_url
-            if proto == 'memcached':
+            if proto == "memcached":
                 from cachelib import MemcachedCache
                 from hashlib import sha1
+
                 cache = MemcachedCache(
-                    path.split(','),
-                    key_prefix=sha1(self.site_id.encode('utf8')).hexdigest()[:8]
+                    path.split(","),
+                    key_prefix=sha1(self.site_id.encode("utf8")).hexdigest()[:8],
                 )
-            elif proto == 'file':
+            elif proto == "file":
                 from cachelib import FileSystemCache
+
                 cache = FileSystemCache(os.path.abspath(path))
         else:
             try:

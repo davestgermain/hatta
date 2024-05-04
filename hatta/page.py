@@ -8,7 +8,7 @@ import mimetypes
 import os
 import re
 
-from werkzeug.urls import url_quote, url_fix
+from urllib import parse
 from markupsafe import escape, Markup
 from dominate import tags
 
@@ -27,11 +27,12 @@ try:
 
             yield 0, '<div class="highlight"><pre>'
             for lineno, line in source:
-                yield (lineno,
-                       Markup(tags.span(line, id_="line_%d" %
-                                         formatter.line_no)))
+                yield (
+                    lineno,
+                    Markup(tags.span(line, id_="line_%d" % formatter.line_no)),
+                )
                 formatter.line_no += 1
-            yield 0, '</pre></div>'
+            yield 0, "</pre></div>"
 
 except ImportError:
     pass
@@ -52,20 +53,32 @@ import hatta.error
 import hatta.parser
 
 
+def url_fix(url_candidate, encoding="utf-8"):
+    # This function was removed in Werkzeug 3.0
+    url = parse.split(url_candidate)
+    path = parse.quote(url.path, encoding=charset, safe="/%+$!*'(),")
+    qs = parse.quote_plus(url.query, encoding=charset, safe=":&%=+$!*'(),")
+    anchor = parse.quote_plus(url.fragment, encoding=charset, safe=":&%=+$!*'(),")
+    return parse.join((url.scheme, url.encode_netloc(), path, qs, anchor))
+
+
 def check_lock(wiki, title):
     _ = wiki.gettext
     restricted_pages = [
-        'scripts.js',
-        'robots.txt',
+        "scripts.js",
+        "robots.txt",
     ]
     if wiki.read_only:
         raise hatta.error.ForbiddenErr(_("This site is read-only."))
     if title in restricted_pages:
-        raise hatta.error.ForbiddenErr(_("""Can't edit this page.
-It can only be edited by the site admin directly on the disk."""))
+        raise hatta.error.ForbiddenErr(
+            _(
+                """Can't edit this page.
+It can only be edited by the site admin directly on the disk."""
+            )
+        )
     if title in wiki.index.page_links(wiki.locked_page, wiki):
         raise hatta.error.ForbiddenErr(_("This page is locked."))
-
 
 
 def get_page(request, title, wiki=None):
@@ -78,26 +91,26 @@ def get_page(request, title, wiki=None):
             page_class, mime = wiki.filename_map[title]
         except KeyError:
             mime = page_mime(title)
-            major, minor = mime.split('/', 1)
+            major, minor = mime.split("/", 1)
             try:
                 page_class = wiki.mime_map[mime]
             except KeyError:
                 try:
-                    plus_pos = minor.find('+')
+                    plus_pos = minor.find("+")
                     if plus_pos > 0:
                         minor_base = minor[plus_pos:]
                     else:
-                        minor_base = ''
-                    base_mime = '/'.join([major, minor_base])
+                        minor_base = ""
+                    base_mime = "/".join([major, minor_base])
                     page_class = wiki.mime_map[base_mime]
                 except KeyError:
                     try:
                         page_class = wiki.mime_map[major]
                     except KeyError:
-                        page_class = wiki.mime_map['']
+                        page_class = wiki.mime_map[""]
     else:
         page_class = WikiPageSpecial
-        mime = ''
+        mime = ""
     return page_class(wiki, request, title, mime)
 
 
@@ -120,12 +133,12 @@ def page_mime(title):
     'archive/gzip'
     """
 
-    addr = title #.encode('utf-8')  # the encoding doesn't relly matter here
+    addr = title  # .encode('utf-8')  # the encoding doesn't relly matter here
     mime, encoding = mimetypes.guess_type(addr, strict=False)
     if encoding:
-        mime = 'archive/%s' % encoding
+        mime = "archive/%s" % encoding
     if mime is None:
-        mime = 'text/x-wiki'
+        mime = "text/x-wiki"
     return mime
 
 
@@ -136,7 +149,8 @@ def date_html(date_time):
     """
 
     return date_time.strftime(
-        '<abbr class="date" title="%Y-%m-%dT%H:%M:%SZ">%Y-%m-%d %H:%M</abbr>')
+        '<abbr class="date" title="%Y-%m-%dT%H:%M:%SZ">%Y-%m-%d %H:%M</abbr>'
+    )
 
 
 class WikiPage(object):
@@ -156,7 +170,8 @@ class WikiPage(object):
         self.config = self.wiki.config
         if self.wiki.alias_page and self.wiki.alias_page in self.storage:
             self.aliases = dict(
-                self.index.page_links_and_labels(self.wiki.alias_page, wiki=self.wiki))
+                self.index.page_links_and_labels(self.wiki.alias_page, wiki=self.wiki)
+            )
         else:
             self.aliases = {}
         self._revision = None
@@ -171,7 +186,7 @@ class WikiPage(object):
         """Find a target address for an alias."""
 
         try:
-            alias, target = addr.split(':', 1)
+            alias, target = addr.split(":", 1)
         except ValueError:
             return self.wiki.alias_page
         try:
@@ -189,68 +204,67 @@ class WikiPage(object):
 
         addr = addr.strip()
         text = escape(label or addr)
-        chunk = ''
+        chunk = ""
         if class_ is not None:
             classes = [class_]
         else:
             classes = []
         if hatta.parser.external_link(addr):
-            classes.append('external')
-            if addr.startswith('mailto:'):
+            classes.append("external")
+            if addr.startswith("mailto:"):
                 # Obfuscate e-mails a little bit.
-                classes.append('mail')
-                text = text.replace('@', '&#64;').replace('.', '&#46;')
-                href = escape(addr).replace('@', '%40').replace('.', '%2E')
+                classes.append("mail")
+                text = text.replace("@", "&#64;").replace(".", "&#46;")
+                href = escape(addr).replace("@", "%40").replace(".", "%2E")
             else:
                 href = escape(url_fix(addr))
         else:
-            if '#' in addr:
-                addr, chunk = addr.split('#', 1)
-                chunk = '#' + url_fix(chunk)
-            if addr.startswith(':'):
+            if "#" in addr:
+                addr, chunk = addr.split("#", 1)
+                chunk = "#" + url_fix(chunk)
+            if addr.startswith(":"):
                 alias = self.link_alias(addr[1:])
                 href = escape(url_fix(alias) + chunk)
-                classes.append('external')
-                classes.append('alias')
-            elif addr.startswith('+'):
-                href = '/'.join([self.request.script_root,
-                                 '+' + escape(addr[1:])])
-                classes.append('special')
-            elif addr == '':
+                classes.append("external")
+                classes.append("alias")
+            elif addr.startswith("+"):
+                href = "/".join([self.request.script_root, "+" + escape(addr[1:])])
+                classes.append("special")
+            elif addr == "":
                 href = escape(chunk)
-                classes.append('anchor')
+                classes.append("anchor")
             else:
-                classes.append('wiki')
+                classes.append("wiki")
                 href = escape(self.get_url(addr) + chunk)
                 if addr not in self.storage:
-                    classes.append('nonexistent')
-        class_ = escape(' '.join(classes) or '')
-        link = Markup(tags.a(image or text, href=href, _class=class_, title=escape(addr + chunk)))
+                    classes.append("nonexistent")
+        class_ = escape(" ".join(classes) or "")
+        link = Markup(
+            tags.a(image or text, href=href, _class=class_, title=escape(addr + chunk))
+        )
         return link
 
-    def wiki_image(self, addr, alt, class_='wiki', lineno=0):
+    def wiki_image(self, addr, alt, class_="wiki", lineno=0):
         """Create HTML for a wiki image."""
 
         addr = addr.strip()
-        chunk = ''
+        chunk = ""
         if hatta.parser.external_link(addr):
-            return tags.img(src=url_fix(addr), class_="external",
-                            alt=alt)
-        if '#' in addr:
-            addr, chunk = addr.split('#', 1)
-        if addr == '':
+            return tags.img(src=url_fix(addr), class_="external", alt=alt)
+        if "#" in addr:
+            addr, chunk = addr.split("#", 1)
+        if addr == "":
             return tags.a(name=chunk)
-        elif addr.startswith(':'):
+        elif addr.startswith(":"):
             if chunk:
-                chunk = '#' + chunk
+                chunk = "#" + chunk
             alias = self.link_alias(addr[1:])
             href = url_fix(alias + chunk)
             return tags.img(src=href, class_="external alias", alt=alt)
         elif addr in self.storage:
             mime = page_mime(addr)
-            if mime.startswith('image/'):
-                return tags.img(src=self.get_download_url(addr), class_=class_,
-                                alt=alt)
+            if mime.startswith("image/"):
+                return tags.img(src=self.get_download_url(addr), class_=class_, alt=alt)
             else:
                 return tags.img(href=self.get_download_url(addr), alt=alt)
         else:
@@ -260,11 +274,13 @@ class WikiPage(object):
         """Generate the menu items"""
         _ = self.wiki.gettext
         if self.wiki.menu_page in self.storage:
-            items = self.index.page_links_and_labels(self.wiki.menu_page, wiki=self.wiki)
+            items = self.index.page_links_and_labels(
+                self.wiki.menu_page, wiki=self.wiki
+            )
         else:
             items = [
                 (self.wiki.front_page, self.wiki.front_page),
-                ('+history/', _('Recent changes')),
+                ("+history/", _("Recent changes")),
             ]
         for link, label in items:
             if link == self.title:
@@ -279,20 +295,20 @@ class WikiPage(object):
         if self.title:
             try:
                 check_lock(self.wiki, self.title)
-                edit_url = self.get_url(self.title, 'edit')
+                edit_url = self.get_url(self.title, "edit")
             except hatta.error.ForbiddenErr:
                 pass
         context = {
-            'request': self.request,
-            'wiki': self.wiki,
-            'title': self.title,
-            'title_quoted': url_quote(self.title, safe=''),
-            'mime': self.mime,
-            'url': self.get_url,
-            'download_url': self.get_download_url,
-            'config': self.config,
-            'page': self,
-            'edit_url': edit_url,
+            "request": self.request,
+            "wiki": self.wiki,
+            "title": self.title,
+            "title_quoted": parse.quote(self.title, safe=""),
+            "mime": self.mime,
+            "url": self.get_url,
+            "download_url": self.get_download_url,
+            "config": self.config,
+            "page": self,
+            "edit_url": edit_url,
         }
         context.update(kwargs)
         stream = template.stream(**context)
@@ -305,47 +321,52 @@ class WikiPage(object):
         dependencies = set()
         for title in [self.wiki.logo_page, self.wiki.menu_page]:
             if title not in self.storage:
-                dependencies.add(url_quote(title))
+                dependencies.add(parse.quote(title))
         for title in [self.wiki.menu_page]:
             if title in self.storage:
                 nrev = self.storage.get_revision(title)
-                etag = '%s/%s-%s' % (url_quote(title), nrev.rev, nrev.date.isoformat())
+                etag = "%s/%s-%s" % (
+                    parse.quote(title),
+                    nrev.rev,
+                    nrev.date.isoformat(),
+                )
                 dependencies.add(etag)
         return dependencies
 
     def get_edit_help(self):
         page = get_page(self.request, self.wiki.help_page)
         try:
-            return ''.join(page.view_content())
+            return "".join(page.view_content())
         except hatta.error.NotFoundErr:
-            return ''
+            return ""
 
     def render_editor(self, preview=None, captcha_error=None):
         _ = self.wiki.gettext
         author = self.request.get_author()
         if self.title in self.storage:
-            comment = _('changed')
+            comment = _("changed")
             rev = self.revision.rev
             old_author = self.revision.author
             old_comment = self.revision.comment
             if old_author == author:
                 comment = old_comment
         else:
-            comment = _('uploaded')
+            comment = _("uploaded")
             rev = -1
         if captcha and self.wiki.recaptcha_public_key:
             recaptcha_html = captcha.displayhtml(
-                    self.wiki.recaptcha_public_key, error=captcha_error)
+                self.wiki.recaptcha_public_key, error=captcha_error
+            )
         else:
             recaptcha_html = None
         context = {
-            'comment': comment,
-            'author': author,
-            'parent': rev,
-            'recaptcha_html': recaptcha_html,
-            'help': self.get_edit_help(),
+            "comment": comment,
+            "author": author,
+            "parent": rev,
+            "recaptcha_html": recaptcha_html,
+            "help": self.get_edit_help(),
         }
-        return self.template('edit_file.html', **context)
+        return self.template("edit_file.html", **context)
 
 
 class WikiPageSpecial(WikiPage):
@@ -356,10 +377,10 @@ class WikiPageText(WikiPage):
     """Pages of mime type text/* use this for display."""
 
     def content_iter(self, lines):
-        yield '<pre>'
+        yield "<pre>"
         for line in lines:
             yield Markup(line)
-        yield '</pre>'
+        yield "</pre>"
 
     def plain_text(self):
         """
@@ -389,34 +410,35 @@ class WikiPageText(WikiPage):
             rev = self.revision.rev
             old_author = self.revision.author
             old_comment = self.revision.comment
-            comment = _('modified')
+            comment = _("modified")
             if old_author == author:
                 comment = old_comment
         except hatta.error.NotFoundErr:
-            comment = _('created')
+            comment = _("created")
             rev = -1
         except hatta.error.ForbiddenErr as e:
             return tags.p(Markup(str(e)))
         if preview:
             lines = preview
-            comment = self.request.form.get('comment', comment)
+            comment = self.request.form.get("comment", comment)
         if captcha and self.wiki.recaptcha_public_key:
             recaptcha_html = captcha.displayhtml(
-                    self.wiki.recaptcha_public_key, error=captcha_error)
+                self.wiki.recaptcha_public_key, error=captcha_error
+            )
         else:
             recaptcha_html = None
         context = {
-            'comment': comment,
-            'preview': preview,
-            'recaptcha_html': recaptcha_html,
-            'help': self.get_edit_help(),
-            'author': author,
-            'parent': rev,
-            'lines': lines,
+            "comment": comment,
+            "preview": preview,
+            "recaptcha_html": recaptcha_html,
+            "help": self.get_edit_help(),
+            "author": author,
+            "parent": rev,
+            "lines": lines,
         }
-        return self.template('edit_text.html', **context)
+        return self.template("edit_text.html", **context)
 
-    def diff_content(self, from_text, to_text, message=''):
+    def diff_content(self, from_text, to_text, message=""):
         """Generate the HTML markup for a diff."""
 
         def infiniter(iterator):
@@ -427,8 +449,8 @@ class WikiPageText(WikiPage):
             while True:
                 yield None
 
-        diff = difflib._mdiff(from_text.split('\n'), to_text.split('\n'))
-        mark_re = re.compile('\0[-+^]([^\1\0]*)\1|([^\0\1])')
+        diff = difflib._mdiff(from_text.split("\n"), to_text.split("\n"))
+        mark_re = re.compile("\0[-+^]([^\1\0]*)\1|([^\0\1])")
         yield message
         yield '<pre class="diff">'
         for old_line, new_line, changed in diff:
@@ -441,19 +463,19 @@ class WikiPageText(WikiPage):
                 new_iter = infiniter(mark_re.finditer(new_text))
                 old = next(old_iter)
                 new = next(new_iter)
-                buff = ''
+                buff = ""
                 while old or new:
                     while old and old.group(1):
                         if buff:
                             yield escape(buff)
-                            buff = ''
-                        yield '<del>%s</del>' % escape(old.group(1))
+                            buff = ""
+                        yield "<del>%s</del>" % escape(old.group(1))
                         old = next(old_iter)
                     while new and new.group(1):
                         if buff:
                             yield escape(buff)
-                            buff = ''
-                        yield '<ins>%s</ins>' % escape(new.group(1))
+                            buff = ""
+                        yield "<ins>%s</ins>" % escape(new.group(1))
                         new = next(new_iter)
                     if new:
                         buff += new.group(2)
@@ -461,11 +483,13 @@ class WikiPageText(WikiPage):
                     new = next(new_iter)
                 if buff:
                     yield escape(buff)
-                yield '</div>'
+                yield "</div>"
             else:
                 yield '<div class="orig" id="line_%d">%s</div>' % (
-                    line_no, escape(old_text))
-        yield '</pre>'
+                    line_no,
+                    escape(old_text),
+                )
+        yield "</pre>"
 
 
 class WikiPageColorText(WikiPageText):
@@ -477,7 +501,7 @@ class WikiPageColorText(WikiPageText):
         if lines is None:
             text = self.revision.text
         else:
-            text = ''.join(lines)
+            text = "".join(lines)
         return self.highlight(text, mime=self.mime)
 
     def highlight(self, text, mime=None, syntax=None, line_no=0):
@@ -489,7 +513,6 @@ class WikiPageColorText(WikiPageText):
 
         formatter = WikiWrapFormatter()
         formatter.line_no = line_no
-
 
         try:
             if mime:
@@ -509,13 +532,13 @@ class WikiPageWiki(WikiPageColorText):
 
     def __init__(self, *args, **kw):
         super(WikiPageWiki, self).__init__(*args, **kw)
-        if self.config.get_bool('wiki_words', False):
+        if self.config.get_bool("wiki_words", False):
             self.parser = hatta.parser.WikiWikiParser
         else:
             self.parser = hatta.parser.WikiParser
-        if self.config.get_bool('ignore_indent', False):
+        if self.config.get_bool("ignore_indent", False):
             try:
-                del self.parser.block['indent']
+                del self.parser.block["indent"]
             except KeyError:
                 pass
 
@@ -526,12 +549,15 @@ class WikiPageWiki(WikiPageColorText):
             try:
                 text = self.revision.text
             except hatta.error.NotFoundErr:
-                text = ''
+                text = ""
         return self.parser.extract_links(text)
 
     def view_content(self, lines=None):
         if self.wiki.cache and not lines and self.revision:
-            cache_key = '%s:%s' % (hashlib.md5(self.title.encode('utf8')).hexdigest(), self.revision.rev)
+            cache_key = "%s:%s" % (
+                hashlib.md5(self.title.encode("utf8")).hexdigest(),
+                self.revision.rev,
+            )
             cached = self.wiki.cache.get(cache_key)
         else:
             cache_key = None
@@ -542,12 +568,20 @@ class WikiPageWiki(WikiPageColorText):
                     raise hatta.error.NotFoundErr()
                 lines = self.revision.text.splitlines(True)
             if self.wiki.icon_page and self.wiki.icon_page in self.storage:
-                icons = self.index.page_links_and_labels(self.wiki.icon_page, wiki=self.wiki)
+                icons = self.index.page_links_and_labels(
+                    self.wiki.icon_page, wiki=self.wiki
+                )
                 smilies = dict((emo, link) for (link, emo) in icons)
             else:
                 smilies = None
-            content = self.parser(lines, self.wiki_link, self.wiki_image,
-                                 self.highlight, self.wiki_math, smilies)
+            content = self.parser(
+                lines,
+                self.wiki_link,
+                self.wiki_image,
+                self.highlight,
+                self.wiki_math,
+                smilies,
+            )
             cached = list(content)
             if cache_key:
                 self.wiki.cache.set(cache_key, cached, timeout=86400)
@@ -555,17 +589,17 @@ class WikiPageWiki(WikiPageColorText):
 
     def wiki_math(self, math_text, display=False):
         math_url = self.wiki.math_url
-        if math_url == '':
+        if math_url == "":
             return escape(math_text)
-        elif math_url == 'mathjax':
+        elif math_url == "mathjax":
             if display:
                 return escape("$$\n%s\n$$" % math_text)
             else:
                 return escape("$%s$" % math_text)
-        if '%s' in math_url:
-            url = math_url % url_quote(math_text)
+        if "%s" in math_url:
+            url = math_url % parse.quote(math_text)
         else:
-            url = '%s%s' % (math_url, url_quote(math_text))
+            url = "%s%s" % (math_url, parse.quote(math_text))
         label = escape(math_text)
         return tags.img(src=url, alt=label, class_="math")
 
@@ -574,11 +608,15 @@ class WikiPageWiki(WikiPageColorText):
         for title in [self.wiki.icon_page, self.wiki.alias_page]:
             if title in self.storage:
                 trev = self.storage.get_revision(title)
-                etag = '%s/%s-%s' % (url_quote(title), trev.rev, trev.date.isoformat())
+                etag = "%s/%s-%s" % (
+                    parse.quote(title),
+                    trev.rev,
+                    trev.date.isoformat(),
+                )
                 dependencies.add(etag)
         for link in self.index.page_links(self.title, wiki=self.wiki):
             if link not in self.storage:
-                dependencies.add(url_quote(link))
+                dependencies.add(parse.quote(link))
         return dependencies
 
 
@@ -588,9 +626,10 @@ class WikiPageFile(WikiPage):
     def view_content(self, lines=None):
         if self.title not in self.storage:
             raise hatta.error.NotFoundErr()
-        content = ['<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>' %
-                   (self.request.get_download_url(self.title),
-                    escape(self.title), self.mime)]
+        content = [
+            '<p>Download <a href="%s">%s</a> as <i>%s</i>.</p>'
+            % (self.request.get_download_url(self.title), escape(self.title), self.mime)
+        ]
         return content
 
 
@@ -600,51 +639,55 @@ class WikiPageImage(WikiPageFile):
     def view_content(self, lines=None):
         if self.title not in self.storage:
             raise hatta.error.NotFoundErr()
-        content = ['<a href="%s"><img src="%s" alt="%s"></a>'
-                   % (self.request.get_url(self.title, 'download'),
-                      self.request.get_url(self.title, 'render'),
-                      escape(self.title))]
+        content = [
+            '<a href="%s"><img src="%s" alt="%s"></a>'
+            % (
+                self.request.get_url(self.title, "download"),
+                self.request.get_url(self.title, "render"),
+                escape(self.title),
+            )
+        ]
         return content
 
     @property
     def render_size(self):
         try:
-            width = min(int(self.request.values.get('w', '512').strip()), 2048)
-            height = min(int(self.request.values.get('h', '512').strip()), 2048)
+            width = min(int(self.request.values.get("w", "512").strip()), 2048)
+            height = min(int(self.request.values.get("h", "512").strip()), 2048)
         except ValueError:
             width = height = 512
         return width, height
 
     @property
     def render_file(self):
-        return '%sx%x.png' % self.render_size
+        return "%sx%x.png" % self.render_size
 
     def render_mime(self):
         """Give the filename and mime type of the rendered thumbnail."""
 
         if not Image:
-            raise NotImplementedError('No Image library available')
-        return  self.render_file, 'image/png'
+            raise NotImplementedError("No Image library available")
+        return self.render_file, "image/png"
 
     def render_cache(self):
         """Render the thumbnail and return the date."""
 
         if not Image:
-            raise NotImplementedError('No Image library available')
+            raise NotImplementedError("No Image library available")
         page_file = self.revision.file
         cache_file = io.BytesIO()
         with self.revision.file as page_file:
             try:
                 im = Image.open(page_file)
-                im = im.convert('RGBA')
+                im = im.convert("RGBA")
                 ow, oh = im.size
                 nw, nh = self.render_size
                 nw = min(nw, ow)
                 nh = min(nh, oh)
                 im.thumbnail((nw, nh), Image.ANTIALIAS)
-                im.save(cache_file, 'PNG')
+                im.save(cache_file, "PNG")
             except IOError:
-                raise hatta.error.UnsupportedMediaTypeErr('Image corrupted')
+                raise hatta.error.UnsupportedMediaTypeErr("Image corrupted")
         return cache_file.getvalue()
 
 
@@ -653,6 +696,7 @@ class WikiPageCSV(WikiPageFile):
 
     def content_iter(self, lines=None):
         import csv
+
         _ = self.wiki.gettext
         # XXX Add preview support
         reader = csv.reader(csv_file)
@@ -661,15 +705,21 @@ class WikiPageCSV(WikiPageFile):
         with self.revision.file as csv_file:
             try:
                 for row in reader:
-                    yield '<tr>%s</tr>' % (''.join('<td>%s</td>' % cell
-                                                     for cell in row))
+                    yield "<tr>%s</tr>" % (
+                        "".join("<td>%s</td>" % cell for cell in row)
+                    )
             except csv.Error as e:
-                yield '</table>'
-                yield tags.p(Markup(
-                    _('Error parsing CSV file %{file}s on '
-                      'line %{line}d: %{error}s') %
-                    {'file': html_title, 'line': reader.line_num, 'error': e}))
-        yield '</table>'
+                yield "</table>"
+                yield tags.p(
+                    Markup(
+                        _(
+                            "Error parsing CSV file %{file}s on "
+                            "line %{line}d: %{error}s"
+                        )
+                        % {"file": html_title, "line": reader.line_num, "error": e}
+                    )
+                )
+        yield "</table>"
 
     def view_content(self, lines=None):
         if self.title not in self.storage:
@@ -687,10 +737,11 @@ class WikiPageRST(WikiPageText):
             from doccore import publish_parts
         except ImportError:
             return super(WikiPageRST, self).content_iter(lines)
-        text = ''.join(lines)
+        text = "".join(lines)
         SAFE_DOCUTILS = dict(file_insertion_enabled=False, raw_enabled=False)
-        content = publish_parts(text, writer_name='html',
-                                settings_overrides=SAFE_DOCUTILS)['html_body']
+        content = publish_parts(
+            text, writer_name="html", settings_overrides=SAFE_DOCUTILS
+        )["html_body"]
         return [content]
 
 
@@ -707,19 +758,19 @@ class WikiPageBugs(WikiPageText):
         attributes = {}
         title = None
         for line_no, line in enumerate(lines):
-            if last_lines and line.startswith('----'):
-                title = ''.join(last_lines)
+            if last_lines and line.startswith("----"):
+                title = "".join(last_lines)
                 last_lines = []
                 in_header = True
                 attributes = {}
-            elif in_header and ':' in line:
-                attribute, value = line.split(':', 1)
+            elif in_header and ":" in line:
+                attribute, value = line.split(":", 1)
                 attributes[attribute.strip()] = value.strip()
             else:
                 if in_header:
                     if in_bug:
-                        yield '</div>'
-                    #tags = [tag.strip() for tag in
+                        yield "</div>"
+                    # tags = [tag.strip() for tag in
                     #        attributes.get('tags', '').split()
                     #        if tag.strip()]
                     yield '<div id="line_%d">' % (line_no)
@@ -727,55 +778,52 @@ class WikiPageBugs(WikiPageText):
                     if title:
                         yield tags.h2(Markup(title))
                     if attributes:
-                        yield '<dl>'
+                        yield "<dl>"
                         for attribute, value in attributes.items():
                             yield tags.dt(Markup(attribute))
                             yield tags.dd(Markup(value))
-                        yield '</dl>'
+                        yield "</dl>"
                     in_header = False
                 if not line.strip():
                     if last_lines:
-                        if last_lines[0][0] in ' \t':
-                            yield tags.pre(Markup(
-                                            ''.join(last_lines)))
+                        if last_lines[0][0] in " \t":
+                            yield tags.pre(Markup("".join(last_lines)))
                         else:
-                            yield tags.p(Markup(
-                                            ''.join(last_lines)))
+                            yield tags.p(Markup("".join(last_lines)))
                         last_lines = []
                 else:
                     last_lines.append(line)
         if last_lines:
-            if last_lines[0][0] in ' \t':
-                yield tags.pre(Markup(
-                                ''.join(last_lines)))
+            if last_lines[0][0] in " \t":
+                yield tags.pre(Markup("".join(last_lines)))
             else:
-                yield tags.p(Markup(
-                                ''.join(last_lines)))
+                yield tags.p(Markup("".join(last_lines)))
         if in_bug:
-            yield '</div>'
+            yield "</div>"
+
 
 filename_map = {
-    'README': (WikiPageText, 'text/plain'),
-    'ISSUES': (WikiPageBugs, 'text/x-bugs'),
-    'ISSUES.txt': (WikiPageBugs, 'text/x-bugs'),
-    'COPYING': (WikiPageText, 'text/plain'),
-    'CHANGES': (WikiPageText, 'text/plain'),
-    'MANIFEST': (WikiPageText, 'text/plain'),
-    'favicon.ico': (WikiPageImage, 'image/x-icon'),
-    'bulk.zip': (WikiPageFile, 'application/hatta+zip'),
+    "README": (WikiPageText, "text/plain"),
+    "ISSUES": (WikiPageBugs, "text/x-bugs"),
+    "ISSUES.txt": (WikiPageBugs, "text/x-bugs"),
+    "COPYING": (WikiPageText, "text/plain"),
+    "CHANGES": (WikiPageText, "text/plain"),
+    "MANIFEST": (WikiPageText, "text/plain"),
+    "favicon.ico": (WikiPageImage, "image/x-icon"),
+    "bulk.zip": (WikiPageFile, "application/hatta+zip"),
 }
 
 mime_map = {
-    'text': WikiPageColorText,
-    'application/x-javascript': WikiPageColorText,
-    'application/x-python': WikiPageColorText,
-    'text/csv': WikiPageCSV,
-    'text/x-rst': WikiPageRST,
-    'text/x-wiki': WikiPageWiki,
-    'image': WikiPageImage,
-    '': WikiPageFile,
+    "text": WikiPageColorText,
+    "application/x-javascript": WikiPageColorText,
+    "application/x-python": WikiPageColorText,
+    "text/csv": WikiPageCSV,
+    "text/x-rst": WikiPageRST,
+    "text/x-wiki": WikiPageWiki,
+    "image": WikiPageImage,
+    "": WikiPageFile,
 }
 
-mimetypes.add_type('application/x-python', '.wsgi')
-mimetypes.add_type('application/x-javascript', '.js')
-mimetypes.add_type('text/x-rst', '.rst')
+mimetypes.add_type("application/x-python", ".wsgi")
+mimetypes.add_type("application/x-javascript", ".js")
+mimetypes.add_type("text/x-rst", ".rst")

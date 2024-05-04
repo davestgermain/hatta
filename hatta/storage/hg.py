@@ -4,11 +4,12 @@
 import datetime
 import os
 import re
-from werkzeug.urls import url_quote, url_unquote
+from urllib.parse import quote, unquote
+
 import io
 
 # Note: we have to set these before importing Mercurial
-os.environ['HGENCODING'] = 'utf-8'
+os.environ["HGENCODING"] = "utf-8"
 
 import mercurial.hg
 import mercurial.node
@@ -41,10 +42,13 @@ def locked_repo(func):
         finally:
             lock.release()
             wlock.release()
+
     return new_func
 
 
-def _get_memfilectx(repo, path, data, islink=False, isexec=False, copied=None, memctx=None):
+def _get_memfilectx(
+    repo, path, data, islink=False, isexec=False, copied=None, memctx=None
+):
     return mercurial.context.memfilectx(
         repo=repo,
         changectx=memctx,
@@ -73,22 +77,31 @@ class WikiStorage(BaseWikiStorage):
     change history, using Mercurial repository as the storage method.
     """
 
-    def __init__(self, path, charset=None, _=lambda x: x, unix_eol=False,
-                 extension=None, repo_path=None):
+    def __init__(
+        self,
+        path,
+        charset=None,
+        _=lambda x: x,
+        unix_eol=False,
+        extension=None,
+        repo_path=None,
+    ):
         """
         Takes the path to the directory where the pages are to be kept.
         If the directory doesn't exist, it will be created. If it's inside
         a Mercurial repository, that repository will be used, otherwise
         a new repository will be created in it.
         """
-        super(WikiStorage, self).__init__(charset=charset, _=_, unix_eol=unix_eol, extension=extension)
+        super(WikiStorage, self).__init__(
+            charset=charset, _=_, unix_eol=unix_eol, extension=extension
+        )
         self.path = os.path.abspath(path)
         if not os.path.exists(self.path):
             os.makedirs(self.path)
         ui = mercurial.ui.ui()
         ui.quiet = True
         ui._report_untrusted = False
-        ui.setconfig(b'ui', b'interactive', False)
+        ui.setconfig(b"ui", b"interactive", False)
         self.ui = ui
 
         if repo_path is None:
@@ -97,42 +110,44 @@ class WikiStorage(BaseWikiStorage):
             self.repo_path = os.path.abspath(repo_path)
             if not self.path.startswith(self.repo_path):
                 raise StorageError(
-                    "Page path %r is outside of the repository path %r." % (
-                        self.path, self.repo_path))
-        self.repo_prefix = self.path[len(self.repo_path):].strip('/')
-        if not os.path.exists(os.path.join(self.repo_path, '.hg')):
+                    "Page path %r is outside of the repository path %r."
+                    % (self.path, self.repo_path)
+                )
+        self.repo_prefix = self.path[len(self.repo_path) :].strip("/")
+        if not os.path.exists(os.path.join(self.repo_path, ".hg")):
             # Create the repository if needed.
-            mercurial.hg.repository(self.ui, self.repo_path.encode('utf8'), create=True)
+            mercurial.hg.repository(self.ui, self.repo_path.encode("utf8"), create=True)
 
     def get_cache_path(self):
-        return os.path.join(self.repo_path, '.hg', 'hatta', 'cache')
+        return os.path.join(self.repo_path, ".hg", "hatta", "cache")
 
     def get_index_path(self):
-        return os.path.join(self.repo_path, '.hg', 'hatta', 'search')
+        return os.path.join(self.repo_path, ".hg", "hatta", "search")
 
     def open_repo(self):
-        return mercurial.hg.repository(self.ui, self.repo_path.encode('utf8'))
+        return mercurial.hg.repository(self.ui, self.repo_path.encode("utf8"))
 
     def get_tip(self):
         """Get the changectx of the tip."""
-        return self.repo[b'tip']
+        return self.repo[b"tip"]
 
     def _file_to_title(self, filepath):
         _ = self._
         if not filepath.startswith(self.repo_prefix):
             raise error.ForbiddenErr(
-                _("Can't read or write outside of the pages repository"))
+                _("Can't read or write outside of the pages repository")
+            )
         sep = os.path.sep
-        name = filepath[len(self.repo_prefix):].strip(sep)
+        name = filepath[len(self.repo_prefix) :].strip(sep)
         # Un-escape special windows filenames and dot files
-        if name.startswith('_') and len(name) > 1:
+        if name.startswith("_") and len(name) > 1:
             name = name[1:]
         if self.extension and name.endswith(self.extension):
-            name = name[:-len(self.extension)]
-        return url_unquote(name)
+            name = name[: -len(self.extension)]
+        return unquote(name)
 
     def __contains__(self, title):
-        repo_file = self._title_to_file(title).encode('utf8')
+        repo_file = self._title_to_file(title).encode("utf8")
         return repo_file in self.tip
 
     def __iter__(self):
@@ -140,17 +155,17 @@ class WikiStorage(BaseWikiStorage):
 
     def _get_parents(self, filename, parent_rev):
         if parent_rev is None:
-            return b'tip', None
+            return b"tip", None
         parent_rev = int(parent_rev)
         try:
             filetip = self.tip[filename]
         except mercurial.error.ManifestLookupError:
-            return (b'tip', None)
+            return (b"tip", None)
         last_rev = filetip.filerev()
         if parent_rev > last_rev:
             raise IndexError("no such parent revision %r" % parent_rev)
         if parent_rev == last_rev:
-            return (b'tip', None)
+            return (b"tip", None)
         return parent_rev, last_rev
 
     def _merge(self, repo_file, parent, other, data):
@@ -170,16 +185,17 @@ class WikiStorage(BaseWikiStorage):
         )
         ret = self.repo.commitctx(ctx)
         if self.repo.changelog.hasnode(ret):
-            self.repo.hook("commit", node=mercurial.node.hex(ret),
-                           parent1=parent, parent2=other)
+            self.repo.hook(
+                "commit", node=mercurial.node.hex(ret), parent1=parent, parent2=other
+            )
 
     def save_data(self, title, data, author=None, comment=None, parent_rev=None):
         """Save a new revision of the page. If the data is None, deletes it."""
 
         _ = self._
-        user = (author or _('anon')).encode('utf-8')
-        text = (comment or _('comment')).encode('utf-8')
-        repo_file = self._title_to_file(title).encode('utf8')
+        user = (author or _("anon")).encode("utf-8")
+        text = (comment or _("comment")).encode("utf-8")
+        repo_file = self._title_to_file(title).encode("utf8")
 
         parent, other = self._get_parents(repo_file, parent_rev)
         if data is None:
@@ -190,7 +206,8 @@ class WikiStorage(BaseWikiStorage):
                 try:
                     data = self._merge(repo_file, parent, other, data)
                 except ValueError:
-                    text = _('failed merge of edit conflict').encode('utf-8')
+                    text = _("failed merge of edit conflict").encode("utf-8")
+
         def filectxfn(repo, memctx, path):
             if data is None:
                 return None
@@ -201,12 +218,12 @@ class WikiStorage(BaseWikiStorage):
     def delete_page(self, title, author, comment):
         self.save_data(title, None, author, comment)
 
-    def save_text(self, title, text, author='', comment='', parent=None):
+    def save_text(self, title, text, author="", comment="", parent=None):
         """Save text as specified page, encoded to charset."""
 
         data = text.encode(self.charset)
         if self.unix_eol:
-            data = data.replace('\r\n', '\n')
+            data = data.replace("\r\n", "\n")
         self.save_data(title, data, author, comment, parent)
 
     def get_revision(self, title, rev=None):
@@ -223,11 +240,18 @@ class WikiStorage(BaseWikiStorage):
         except mercurial.error.LookupError:
             raise error.NotFoundErr()
         date = _get_datetime(filectx)
-        author = str(filectx.user(), "utf-8",
-                         'replace').split('<')[0].strip()
-        comment = str(filectx.description(), "utf-8", 'replace')
+        author = str(filectx.user(), "utf-8", "replace").split("<")[0].strip()
+        comment = str(filectx.description(), "utf-8", "replace")
 
-        revision = HgRevision(self, rev=rev, data=data, date=date, author=author, comment=comment, charset=self.charset)
+        revision = HgRevision(
+            self,
+            rev=rev,
+            data=data,
+            date=date,
+            author=author,
+            comment=comment,
+            charset=self.charset,
+        )
         return revision
 
     def get_repo_rev(self):
@@ -237,7 +261,7 @@ class WikiStorage(BaseWikiStorage):
     def _find_filectx(self, title):
         """Find the last revision in which the file existed."""
 
-        repo_file = self._title_to_file(title).encode('utf8')
+        repo_file = self._title_to_file(title).encode("utf8")
         stack = [self.tip]
         while stack:
             changectx = stack.pop()
@@ -261,16 +285,15 @@ class WikiStorage(BaseWikiStorage):
         for rev in range(maxrev, minrev - 1, -1):
             filectx = filectx_tip.filectx(rev)
             date = _get_datetime(filectx)
-            author = str(filectx.user(), "utf-8",
-                             'replace').split('<')[0].strip()
-            comment = str(filectx.description(), "utf-8", 'replace')
+            author = str(filectx.user(), "utf-8", "replace").split("<")[0].strip()
+            comment = str(filectx.description(), "utf-8", "replace")
             yield {
-                'title': title,
-                'rev': str(rev),
-                'parent': str(rev - 1) if rev else None,
-                'date': date,
-                'author': author,
-                'comment': comment
+                "title": title,
+                "rev": str(rev),
+                "parent": str(rev - 1) if rev else None,
+                "date": date,
+                "author": author,
+                "comment": comment,
             }
 
     def history(self):
@@ -282,11 +305,10 @@ class WikiStorage(BaseWikiStorage):
         for wiki_rev in range(maxrev, minrev - 1, -1):
             change = self.repo[wiki_rev]
             date = _get_datetime(change)
-            author = str(change.user(), "utf-8",
-                             'replace').split('<')[0].strip()
-            comment = str(change.description(), "utf-8", 'replace')
+            author = str(change.user(), "utf-8", "replace").split("<")[0].strip()
+            comment = str(change.description(), "utf-8", "replace")
             for repo_file in change.files():
-                repo_file_str = repo_file.decode('utf8')
+                repo_file_str = repo_file.decode("utf8")
                 if repo_file_str.startswith(self.repo_prefix):
                     title = self._file_to_title(repo_file_str)
                     try:
@@ -294,12 +316,12 @@ class WikiStorage(BaseWikiStorage):
                     except mercurial.error.LookupError:
                         rev = -1
                     yield {
-                        'title': title,
-                        'rev': str(rev),
-                        'date': date,
-                        'author': author,
-                        'comment': comment,
-                        'parent': str(rev - 1) if rev else None,
+                        "title": title,
+                        "rev": str(rev),
+                        "date": date,
+                        "author": author,
+                        "comment": comment,
+                        "parent": str(rev - 1) if rev else None,
                     }
 
     def all_pages(self):
@@ -307,9 +329,10 @@ class WikiStorage(BaseWikiStorage):
 
         sep = os.path.sep
         for repo_file in self.tip:
-            repo_file = repo_file.decode('utf8')
-            if (repo_file.startswith(self.repo_prefix) and
-                sep not in repo_file[len(self.repo_prefix):].strip(sep)):
+            repo_file = repo_file.decode("utf8")
+            if repo_file.startswith(self.repo_prefix) and sep not in repo_file[
+                len(self.repo_prefix) :
+            ].strip(sep):
                 title = self._file_to_title(repo_file)
                 if title in self:
                     yield title
@@ -320,16 +343,16 @@ class WikiStorage(BaseWikiStorage):
         """
 
         try:
-            last = self.repo.lookup(str(rev or 0).encode('utf8'))
+            last = self.repo.lookup(str(rev or 0).encode("utf8"))
         except mercurial.error.RepoLookupError:
             for page in self.all_pages():
                 yield page
             return
-        current = self.repo.lookup(b'tip')
+        current = self.repo.lookup(b"tip")
         status = self.repo.status(current, last)
         modified, added, removed, deleted, unknown, ignored, clean = status
         for filename in modified + added + removed + deleted:
-            filename = filename.decode('utf8')
+            filename = filename.decode("utf8")
             if filename.startswith(self.repo_prefix):
                 yield self._file_to_title(filename)
 
@@ -341,8 +364,8 @@ class WikiSubdirectoryStorage(WikiStorage):
 
     """
 
-    periods_re = re.compile(r'^[.]|(?<=/)[.]')
-    slashes_re = re.compile(r'^[/]|(?<=/)[/]')
+    periods_re = re.compile(r"^[.]|(?<=/)[.]")
+    slashes_re = re.compile(r"^[/]|(?<=/)[/]")
 
     # TODO: make them configurable
     index = "Index"
@@ -352,7 +375,7 @@ class WikiSubdirectoryStorage(WikiStorage):
 
         if not repo_path:
             return True
-        return repo_path.encode('utf8') in self.tip.dirs()
+        return repo_path.encode("utf8") in self.tip.dirs()
 
     def _title_to_file(self, title):
         """
@@ -361,14 +384,14 @@ class WikiSubdirectoryStorage(WikiStorage):
         """
 
         title = str(title).strip()
-        escaped = url_quote(title, safe='/ ')
-        escaped = self.periods_re.sub('%2E', escaped)
-        escaped = self.slashes_re.sub('%2F', escaped)
+        escaped = quote(title, safe="/ ")
+        escaped = self.periods_re.sub("%2E", escaped)
+        escaped = self.slashes_re.sub("%2F", escaped)
         path = os.path.join(self.repo_prefix, escaped)
 
         if self._is_directory(path):
             path = os.path.join(path, self.index)
-        if page.page_mime(title) == 'text/x-wiki' and self.extension:
+        if page.page_mime(title) == "text/x-wiki" and self.extension:
             path += self.extension
         return path
 
@@ -378,19 +401,19 @@ class WikiSubdirectoryStorage(WikiStorage):
             filepath = os.path.dirname(filepath)
         return super(WikiSubdirectoryStorage, self)._file_to_title(filepath)
 
-    def save_data(self, title, data, author='', comment='', parent_rev=None):
+    def save_data(self, title, data, author="", comment="", parent_rev=None):
         """Save the file and make the subdirectories if needed."""
 
         _ = self._
-        user = (author or _('anon')).encode('utf-8')
-        text = (comment or _('comment')).encode('utf-8')
-        repo_file = self._title_to_file(title).encode('utf8')
+        user = (author or _("anon")).encode("utf-8")
+        text = (comment or _("comment")).encode("utf-8")
+        repo_file = self._title_to_file(title).encode("utf8")
 
         files = [repo_file]
         dir_path = None
         new_dir_path = None
 
-        index = self.index.encode('utf8')
+        index = self.index.encode("utf8")
         if os.path.basename(repo_file) != self.index:
             # Move a colliding file out of the way.
             dir_path = os.path.dirname(repo_file)
@@ -411,20 +434,24 @@ class WikiSubdirectoryStorage(WikiStorage):
                 try:
                     data = self._merge(repo_file, parent, other, data)
                 except ValueError:
-                    text = _('failed merge of edit conflict').encode('utf-8')
+                    text = _("failed merge of edit conflict").encode("utf-8")
+
         def filectxfn(repo, memctx, path):
             if data is None or path == dir_path:
                 return None
             if path == new_dir_path:
-                return _get_memfilectx(repo, path, dir_data, memctx=memctx, copied=dir_path)
+                return _get_memfilectx(
+                    repo, path, dir_data, memctx=memctx, copied=dir_path
+                )
             return _get_memfilectx(repo, path, data, memctx=memctx)
+
         self._commit(parent, other, text, files, filectxfn, user)
 
     def all_pages(self):
         """Iterate over the titles of all pages in the wiki."""
 
         for repo_file in self.tip:
-            repo_file = repo_file.decode('utf8')
+            repo_file = repo_file.decode("utf8")
             if repo_file.startswith(self.repo_prefix):
                 title = self._file_to_title(repo_file)
                 if title in self:

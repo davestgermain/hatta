@@ -4,9 +4,9 @@ import time
 import os, os.path
 import mimetypes
 import threading
+from urllib.parse import quote, unquote
 
 from .. import error, page
-from werkzeug.urls import url_quote, url_unquote
 
 
 class StorageError(Exception):
@@ -16,14 +16,18 @@ class StorageError(Exception):
 def merge_func(base, other, this):
     """Used for merging edit conflicts."""
     import mercurial.simplemerge
-    if (base.isbinary() or
-        other.isbinary()):
+
+    if base.isbinary() or other.isbinary():
         raise ValueError("can't merge binary data")
     m3 = mercurial.simplemerge.Merge3Text(base.data(), this, other.data())
-    return b''.join(m3.merge_lines(start_marker=b'<<<<<<< local',
-                                  mid_marker=b'=======',
-                                  end_marker=b'>>>>>>> other',
-                                  base_marker=None))
+    return b"".join(
+        m3.merge_lines(
+            start_marker=b"<<<<<<< local",
+            mid_marker=b"=======",
+            end_marker=b">>>>>>> other",
+            base_marker=None,
+        )
+    )
 
 
 class Revision:
@@ -31,7 +35,7 @@ class Revision:
     Encapsulates page data and metadata
     """
 
-    def __init__(self, *args, charset='utf8', **kwargs):
+    def __init__(self, *args, charset="utf8", **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
         self.charset = charset
@@ -42,7 +46,7 @@ class Revision:
 
     @property
     def text(self):
-        text = str(self.data, self.charset, 'replace')
+        text = str(self.data, self.charset, "replace")
         return text
 
 
@@ -52,17 +56,16 @@ class BaseWikiStorage(threading.local):
     change history, using database repository as the storage method.
     """
 
-    def __init__(self, charset=None, _=lambda x: x, unix_eol=False,
-                 extension=None, **kwargs):
-        """
-
-        """
+    def __init__(
+        self, charset=None, _=lambda x: x, unix_eol=False, extension=None, **kwargs
+    ):
+        """ """
         threading.local.__init__(self)
         self._ = _
-        self.charset = charset or 'utf-8'
+        self.charset = charset or "utf-8"
         self.unix_eol = unix_eol
         self.extension = extension
-        self.repo_prefix = kwargs.get('repo_prefix', '')
+        self.repo_prefix = kwargs.get("repo_prefix", "")
 
         self._repo = self._tip = self._current_rev = None
 
@@ -155,11 +158,20 @@ class BaseWikiStorage(threading.local):
         """
         raise NotImplementedError()
 
-    def save_data(self, title, data, author=None, comment=None, parent_rev=None, ts=None, new=False):
+    def save_data(
+        self,
+        title,
+        data,
+        author=None,
+        comment=None,
+        parent_rev=None,
+        ts=None,
+        new=False,
+    ):
         """Save a new revision of the page. If the data is None, deletes it."""
         _ = self._
-        user = author or _('anon')
-        text = comment or _('comment')
+        user = author or _("anon")
+        text = comment or _("comment")
 
         ts = ts or datetime.datetime.utcnow()
         if data is None:
@@ -175,12 +187,12 @@ class BaseWikiStorage(threading.local):
         #             text = _(u'failed merge of edit conflict').encode('utf-8')
         return data, user, text, ts
 
-    def save_text(self, title, text, author='', comment='', parent=None):
+    def save_text(self, title, text, author="", comment="", parent=None):
         """Save text as specified page, encoded to charset."""
 
         data = text.encode(self.charset)
         if self.unix_eol:
-            data = data.replace(b'\r\n', b'\n')
+            data = data.replace(b"\r\n", b"\n")
         self.save_data(title, data, author, comment, parent)
 
     def page_meta(self, title):
@@ -195,7 +207,7 @@ class BaseWikiStorage(threading.local):
         try:
             text = str(data, self.charset)
         except UnicodeDecodeError:
-            text = self._('Unable to display')
+            text = self._("Unable to display")
         return text
 
     def __iter__(self):
@@ -203,27 +215,40 @@ class BaseWikiStorage(threading.local):
 
     def _title_to_file(self, title):
         title = str(title).strip()
-        filename = url_quote(title, safe='', unsafe='~')
+        filename = quote(title, safe="")
         # Escape special windows filenames and dot files
-        _windows_device_files = ('CON', 'AUX', 'COM1', 'COM2', 'COM3',
-                                 'COM4', 'LPT1', 'LPT2', 'LPT3', 'PRN',
-                                 'NUL')
-        if (filename.split('.')[0].upper() in _windows_device_files or
-            filename.startswith('_') or filename.startswith('.')):
-            filename = '_' + filename
-        if page.page_mime(title) == 'text/x-wiki' and self.extension:
+        _windows_device_files = (
+            "CON",
+            "AUX",
+            "COM1",
+            "COM2",
+            "COM3",
+            "COM4",
+            "LPT1",
+            "LPT2",
+            "LPT3",
+            "PRN",
+            "NUL",
+        )
+        if (
+            filename.split(".")[0].upper() in _windows_device_files
+            or filename.startswith("_")
+            or filename.startswith(".")
+        ):
+            filename = "_" + filename
+        if page.page_mime(title) == "text/x-wiki" and self.extension:
             filename += self.extension
         return os.path.join(self.repo_prefix, filename)
 
     def _file_to_title(self, filepath):
         sep = os.path.sep
-        name = filepath[len(self.repo_prefix):].strip(sep)
+        name = filepath[len(self.repo_prefix) :].strip(sep)
         # Un-escape special windows filenames and dot files
-        if name.startswith('_') and len(name) > 1:
+        if name.startswith("_") and len(name) > 1:
             name = name[1:]
         if self.extension and name.endswith(self.extension):
-            name = name[:-len(self.extension)]
-        return url_unquote(name)
+            name = name[: -len(self.extension)]
+        return unquote(name)
 
     def __enter__(self):
         self.reopen()

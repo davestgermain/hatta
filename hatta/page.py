@@ -56,10 +56,10 @@ import hatta.parser
 def url_fix(url_candidate, encoding="utf-8"):
     # This function was removed in Werkzeug 3.0
     url = parse.urlsplit(url_candidate)
-    path = parse.quote(url.path, encoding=charset, safe="/%+$!*'(),")
-    qs = parse.quote_plus(url.query, encoding=charset, safe=":&%=+$!*'(),")
-    anchor = parse.quote_plus(url.fragment, encoding=charset, safe=":&%=+$!*'(),")
-    return parse.join((url.scheme, url.encode_netloc(), path, qs, anchor))
+    path = parse.quote(url.path, encoding=encoding, safe="/%+$!*'(),")
+    qs = parse.quote_plus(url.query, encoding=encoding, safe=":&%=+$!*'(),")
+    anchor = parse.quote_plus(url.fragment, encoding=encoding, safe=":&%=+$!*'(),")
+    return parse.urljoin((url.scheme, url.encode_netloc(), path, qs, anchor))
 
 
 def check_lock(wiki, title):

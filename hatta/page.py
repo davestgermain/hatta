@@ -59,7 +59,9 @@ def url_fix(url_candidate, encoding="utf-8"):
     path = parse.quote(url.path, encoding=encoding, safe="/%+$!*'(),")
     qs = parse.quote_plus(url.query, encoding=encoding, safe=":&%=+$!*'(),")
     anchor = parse.quote_plus(url.fragment, encoding=encoding, safe=":&%=+$!*'(),")
-    return parse.urljoin((url.scheme, url.encode(encoding=encoding), path, qs, anchor))
+    return parse.urlunsplit(
+        (url.scheme, url.encode(encoding=encoding), path, qs, anchor)
+    )
 
 
 def check_lock(wiki, title):

@@ -55,7 +55,7 @@ import hatta.parser
 
 def url_fix(url_candidate, encoding="utf-8"):
     # This function was removed in Werkzeug 3.0
-    url = parse.split(url_candidate)
+    url = parse.urlsplit(url_candidate)
     path = parse.quote(url.path, encoding=charset, safe="/%+$!*'(),")
     qs = parse.quote_plus(url.query, encoding=charset, safe=":&%=+$!*'(),")
     anchor = parse.quote_plus(url.fragment, encoding=charset, safe=":&%=+$!*'(),")

@@ -19,7 +19,7 @@ class MultiWiki(ProxyFix):
     Each domain is configured in a section of the config file.
     """
 
-    def __init__(self, config_file=os.environ.get('HATTA_CONFIG_FILE')):
+    def __init__(self, config_file=os.environ.get("HATTA_CONFIG_FILE")):
         ProxyFix.__init__(self, self.host_dispatcher_app, x_prefix=1)
         self.apps = {}
         assert config_file is not None, "Configuration file is required"
@@ -29,21 +29,23 @@ class MultiWiki(ProxyFix):
         config = ConfigParser()
         config.read(config_file)
         for section in config:
-            if section == 'DEFAULT':
+            if section == "DEFAULT":
                 continue
             wiki_config = hatta.WikiConfig()
             wiki_config.parse_options(config[section].items())
             wiki = hatta.Wiki(wiki_config, site_id=section)
-            splitname = section.split('/', 1)
+            splitname = section.split("/", 1)
 
             domain_name = splitname[0].lower()
             if len(splitname) == 2:
-                self.apps.setdefault(domain_name, DispatcherMiddleware(self.default_application, None)).mounts['/' + splitname[1]] = wiki.application
+                self.apps.setdefault(
+                    domain_name, DispatcherMiddleware(self.default_application, None)
+                ).mounts["/" + splitname[1]] = wiki.application
             else:
                 self.apps[domain_name] = wiki.application
 
     def host_dispatcher_app(self, env, start):
-        host = env.get('HTTP_HOST').split(':')[0].lower()
+        host = env.get("HTTP_HOST", "").split(":")[0].lower()
         try:
             app = self.apps[host]
         except KeyError:
@@ -53,4 +55,3 @@ class MultiWiki(ProxyFix):
     @werkzeug.wsgi.responder
     def default_application(self, environ, start_response):
         return werkzeug.Response()
-

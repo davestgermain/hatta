@@ -70,7 +70,7 @@ class CompressionMiddleware:
         return compression_method, headers
 
     def _compress_zstd(self, result_iter, content_type):
-        return [zstandard.compress(b"".join(result_iter))]
+        return [zstandard.compress(b"".join(result_iter), level=11)]
 
     def _compress_brotli(self, result_iter, content_type):
         if content_type.startswith("text/"):

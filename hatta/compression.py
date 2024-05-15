@@ -46,12 +46,12 @@ class CompressionMiddleware:
         compression_method = None
         encoding = None
 
-        if zstandard and encodings.get("zstd", 0) >= encodings["identity"]:
-            encoding = "zstd"
-            compression_method = self._compress_zstd
-        elif brotli and encodings.get("br", 0) >= encodings["identity"]:
+        if brotli and encodings.get("br", 0) >= encodings["identity"]:
             encoding = "br"
             compression_method = self._compress_brotli
+        elif zstandard and encodings.get("zstd", 0) >= encodings["identity"]:
+            encoding = "zstd"
+            compression_method = self._compress_zstd
         elif encodings.get("gzip", 0) >= encodings["identity"]:
             encoding = "gzip"
             compression_method = self._compress_gzip

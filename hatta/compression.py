@@ -29,7 +29,13 @@ class CompressionMiddleware:
         # breakpoint()
         accept_encoding_header = environ.get("HTTP_ACCEPT_ENCODING", "")
         headers = [("Vary", "Accept-Encoding")]
-        encodings = {"identity": 1.0}
+        encodings = {
+            "identity": 1.0,
+            "gzip": 0,
+            "br": 0,
+            "zstd": 0,
+            "*": 0,
+        }
 
         for encoding in accept_encoding_header.split(","):
             if ";" in encoding:
@@ -46,20 +52,22 @@ class CompressionMiddleware:
         compression_method = None
         encoding = None
 
-        if brotli and encodings.get("br", 0) >= encodings["identity"]:
+        if brotli and encodings["br"] >= encodings["identity"]:
             encoding = "br"
             compression_method = self._compress_brotli
-        elif zstandard and encodings.get("zstd", 0) >= encodings["identity"]:
+        elif zstandard and encodings["zstd"] >= encodings["identity"]:
             encoding = "zstd"
             compression_method = self._compress_zstd
-        elif encodings.get("gzip", 0) >= encodings["identity"]:
+        elif encodings["gzip"] >= encodings["identity"]:
             encoding = "gzip"
             compression_method = self._compress_gzip
-
-        elif encodings.get("*", 0) >= encodings["identity"]:
+        elif encodings["*"] >= encodings["identity"]:
             if brotli is not None:
                 encoding = "br"
                 compression_method = self._compress_brotli
+            elif zstandard is not None:
+                encoding = "zstd"
+                compression_method = self._compress_zstd
             else:
                 encoding = "gzip"
                 compression_method = self._compress_gzip
@@ -70,10 +78,10 @@ class CompressionMiddleware:
         return compression_method, headers
 
     def _compress_zstd(self, result_iter, content_type):
-        return [zstandard.compress(b"".join(result_iter), level=11)]
+        return [zstandard.compress(b"".join(result_iter), level=15)]
 
     def _compress_brotli(self, result_iter, content_type):
-        if content_type.startswith("text/"):
+        if content_type.startswith(("text/", "application/javascript")):
             mode = brotli.MODE_TEXT
         else:
             mode = brotli.MODE_GENERIC
@@ -83,31 +91,37 @@ class CompressionMiddleware:
         return [gzip.compress(b"".join(result_iter))]
 
     def __call__(self, environ, start_response):
-        compression_method, extra_headers = self._parse_accept_encoding(environ)
-        if not compression_method:
+        compress_response, extra_headers = self._parse_accept_encoding(environ)
+        if not compress_response:
             return self.app(environ, start_response)
 
         content_type = ""
 
         headers = []
         status = ""
+        content_length = None
 
-        def _compress_response(wrapped_status, wrapped_headers):
-            nonlocal content_type, status
+        def _check_content_type(wrapped_status, wrapped_headers):
+            nonlocal content_type, content_length, status
 
             status = wrapped_status
             for name, value in wrapped_headers:
                 if name == "Content-Type":
                     content_type = value
+                elif name == "Content-Length":
+                    content_length = value
+                    continue
                 headers.append((name, value))
 
-        response = self.app(environ, _compress_response)
+        response = self.app(environ, _check_content_type)
         for ctype in self.compress_types:
             if content_type.startswith(ctype):
-                headers = [(k, v) for k, v in headers if k != "Content-Length"]
-                response = compression_method(response, content_type)
+                response = compress_response(response, content_type)
+
                 headers.extend(extra_headers)
-                headers.append(("Content-Length", str(len(response[0]))))
+                content_length = str(len(response[0]))
                 break
+        if content_length:
+            headers.append(("Content-Length", content_length))
         start_response(status, headers)
         return response

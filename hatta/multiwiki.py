@@ -12,6 +12,8 @@ from configparser import ConfigParser
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
+from .compression import CompressionMiddleware
+
 
 class MultiWiki(ProxyFix):
     """
@@ -20,7 +22,9 @@ class MultiWiki(ProxyFix):
     """
 
     def __init__(self, config_file=os.environ.get("HATTA_CONFIG_FILE")):
-        ProxyFix.__init__(self, self.host_dispatcher_app, x_prefix=1)
+        ProxyFix.__init__(
+            self, CompressionMiddleware(self.host_dispatcher_app), x_prefix=1
+        )
         self.apps = {}
         assert config_file is not None, "Configuration file is required"
         self.load_from_file(config_file)

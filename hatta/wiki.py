@@ -180,6 +180,19 @@ class Wiki:
                     path.split(","),
                     key_prefix=sha1(self.site_id.encode("utf8")).hexdigest()[:8],
                 )
+            elif proto == "redis":
+                from cachelib import RedisCache
+                from hashlib import sha1
+
+                server, dbnum = path.split("/")
+                host, port = server.split(":")
+                cache = RedisCache(
+                        host,
+                        port=int(port),
+                        db=int(dbnum),
+                        key_prefix=sha1(self.site_id.encode("utf8")).hexdigest()[:8],
+                )
+
             elif proto == "file":
                 from cachelib import FileSystemCache
 
